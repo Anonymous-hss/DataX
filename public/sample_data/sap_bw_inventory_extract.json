@@ -1,0 +1,57 @@
+[
+  {
+    "SKU": "PUMP-A10",
+    "LOCATION": "Plant-Dallas",
+    "CURRENT_STOCK": 15,
+    "IN_TRANSIT": 0,
+    "AVG_DAILY_DEMAND": 18,
+    "DEMAND_STD_DEV": 5.5,
+    "LEAD_TIME_DAYS": 12,
+    "LEAD_TIME_STD_DEV": 2.5,
+    "UNIT_COST": 280
+  },
+  {
+    "SKU": "VALVE-B22",
+    "LOCATION": "Plant-Dallas",
+    "CURRENT_STOCK": 45,
+    "IN_TRANSIT": 20,
+    "AVG_DAILY_DEMAND": 25,
+    "DEMAND_STD_DEV": 6,
+    "LEAD_TIME_DAYS": 8,
+    "LEAD_TIME_STD_DEV": 1.5,
+    "UNIT_COST": 110
+  },
+  {
+    "SKU": "MOTOR-C30",
+    "LOCATION": "Plant-Chicago",
+    "CURRENT_STOCK": 950,
+    "IN_TRANSIT": 0,
+    "AVG_DAILY_DEMAND": 20,
+    "DEMAND_STD_DEV": 4,
+    "LEAD_TIME_DAYS": 6,
+    "LEAD_TIME_STD_DEV": 0.8,
+    "UNIT_COST": 65
+  },
+  {
+    "SKU": "GASKET-D41",
+    "LOCATION": "Plant-Chicago",
+    "CURRENT_STOCK": 320,
+    "IN_TRANSIT": 0,
+    "AVG_DAILY_DEMAND": 40,
+    "DEMAND_STD_DEV": 8,
+    "LEAD_TIME_DAYS": 5,
+    "LEAD_TIME_STD_DEV": 1,
+    "UNIT_COST": 8
+  },
+  {
+    "SKU": "BEARING-E55",
+    "LOCATION": "Plant-Atlanta",
+    "CURRENT_STOCK": 60,
+    "IN_TRANSIT": 0,
+    "AVG_DAILY_DEMAND": 12,
+    "DEMAND_STD_DEV": 3,
+    "LEAD_TIME_DAYS": 10,
+    "LEAD_TIME_STD_DEV": 2,
+    "UNIT_COST": 45
+  }
+]
