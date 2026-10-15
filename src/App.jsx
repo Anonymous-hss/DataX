@@ -21,6 +21,7 @@ export default function App() {
         hash === '#poc' ||
         hash === '#datax' ||
         hash === '#threads' ||
+        hash === '#new-thread' ||
         hash === '#connect-source' ||
         hash === '#connect-target' ||
         hash === '#rules' ||
