@@ -10,15 +10,27 @@ import BookDemoModal from './components/website/BookDemoModal';
 import DataXPoc from './components/poc/DataXPoc';
 
 export default function App() {
-  const [activeView, setActiveView] = useState('website'); // 'website' | 'poc'
+  const [activeView, setActiveView] = useState('poc'); // Default to DataX PoC app view
   const [demoModalOpen, setDemoModalOpen] = useState(false);
 
   // Sync with URL hash
   useEffect(() => {
     const handleHashChange = () => {
-      if (window.location.hash === '#poc' || window.location.hash === '#datax') {
+      const hash = window.location.hash;
+      if (
+        hash === '#poc' ||
+        hash === '#datax' ||
+        hash === '#threads' ||
+        hash === '#connect-source' ||
+        hash === '#connect-target' ||
+        hash === '#rules' ||
+        hash === '#running-dry-run' ||
+        hash === '#dry-run-results' ||
+        hash === '#live-auto-fix' ||
+        hash === '#history'
+      ) {
         setActiveView('poc');
-      } else {
+      } else if (hash === '#website') {
         setActiveView('website');
       }
     };
@@ -34,20 +46,21 @@ export default function App() {
       window.location.hash = '#poc';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      window.location.hash = '';
+      window.location.hash = '#website';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   return (
     <div className="min-h-screen bg-[#060a12] text-slate-100 flex flex-col font-sans selection:bg-cyan-500/20 selection:text-cyan-300">
-      
-      {/* Universal Navbar */}
-      <Navbar 
-        activeView={activeView} 
-        setActiveView={handleViewChange} 
-        onOpenDemo={() => setDemoModalOpen(true)} 
-      />
+      {/* Universal Navbar (Only show on website view, DataX app has its own dedicated top bar) */}
+      {activeView === 'website' && (
+        <Navbar 
+          activeView={activeView} 
+          setActiveView={handleViewChange} 
+          onOpenDemo={() => setDemoModalOpen(true)} 
+        />
+      )}
 
       {/* Main Body View */}
       <main className="flex-1">
@@ -74,18 +87,19 @@ export default function App() {
         )}
       </main>
 
-      {/* Universal Footer */}
-      <Footer 
-        setActiveView={handleViewChange} 
-        onOpenDemo={() => setDemoModalOpen(true)} 
-      />
+      {/* Universal Footer (Only on website view) */}
+      {activeView === 'website' && (
+        <Footer 
+          setActiveView={handleViewChange} 
+          onOpenDemo={() => setDemoModalOpen(true)} 
+        />
+      )}
 
       {/* Enterprise Demo Modal */}
       <BookDemoModal 
         isOpen={demoModalOpen} 
         onClose={() => setDemoModalOpen(false)} 
       />
-
     </div>
   );
 }
