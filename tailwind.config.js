@@ -21,8 +21,10 @@ export default {
         }
       },
       fontFamily: {
+        geist: ['Geist', 'sans-serif'],
+        'geist-mono': ['Geist Mono', 'monospace'],
         sans: ['Geist', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Outfit', 'sans-serif'],
+        display: ['Geist', 'Outfit', 'sans-serif'],
         mono: ['Geist Mono', 'JetBrains Mono', 'Fira Code', 'monospace'],
       },
       boxShadow: {

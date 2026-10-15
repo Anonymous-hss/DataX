@@ -1,333 +1,515 @@
 import React, { useState } from 'react';
-import { Link } from '../context/NavigationContext';
-import { useRuleEngine } from '../context/RuleEngineContext';
-import Button from '../components/ui/Button';
-import Tag from '../components/ui/Tag';
-import Input from '../components/ui/Input';
-import Segmented from '../components/ui/Segmented';
-import IconButton from '../components/ui/IconButton';
-import Logo from '../components/icons/Logo';
-import { PostgresLogo, SapLogo, DatabaseIcon } from '../components/icons/DatabaseLogos';
-import {
-  IconThreads,
-  IconDomainPacks,
-  IconConnections,
-  IconRuns,
-  IconSearch,
-  IconBell,
-  IconHelp,
-  IconChevronDown,
-  IconArrowLeft,
-} from '../components/icons/NavIcons';
-import {
-  IconTable,
-  IconCheck,
-  IconRefresh,
-  IconPlay,
-  IconLock,
-  IconEye,
-  IconEyeOff,
-} from '../components/icons/ActionIcons';
-import { AvatarDX } from '../components/icons/Illustrations';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Database, 
+  ChevronDown, 
+  Lock, 
+  Eye, 
+  EyeOff, 
+  Check, 
+  RefreshCw, 
+  Search, 
+  AlertCircle, 
+  ArrowRight,
+  ArrowLeft,
+  FileCheck,
+  FlaskConical,
+  Play
+} from 'lucide-react';
+import { useNavigation } from '../context/NavigationContext';
+import PipelineFlowNodes from '../components/cleanflow/PipelineFlowNodes';
+import DataXHeader from '../components/cleanflow/DataXHeader';
 
 export default function ConnectSourcePage() {
-  const { currentData, selectedDatasetKey, handleDatasetChange } = useRuleEngine();
-  const [testStatus, setTestStatus] = useState('success');
-  const [connMode, setConnMode] = useState('connection-string');
-  const [connString, setConnString] = useState('sap-bw://infocube-0pur_c01.jj-enterprise:3300');
-  const [showSecret, setShowSecret] = useState(false);
-  const [tableFilter, setTableFilter] = useState('');
+  const { navigateTo } = useNavigation();
+  const [dbType, setDbType] = useState('PostgreSQL');
+  const [connectMethod, setConnectMethod] = useState('string');
+  const [connString, setConnString] = useState('postgres://reader:******@db.acme.io/production_db');
+  const [showConnString, setShowConnString] = useState(false);
+  const [host, setHost] = useState('');
+  const [port, setPort] = useState('5432');
+  const [databaseName, setDatabaseName] = useState('retaildata');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [readScope, setReadScope] = useState('selected');
+  const [selectedTables, setSelectedTables] = useState(['raw_source_users']);
+  const [tableSearch, setTableSearch] = useState('');
+  const [isTesting, setIsTesting] = useState(false);
+  const [testSuccess, setTestSuccess] = useState(false);
 
-  const datasets = [
-    { id: 'procurement', name: '0PUR_C01 (Procurement Orders)', rows: '12 records', source: 'SAP BW' },
-    { id: 'inventory', name: '0IC_C03 (Inventory Movements)', rows: '10 records', source: 'SAP BW' },
+  const availableTables = [
+    { name: 'purchase_orders', rows: '16,204 rows' },
+    { name: 'raw_source_users', rows: '1,240 rows' },
+    { name: 'sales', rows: '52,019 rows' },
   ];
 
-  const handleTestConnection = () => {
-    setTestStatus('testing');
-    setTimeout(() => setTestStatus('success'), 600);
+  const previewRows = [
+    { id: '101', email: 'sarah.j@acme.com', full_name: 'Sarah Jenkins', role: 'analyst' },
+    { id: '102', email: 'malformed.email@bad', full_name: 'Mark Lee', role: 'viewer' },
+    { id: '103', email: 'marcus.v@acme.com', full_name: 'empty', role: 'manager' },
+    { id: '104', email: 'Elena.RO@ACME.com', full_name: 'Elena Rostova', role: 'Admin' },
+  ];
+
+  const handleTest = () => {
+    setIsTesting(true);
+    setTimeout(() => {
+      setIsTesting(false);
+      setTestSuccess(true);
+    }, 600);
+  };
+
+  const handleSaveSource = () => {
+    navigateTo('generate-rules');
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-6 font-sans">
-      <header className="bg-white border-b border-[#E3E6EE] sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link to="threads" className="flex items-center gap-2.5">
-              <Logo size={32} />
-              <span className="font-bold text-[#0A0F1F] tracking-tight text-lg">DataX</span>
-            </Link>
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col antialiased">
+      {/* Top Header & Subheader */}
+      <DataXHeader
+        currentPage="03"
+        onBack={() => navigateTo('start-thread')}
+        onDryRun={() => navigateTo('running-dry-run')}
+        onRunLive={() => navigateTo('dry-run-results')}
+      />
 
-            <nav className="hidden sm:flex items-center gap-1">
-              <Link to="threads" className="px-3 py-1.5 text-xs font-medium rounded-full text-[#474E61] hover:text-[#0A0F1F] hover:bg-[#F9FAFC] flex items-center gap-1.5">
-                <IconThreads color="#5F6678" /> Threads
-              </Link>
-              <Link to="connect-source" className="px-3 py-1.5 text-xs font-medium rounded-full text-[#474E61] hover:text-[#0A0F1F] hover:bg-[#F9FAFC] flex items-center gap-1.5">
-                <IconDomainPacks color="#5F6678" /> Domain packs
-              </Link>
-              <Link to="connect-source" className="px-3 py-1.5 text-xs font-medium rounded-full bg-[#ECF0FF] text-[#2D55F5] flex items-center gap-1.5">
-                <IconConnections color="#2D55F5" /> Connections
-              </Link>
-              <Link to="history" className="px-3 py-1.5 text-xs font-medium rounded-full text-[#474E61] hover:text-[#0A0F1F] hover:bg-[#F9FAFC] flex items-center gap-1.5">
-                <IconRuns color="#5F6678" /> Runs
-              </Link>
-            </nav>
-          </div>
+      {/* 3 Pipeline Flow Nodes */}
+      <PipelineFlowNodes currentStep="03" />
 
-          <div className="flex items-center gap-10">
-            <div className="flex items-center gap-8 hidden sm:flex">
-              <div className="flex items-center gap-2.5 px-3 py-1.5 bg-[#F9FAFC] border border-[#E3E6EE] rounded-full">
-                <IconSearch className="w-4 h-4 text-[#5F6678]" />
-                <input
-                  type="text"
-                  placeholder="Search threads, tables…"
-                  className="bg-transparent border-none outline-none text-xs text-[#5F6678] w-52 placeholder:text-[#A6ADC2]"
-                />
+      {/* Main 2-Column Content: Step 1 Source & Choose Table (Image 4) */}
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          
+          {/* Left Column: Connect Source Database */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-5">
+            {/* Step title */}
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
+                <Database className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs text-slate-400 font-medium">Step 1 of 3 · Source</div>
+                <h2 className="text-xl font-bold text-slate-900 tracking-tight font-display">Connect source database</h2>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <IconButton variant="default">
-                <IconHelp />
-              </IconButton>
-              <IconButton variant="outlined">
-                <IconBell />
-              </IconButton>
-              <AvatarDX size={34} />
+            <div className="space-y-4 pt-1">
+              {/* Database type */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Database type</label>
+                <div className="relative">
+                  <select
+                    value={dbType}
+                    onChange={(e) => setDbType(e.target.value)}
+                    className="w-full appearance-none px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 pr-8 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
+                  >
+                    <option value="PostgreSQL">PostgreSQL</option>
+                    <option value="SAP BW">SAP BW InfoCube</option>
+                    <option value="Snowflake">Snowflake Data Cloud</option>
+                    <option value="Databricks">Databricks Lakehouse</option>
+                    <option value="MySQL">MySQL 8</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Format / Connect with pills (matching Image 3) */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">Format</label>
+                  <span className="text-[11px] text-slate-400">Connection method</span>
+                </div>
+                <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-lg max-w-xs text-xs mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setConnectMethod('string')}
+                    className={`py-1.5 rounded-md font-medium transition-all cursor-pointer text-center ${
+                      connectMethod === 'string'
+                        ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Connection URI
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConnectMethod('host')}
+                    className={`py-1.5 rounded-md font-medium transition-all cursor-pointer text-center ${
+                      connectMethod === 'host'
+                        ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Host & Credentials
+                  </button>
+                </div>
+              </div>
+
+              {/* Conditional Connection Details: URI vs Host & Credentials */}
+              {connectMethod === 'string' ? (
+                /* Connection string / URI input (Image 2 Match) */
+                <div className="space-y-3.5">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-700">Connection string</label>
+                    <div className="relative">
+                      <input
+                        type={showConnString ? 'text' : 'password'}
+                        value={connString}
+                        onChange={(e) => setConnString(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConnString(!showConnString)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      >
+                        {showConnString ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400 pt-1">
+                      <Lock className="w-3 h-3" />
+                      Encrypted in transit and kept in your vault. Never shown in logs.
+                    </div>
+                  </div>
+
+                  {/* Connection Ping & Verification Card — also shown in URI mode */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">Connection Ping & Verification</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        Ping database to verify write access and discover target schema.
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleTest}
+                      disabled={isTesting}
+                      className="px-4 py-2 rounded-xl bg-[#2D55F5] hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0"
+                    >
+                      {isTesting ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          Verifying...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                          Test Connection
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Host & Credentials Format (Image 3 Exact Match) */
+                <div className="space-y-3.5">
+                  {/* Host / Address & Port */}
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div className="sm:col-span-3">
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Host / Address</label>
+                      <input
+                        type="text"
+                        value={host}
+                        onChange={(e) => setHost(e.target.value)}
+                        placeholder="db.acme.io"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Port</label>
+                      <input
+                        type="text"
+                        value={port}
+                        onChange={(e) => setPort(e.target.value)}
+                        placeholder="5432"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-semibold"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Database Name & Username */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Database Name</label>
+                      <input
+                        type="text"
+                        value={databaseName}
+                        onChange={(e) => setDatabaseName(e.target.value)}
+                        placeholder="production_db"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Username</label>
+                      <input
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="reader"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Password */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Enter database password"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      >
+                        {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Connection Ping & Verification Card (Image 3 Exact Match) */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">Connection Ping & Verification</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        Ping database to verify connectivity and discover schema tables.
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleTest}
+                      disabled={isTesting}
+                      className="px-4 py-2 rounded-xl bg-[#2D55F5] hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0"
+                    >
+                      {isTesting ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          Verifying...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                          Test Connection
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Connected Status Box with Spring Tick Animation - ONLY shown after clicking test connection */}
+              <AnimatePresence>
+                {testSuccess && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                    transition={{ duration: 0.35, ease: "easeOut" }}
+                    className="bg-[#ecfdf5] border border-[#a7f3d0] rounded-xl p-3 flex items-center justify-between shadow-2xs"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <motion.div
+                        initial={{ scale: 0, rotate: -25 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{ type: "spring", stiffness: 450, damping: 18, delay: 0.08 }}
+                        className="w-6 h-6 rounded-full bg-[#059669] text-white flex items-center justify-center shrink-0 shadow-xs"
+                      >
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      </motion.div>
+                      <div>
+                        <div className="text-xs font-bold text-emerald-950">Connected · 39 tables found</div>
+                        <div className="text-[11px] text-emerald-700">PostgreSQL 15 · tested just now</div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleTest}
+                      disabled={isTesting}
+                      className="px-2.5 py-1 rounded-lg border border-emerald-300 bg-white hover:bg-emerald-50 text-[11px] font-semibold text-emerald-800 flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isTesting ? 'animate-spin' : ''}`} />
+                      Test again
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* What to read */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">What to read</label>
+                <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-lg max-w-xs text-xs mb-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setReadScope('selected')}
+                    className={`py-1 rounded-md font-medium transition-all ${
+                      readScope === 'selected'
+                        ? 'bg-white text-blue-700 shadow-2xs font-semibold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Selected tables
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReadScope('all')}
+                    className={`py-1 rounded-md font-medium transition-all ${
+                      readScope === 'all'
+                        ? 'bg-white text-blue-700 shadow-2xs font-semibold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    All tables
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  AI uses the columns of the selected table to suggest rules.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      </header>
 
-      <div className="bg-white border-b border-[#E3E6EE] px-8 py-2.5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link to="threads" className="w-9 h-9 rounded-full flex items-center justify-center bg-white border border-[#E3E6EE] hover:bg-[#F5F6FA] transition-colors">
-            <IconArrowLeft />
-          </Link>
-          <div className="flex flex-col gap-0.5">
-            <h2 className="text-[#0A0F1F] text-[18px] font-semibold leading-[130%] tracking-tight">SAP BW → S/4HANA Clean Core</h2>
-            <div className="flex items-center gap-2">
-              <Tag variant="neutral" showDot={false}>
-                Configuring Source
-              </Tag>
-              <span className="text-xs text-[#5F6678]">0PUR_C01 InfoCube → S/4HANA Plant Reconciled</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="w-[1px] h-[24px] bg-[#E3E6EE]" />
-
-        <div className="flex items-center gap-2">
-          <Link to="connect-target">
-            <Button variant="secondary" size="md" className="px-3.5 py-[3px] text-[13px]">
-              Next: Target
-            </Button>
-          </Link>
-          <Link to="rules">
-            <Button variant="primary" size="md" className="px-3.5 py-[3px] text-[13px]">
-              View Rules
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      <div className="bg-[#F9FAFC] border-b border-[#E3E6EE] px-8 py-3 flex gap-4">
-        <div className="flex items-center gap-3 p-3 rounded-[18px] border w-[360px] border-[#2D55F5] shadow-[0_0_0_4px_rgba(45,85,245,0.16)] bg-white">
-          <div className="w-5 h-5 rounded-[10px] bg-[#0A0F1F] flex items-center justify-center flex-shrink-0">
-            <span className="text-[12px] font-medium text-[#D4FF3A] leading-[140%]">1</span>
-          </div>
-          <div className="w-11 h-11 rounded-[12px] bg-[#ECF0FF] flex items-center justify-center shrink-0">
-            <SapLogo size={28} />
-          </div>
-          <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-            <span className="text-[#5F6678] text-[12px] font-medium leading-[140%]">Source</span>
-            <span className="text-[#0A0F1F] text-[15px] font-semibold leading-[135%] tracking-tight">SAP BW InfoCube</span>
-            <span className="text-[#5F6678] text-[12px] font-medium leading-[140%]">{selectedDatasetKey === 'procurement' ? '0PUR_C01' : '0IC_C03'}</span>
-          </div>
-          <Tag variant="success" showDot={false} className="text-[12px] px-2 py-0.5">
-            Connected
-          </Tag>
-        </div>
-
-        <div className="w-14 h-[16px] flex items-center justify-center shrink-0 self-center">
-          <div className="w-[30px] h-[2px] bg-[#CDD2DE]" />
-        </div>
-
-        <Link to="rules" className="flex items-center gap-3 p-3 rounded-[18px] border w-[360px] border-[#CDD2DE] shadow-sm bg-white hover:border-[#2D55F5] transition-colors">
-          <div className="w-5 h-5 rounded-[10px] bg-[#0A0F1F] flex items-center justify-center flex-shrink-0">
-            <span className="text-[12px] font-medium text-[#D4FF3A] leading-[140%]">2</span>
-          </div>
-          <div className="w-11 h-11 rounded-[12px] bg-[#ECF0FF] flex items-center justify-center shrink-0">
-            <DatabaseIcon size={20} className="text-[#2D55F5]" />
-          </div>
-          <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-            <span className="text-[#5F6678] text-[12px] font-medium leading-[140%]">AI rules</span>
-            <span className="text-[#0A0F1F] text-[15px] font-semibold leading-[135%] tracking-tight">AI rule generator</span>
-            <span className="text-[#5F6678] text-[12px] font-medium leading-[140%]">4 Active Rules</span>
-          </div>
-          <Tag variant="primary" showDot={false} className="text-[12px] px-2 py-0.5">
-            Configured
-          </Tag>
-        </Link>
-
-        <div className="w-14 h-[16px] flex items-center justify-center shrink-0 self-center">
-          <div className="w-[30px] h-[2px] bg-[#CDD2DE]" />
-        </div>
-
-        <Link to="connect-target" className="flex items-center gap-3 p-3 rounded-[18px] border w-[360px] border-[#CDD2DE] shadow-sm bg-white hover:border-[#2D55F5] transition-colors">
-          <div className="w-5 h-5 rounded-[10px] bg-[#0A0F1F] flex items-center justify-center flex-shrink-0 opacity-70">
-            <span className="text-[12px] font-medium text-[#D4FF3A] leading-[140%]">3</span>
-          </div>
-          <div className="w-11 h-11 rounded-[12px] bg-[#F9FAFC] flex items-center justify-center shrink-0">
-            <SapLogo size={24} />
-          </div>
-          <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-            <span className="text-[#5F6678] text-[12px] font-medium leading-[140%]">Target</span>
-            <span className="text-[#0A0F1F] text-[15px] font-semibold leading-[135%] tracking-tight">SAP S/4HANA</span>
-            <span className="text-[#5F6678] text-[12px] font-medium leading-[140%]">Clean Core Orders</span>
-          </div>
-          <Tag variant="neutral" showDot={false} className="text-[12px] px-2 py-0.5">
-            Ready
-          </Tag>
-        </Link>
-      </div>
-
-      <main className="p-8 flex gap-8 min-h-[644px]">
-        <section className="w-[520px] flex-shrink-0 bg-white border border-[#E3E6EE] rounded-[20px] shadow-sm flex flex-col">
-          <div className="border-b border-[#E3E6EE] p-4 flex items-center gap-3">
-            <div className="w-11 h-11 rounded-[12px] bg-[#ECF0FF] flex items-center justify-center shrink-0">
-              <SapLogo size={28} />
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[#5F6678] text-[12px] font-medium leading-[140%]">Step 1 of 3 · Source</span>
-              <h3 className="text-[#0A0F1F] text-[18px] font-semibold leading-[130%] tracking-tight">Connect SAP BW source</h3>
-            </div>
-          </div>
-
-          <div className="p-4 flex flex-col gap-3.5 flex-1 min-h-0">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[#0A0F1F] text-[13px] font-medium leading-[145%]">Dataset / InfoCube</label>
-              <div className="relative">
-                <Input
-                  icon={<SapLogo size={20} />}
-                  value={selectedDatasetKey === 'procurement' ? 'SAP BW 0PUR_C01 (Procurement)' : 'SAP BW 0IC_C03 (Inventory)'}
-                  readOnly
-                  className="pr-10 cursor-pointer"
-                />
-                <IconChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5F6678] pointer-events-none" />
+          {/* Right Column: Choose a Table & Preview (Image 4) */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-4">
+            <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+              <h3 className="text-sm font-bold text-slate-900">Choose a table</h3>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold border border-blue-200">
+                  {selectedTables.length} selected
+                </span>
+                <button 
+                  onClick={() => {
+                    const allSelected = availableTables.length === selectedTables.length;
+                    setSelectedTables(allSelected ? [] : availableTables.map(t => t.name));
+                  }}
+                  className="text-blue-600 hover:underline font-medium text-xs cursor-pointer"
+                >
+                  {availableTables.length === selectedTables.length ? 'Deselect all' : `Select all (${availableTables.length})`}
+                </button>
               </div>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[#0A0F1F] text-[13px] font-medium leading-[145%]">Select Active Source Data</label>
-              <Segmented
-                options={[
-                  { label: 'Procurement (45000101)', value: 'procurement' },
-                  { label: 'Inventory Movements', value: 'inventory' },
-                ]}
-                value={selectedDatasetKey}
-                onChange={handleDatasetChange}
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search tables"
+                value={tableSearch}
+                onChange={(e) => setTableSearch(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
               />
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[#0A0F1F] text-[13px] font-medium leading-[145%]">Connection Endpoint</label>
-              <div className="relative">
-                <Input
-                  value={connString}
-                  onChange={(e) => setConnString(e.target.value)}
-                  type={showSecret ? 'text' : 'password'}
-                  className="font-mono text-xs pr-10"
-                />
-                <button
-                  onClick={() => setShowSecret(!showSecret)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#5F6678] hover:text-[#0A0F1F] rounded hover:bg-[#F5F6FA] transition-colors"
-                >
-                  {showSecret ? <IconEyeOff size={16} /> : <IconEye size={16} />}
-                </button>
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                <IconLock className="w-4 h-4 text-[#5F6678]" />
-                <span className="text-[#5F6678] text-[12px] font-medium leading-[140%]">Encrypted in transit. Never exposed in external logs.</span>
-              </div>
+            {/* Tables List */}
+            <div className="space-y-1.5">
+              {availableTables.map((table) => {
+                const isChecked = selectedTables.includes(table.name);
+                const toggleTable = () => {
+                  setSelectedTables(prev => 
+                    prev.includes(table.name)
+                      ? prev.filter(t => t !== table.name)
+                      : [...prev, table.name]
+                  );
+                };
+                return (
+                  <div
+                    key={table.name}
+                    onClick={toggleTable}
+                    className={`px-3 py-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                      isChecked
+                        ? 'border-blue-500 bg-blue-50/50'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleTable();
+                        }}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <span className="font-mono text-xs font-semibold text-slate-800">{table.name}</span>
+                    </div>
+                    <span className="text-xs text-slate-400 font-mono">{table.rows}</span>
+                  </div>
+                );
+              })}
             </div>
 
-            <div className="bg-[#E7F6EE] border border-[#BFE6D2] rounded-[14px] p-3.5 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#127A52] flex items-center justify-center shrink-0">
-                <IconCheck size={14} color="#FFFFFF" />
+            {/* Preview Selected Table */}
+            <div className="pt-2 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-slate-700 font-mono">
+                  Preview <span className="text-blue-600 underline">raw_source_users</span>
+                </span>
+                <span className="text-slate-400 font-mono text-[11px]">first 4 of 1,240 rows</span>
               </div>
-              <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                <span className="text-[#127A52] text-[13px] font-medium leading-[145%]">Connected · {currentData.length} records ready</span>
-                <span className="text-[#474E61] text-[12px] font-medium leading-[140%]">SAP BW Extractor Active · Latency 28ms</span>
-              </div>
-              <Button variant="secondary" size="sm" onClick={handleTestConnection} className="px-3 py-[3px] text-[13px] min-w-[109px]">
-                <IconRefresh className="mr-1 inline-block" />
-                Refresh
-              </Button>
-            </div>
-          </div>
-        </section>
 
-        <section className="flex-1 bg-white border border-[#E3E6EE] rounded-[20px] shadow-sm flex flex-col">
-          <div className="border-b border-[#E3E6EE] p-4 flex items-center justify-between">
-            <div className="flex flex-col gap-0.5">
-              <h3 className="text-[#0A0F1F] text-[18px] font-semibold leading-[130%] tracking-tight">Active Source Records</h3>
-              <div className="flex items-center gap-2">
-                <Tag variant="dark" showDot={false}>
-                  {currentData.length} rows loaded
-                </Tag>
-                <span className="text-[#5F6678] text-xs">Simulating SAP BW Extract</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-4 flex flex-col gap-3 flex-1 min-h-0 overflow-x-auto">
-            <div className="border border-[#E3E6EE] rounded-[14px] overflow-hidden flex flex-col">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-[#F5F6FA] text-[#5F6678] font-semibold border-b border-[#E3E6EE]">
-                  <tr>
-                    <th className="py-2.5 px-3">PO #</th>
-                    <th className="py-2.5 px-3">Material</th>
-                    <th className="py-2.5 px-3">Qty</th>
-                    <th className="py-2.5 px-3">Unit Price</th>
-                    <th className="py-2.5 px-3">Total</th>
-                    <th className="py-2.5 px-3">Plant</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E3E6EE]">
-                  {currentData.slice(0, 8).map((row, idx) => (
-                    <tr key={idx} className="hover:bg-[#F9FAFC]">
-                      <td className="py-2 px-3 font-mono font-medium text-[#0A0F1F]">{row.PO_NUMBER || row.MAT_DOC}</td>
-                      <td className="py-2 px-3 text-[#474E61] truncate max-w-[160px]">{row.MATERIAL_DESC || row.MATERIAL_ID}</td>
-                      <td className="py-2 px-3 font-mono">{row.QUANTITY}</td>
-                      <td className="py-2 px-3 font-mono">${Number(row.UNIT_PRICE || 0).toFixed(2)}</td>
-                      <td className="py-2 px-3 font-mono font-medium text-[#0A0F1F]">${Number(row.TOTAL_AMOUNT || 0).toFixed(2)}</td>
-                      <td className="py-2 px-3">
-                        <Tag variant={row.DELIVERY_PLANT?.startsWith('P') ? 'success' : 'warning'}>
-                          {row.DELIVERY_PLANT || row.LOCATION || 'None'}
-                        </Tag>
-                      </td>
+              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+                    <tr>
+                      <th className="py-2 px-2.5 font-semibold">id</th>
+                      <th className="py-2 px-2.5 font-semibold">email</th>
+                      <th className="py-2 px-2.5 font-semibold">full_name</th>
+                      <th className="py-2 px-2.5 font-semibold">role</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {previewRows.map((row) => (
+                      <tr key={row.id} className="hover:bg-slate-50/70">
+                        <td className="py-2 px-2.5 text-slate-500">{row.id}</td>
+                        <td className="py-2 px-2.5 text-slate-800 truncate max-w-[140px]">{row.email}</td>
+                        <td className="py-2 px-2.5 text-slate-800">{row.full_name}</td>
+                        <td className="py-2 px-2.5 text-slate-800">{row.role}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        </section>
-      </main>
 
-      <div className="bg-white border-t border-[#E3E6EE] px-8 py-2.5 flex items-center justify-between">
-        <Link to="threads">
-          <Button variant="ghost" size="md">
-            Cancel
-          </Button>
-        </Link>
-        <Link to="connect-target">
-          <Button variant="primary" size="md">
-            Save & Continue to Target
-          </Button>
-        </Link>
-      </div>
+          </div>
+
+        </div>
+
+        {/* Bottom Bar: Next AI Rules (Image 4) */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-6 mt-4 border-t border-slate-200">
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <AlertCircle className="w-3.5 h-3.5 text-blue-500" />
+            Next: AI rules
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => navigateTo('start-thread')}
+              className="px-4 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-xs font-medium transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveSource}
+              className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all shadow-blue-500/20 flex items-center gap-1.5"
+            >
+              <Check className="w-3.5 h-3.5 stroke-[3]" />
+              Save source
+            </button>
+          </div>
+        </div>
+
+      </main>
     </div>
   );
 }
