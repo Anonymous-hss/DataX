@@ -2,15 +2,15 @@ import React, { useState } from 'react';
 import { Link } from '../context/NavigationContext';
 import { useRuleEngine } from '../context/RuleEngineContext';
 
-// --- Figma-Exact Icons & Illustrations ---
+// --- Figma-Exact Icons & Illustrations with User Brand Logo ---
 
-// DataX Brand Logo Squircle
-const DataXLogo = ({ size = 32 }) => (
-  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className="shrink-0">
-    <rect width="32" height="32" rx="9" fill="#2D55F5" />
-    <path d="M9 9L23 23" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" />
-    <path d="M23 9L18 14" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" />
-    <path d="M14 18L9 23" stroke="#D4FF3A" strokeWidth="3" strokeLinecap="round" />
+// User-Provided Official DataX Brand Logo Squircle
+export const DataXLogo = ({ size = 32 }) => (
+  <svg width={size} height={size} viewBox="0 0 64 64" fill="none" className="shrink-0">
+    <rect width="64" height="64" rx="16" fill="#2D55F5" />
+    <polygon points="14.5,49.5 24.5,49.5 49.5,14.5 39.5,14.5" fill="#FFFFFF" />
+    <polygon points="14.5,14.5 24.5,14.5 31.5,24.5 21.5,24.5" fill="#D4FF3A" />
+    <polygon points="32.5,39.5 42.5,39.5 49.5,49.5 39.5,49.5" fill="#D4FF3A" />
   </svg>
 );
 
@@ -56,14 +56,15 @@ const HeroFigmaGraphic = () => (
       <ellipse cx="0" cy="-18" rx="20" ry="7" fill="#132142" stroke="#D4FF3A" strokeWidth="2.5" />
     </g>
 
-    {/* Central Node: Glowing DataX Squircle */}
+    {/* Central Node: Glowing DataX Squircle matching User Brand Logo */}
     <g transform="translate(220, 105)">
       <rect x="-38" y="-38" width="76" height="76" rx="20" fill="#2D55F5" fillOpacity="0.18" />
-      <rect x="-32" y="-32" width="64" height="64" rx="17" fill="#2D55F5" stroke="#6084FF" strokeWidth="1.75" />
-      <path d="M-13 -13 L13 13" stroke="#FFFFFF" strokeWidth="5.5" strokeLinecap="round" />
-      <path d="M13 -13 L2 -2" stroke="#FFFFFF" strokeWidth="5.5" strokeLinecap="round" />
-      <path d="M-2 2 L-13 13" stroke="#D4FF3A" strokeWidth="5.5" strokeLinecap="round" />
-      <circle cx="0" cy="0" r="2" fill="#D4FF3A" />
+      <rect x="-32" y="-32" width="64" height="64" rx="16" fill="#2D55F5" stroke="#6084FF" strokeWidth="1.75" />
+      <g transform="translate(-32, -32)">
+        <polygon points="14.5,49.5 24.5,49.5 49.5,14.5 39.5,14.5" fill="#FFFFFF" />
+        <polygon points="14.5,14.5 24.5,14.5 31.5,24.5 21.5,24.5" fill="#D4FF3A" />
+        <polygon points="32.5,39.5 42.5,39.5 49.5,49.5 39.5,49.5" fill="#D4FF3A" />
+      </g>
     </g>
 
     {/* Right Node: Wireframe Cylinder with Blue Rim & Success Check Badge */}
@@ -200,7 +201,7 @@ export default function ThreadsPage() {
       <header className="w-full bg-white border-b border-[#E3E6EE] sticky top-0 z-40">
         <div className="max-w-[1360px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-7">
-            {/* Logo */}
+            {/* User Provided Brand Logo */}
             <Link to="threads" className="flex items-center gap-2.5">
               <DataXLogo size={32} />
               <span className="font-bold text-[#0A0F1F] tracking-tight text-[18px]">DataX</span>
@@ -321,7 +322,7 @@ export default function ThreadsPage() {
               Each thread reads from a source, checks every row with rules written by AI, and writes clean rows to a target.
             </p>
           </div>
-          <Link to="connect-source">
+          <Link to="new-thread">
             <button className="bg-[#2D55F5] hover:bg-[#2045DC] active:bg-[#1937B0] text-white px-5 py-2.5 rounded-full font-medium text-sm flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
               <span className="text-base font-bold leading-none">+</span> New thread
             </button>
@@ -540,7 +541,7 @@ export default function ThreadsPage() {
 
           {/* Card 4: Start a New Thread (Dashed Border Card) */}
           <Link
-            to="connect-source"
+            to="new-thread"
             className="border-2 border-dashed border-[#CDD2DE] hover:border-[#2D55F5] rounded-[22px] bg-white/40 hover:bg-white/80 p-5 lg:p-6 flex flex-col items-center justify-center text-center group cursor-pointer transition-all min-h-[300px]"
           >
             <div className="w-14 h-14 rounded-2xl bg-[#EEF2FF] group-hover:bg-[#E0E7FF] flex items-center justify-center transition-colors">

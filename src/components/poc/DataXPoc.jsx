@@ -4,6 +4,7 @@ import { NavigationProvider, useNavigation } from '../../context/NavigationConte
 
 // Figma Screen Pages
 import ThreadsPage from '../../pages/ThreadsPage';
+import StartAThreadPage from '../../pages/StartAThreadPage';
 import ConnectSourcePage from '../../pages/ConnectSourcePage';
 import ConnectTargetPage from '../../pages/ConnectTargetPage';
 import RulesPage from '../../pages/RulesPage';
@@ -17,6 +18,9 @@ function ScreenRenderer({ onBackToWebsite }) {
 
   let ScreenComponent;
   switch (currentScreen) {
+    case 'new-thread':
+      ScreenComponent = StartAThreadPage;
+      break;
     case 'connect-source':
       ScreenComponent = ConnectSourcePage;
       break;
@@ -50,7 +54,7 @@ function ScreenRenderer({ onBackToWebsite }) {
       {onBackToWebsite && (
         <button
           onClick={onBackToWebsite}
-          className="fixed bottom-3 left-4 z-50 bg-white/95 backdrop-blur-md text-[#5F6678] hover:text-[#0A0F1F] hover:border-[#B7BDCE] text-[11px] font-medium px-3 py-1.5 rounded-full shadow-sm border border-[#E3E6EE] flex items-center gap-1.5 transition-all cursor-pointer"
+          className="fixed bottom-16 left-4 z-50 bg-white/95 backdrop-blur-md text-[#5F6678] hover:text-[#0A0F1F] hover:border-[#B7BDCE] text-[11px] font-medium px-3 py-1.5 rounded-full shadow-md border border-[#E3E6EE] flex items-center gap-1.5 transition-all cursor-pointer"
         >
           <span>&larr;</span> Back to Dataglow Website
         </button>
