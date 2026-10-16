@@ -13,11 +13,15 @@ export default function App() {
   const [activeView, setActiveView] = useState('poc'); // Default to DataX PoC app view
   const [demoModalOpen, setDemoModalOpen] = useState(false);
 
-  // Sync with URL hash
+  // Sync with URL hash and pathname
   useEffect(() => {
-    const handleHashChange = () => {
+    const handleLocationChange = () => {
       const hash = window.location.hash;
+      const path = window.location.pathname.toLowerCase();
       if (
+        path.includes('datax') ||
+        path.includes('poc') ||
+        path.includes('cleanflow') ||
         hash === '#poc' ||
         hash === '#datax' ||
         hash === '#threads' ||
@@ -36,9 +40,13 @@ export default function App() {
       }
     };
 
-    handleHashChange();
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    handleLocationChange();
+    window.addEventListener('hashchange', handleLocationChange);
+    window.addEventListener('popstate', handleLocationChange);
+    return () => {
+      window.removeEventListener('hashchange', handleLocationChange);
+      window.removeEventListener('popstate', handleLocationChange);
+    };
   }, []);
 
   const handleViewChange = (view) => {
