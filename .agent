@@ -1,0 +1,118 @@
+# ==============================================================================
+# DATAX REPOSITORY AGENT DIRECTIVE & CODE EXCELLENCE SPECIFICATION (.agent)
+# ==============================================================================
+# Project: DataGlow.ai — DataX Enterprise Decision Intelligence & Clean-up Studio
+# Scope: All AI Agents, Pair Programmers, Refactoring Engines & Code Generators
+# Enforced Standards: Zero Hardcoding · High Dynamicity · Low Complexity · Code Integrity
+# ==============================================================================
+
+[metadata]
+name = "DataX-Code-Excellence-Agent"
+version = "1.0.0"
+target_repository = "D:/DATAX"
+stack = ["React 18", "Vite", "Tailwind CSS", "Framer Motion", "Lucide React", "SheetJS (XLSX)"]
+last_updated = "2026-10-15"
+
+# ==============================================================================
+# 1. CORE OPERATIONAL LAWS (NON-NEGOTIABLE)
+# ==============================================================================
+
+[law.1_zero_hardcoding]
+description = "Strict ban on static mocks, hardcoded counts, fake pass rates, and string-matching heuristics."
+enforcement:
+  - NEVER hardcode summary counters (e.g. '14 Clean', '4 Fixed', '2 Held', '90% Pass Rate', '1,240 rows').
+  - ALL metrics, pass rates, and status badges MUST be dynamically computed at runtime using pure array reducers:
+    `metrics = computeDatasetMetrics(records, activeRules)`
+  - NEVER hardcode target options in JSX. Target databases (Postgres, Snowflake, Databricks, BigQuery) MUST be loaded from dynamic driver schemas (`src/data/targetDrivers.js`).
+  - NEVER use hardcoded `if (val === 'Plant-Dallas')` heuristics in semantic lookups. All ontology and knowledge graph mappings MUST traverse dynamic graph nodes and relationship edges (`relationships.find(...)`).
+  - Quarantine rules and table outputs MUST be dynamically parameterizable.
+
+[law.2_dynamicity_first]
+description = "Every component and engine must react dynamically to changes in datasets, rules, and runtime state."
+enforcement:
+  - When a user filters rows (e.g. 'Live rows' vs 'Edge cases'), ALL before/after tables, stat badges, and pass percentages MUST immediately recalculate.
+  - Adding a custom rule in the UI MUST dynamically synthesize an executable predicate function that is evaluated against the batch—never hardcoded conditional branches.
+  - All database connection parameters and protocols MUST be driven by metadata definitions, not static `<input>` forms.
+
+[law.3_low_complexity_and_anti_monolith]
+description = "Strict ceiling on file length and cyclomatic complexity."
+enforcement:
+  - MAXIMUM FILE LENGTH: 350 lines. Any file exceeding 350 lines MUST be refactored into smaller, composable units.
+  - DECOMPOSE MONOLITHS: Never create or maintain monolithic components like the legacy 1,340-line `DataXCleanFlow.jsx` or 1,003-line `DataXPoc.jsx`.
+  - COMPONENT ARCHITECTURE: Maintain a clean Atomic structure:
+    * Pages (`src/pages/cleanflow/`)
+    * Sub-views / Sections (`src/components/cleanflow/`, `src/components/poc/`)
+    * Domain Engines (`src/engine/metrics.js`, `src/engine/ruleEvaluator.js`)
+    * Reusable Atoms/Molecules (`src/components/common/`)
+  - NEVER keep duplicate component trees (e.g. `src/components/cleanapp/` vs `src/components/cleanflow/`). Single source of truth is mandatory.
+
+[law.4_code_integrity_and_async_resilience]
+description = "Deterministic async pipelines, memory safety, and defensive fault tolerance."
+enforcement:
+  - PROHIBITED: Naked nested `setTimeout` callback hell (e.g. `setTimeout(() => { setTimeout(...) }, 700)`).
+  - MANDATORY: Use async/await step runners or deterministic state machines backed by `AbortController` / `AbortSignal` for cancellation and memory leak prevention during unmount.
+  - ERROR BOUNDARIES: All major route views and complex data parsing blocks (e.g. XLSX file uploads) MUST be wrapped in React Error Boundaries with graceful recovery UI.
+  - PRESERVE COMMENTS: Maintain documentation integrity and preserve all existing meaningful docstrings and comments.
+
+[law.5_bundle_and_performance_budget]
+description = "Keep initial application payload lean and responsive."
+enforcement:
+  - BUNDLE CEILING: Individual JS chunks MUST NOT exceed 500 kB.
+  - CODE SPLITTING: Main application views (`flow`, `website`, `poc`) MUST be split using `React.lazy` and wrapped in `<Suspense>`.
+  - VENDOR CHUNKING: Heavy third-party dependencies (`xlsx`, `framer-motion`, `lottie-react`, `lucide-react`) MUST be separated into manual Rollup chunks in `vite.config.js`.
+
+# ==============================================================================
+# 2. PRE-ANALYSIS WORKFLOW (MANDATORY BEFORE ANY CODE MODIFICATION)
+# ==============================================================================
+
+[workflow.pre_analysis_protocol]
+step_1 = "AUDIT IMPACT: Inspect all affected files and identify whether any hardcoded metrics, duplicate components, or unhandled async timers exist."
+step_2 = "PRIORITY ALIGNMENT: Classify the task against the Frontend Excellence Priority Framework (P0, P1, or P2)."
+step_3 = "STRUCTURAL VERIFICATION: Verify that proposed changes adhere to the 350-line limit and use composable hooks/components."
+step_4 = "INTEGRITY & BUILD CHECK: Validate that types, imports, dynamic formulas, and `npm run build` pass without warnings or chunk bloat."
+
+# ==============================================================================
+# 3. FRONTEND EXCELLENCE PRIORITY FRAMEWORK
+# ==============================================================================
+
+[priority.P0_critical_foundation]
+items:
+  - "Deconstruct mega-monoliths (DataXCleanFlow.jsx, DataXPoc.jsx) into modular subcomponents."
+  - "Retire duplicate `src/components/cleanapp/` and standardize on `src/pages/cleanflow/`."
+  - "Implement pure dynamic computation engines (`computeDatasetMetrics`) for all stat cards and summaries."
+  - "Configure Vite manual chunks and route code-splitting to drop bundle size under 200 kB."
+
+[priority.P1_domain_dynamicity]
+items:
+  - "Transform `ontologyGraph.js` into a dynamic Knowledge Graph traversal engine (nodes, edges, BFS)."
+  - "Build an AST / Predicate-based dynamic Rule Evaluation Engine with zero hardcoded rule IDs."
+  - "Refactor async execution pipelines into cancelable `usePipelineRunner` hooks with telemetry streams."
+
+[priority.P2_ux_and_resilience]
+items:
+  - "Pluggable Target Database Driver Registry (`targetDrivers.js`)."
+  - "Defensive Error Boundaries & schema-level payload validation."
+  - "WCAG 2.1 AA accessibility, ARIA wizard steps, and screen-reader live regions."
+  - "Virtualization / windowing for tables processing 1,000+ records."
+
+# ==============================================================================
+# 4. DESIGN & PRESENTATION CONVENTIONS
+# ==============================================================================
+
+[conventions.ui_styling]
+framework = "Tailwind CSS with custom enterprise dark/light tokens"
+light_mode_surface = "bg-[#f8fafc] text-slate-800 border-slate-200"
+dark_mode_surface = "bg-[#060a12] text-slate-100 border-slate-800"
+font_family_sans = "Inter, sans-serif"
+font_family_display = "Outfit, sans-serif"
+font_family_mono = "ui-monospace, SFMono-Regular, Menlo, monospace"
+icon_library = "lucide-react"
+animation_library = "framer-motion"
+
+[conventions.quality_checklist]
+definition_of_done:
+  - "Zero static counters or fake stats in JSX."
+  - "Zero files > 350 LOC."
+  - "Zero duplicate files or orphaned components."
+  - "Clean Vite build without monolithic chunk warnings."
+  - "All clickable elements have keyboard focus & ARIA labels."
