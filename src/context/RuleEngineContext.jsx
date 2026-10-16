@@ -258,26 +258,16 @@ export const evaluateRow = (row, rules = [], isAutoFix = true, allRows = []) => 
   };
 };
 
-// Helper: Calculate dynamic baseline health score for any pack
-export const computePackBaseline = (pack, isAutoFix = true) => {
-  let dataset = [];
-  if (pack.id === 'sap_bw_s4hana' || pack.domainPackId === 'sap_bw_s4hana' || pack.source?.engine === 'sap_bw') {
-    dataset = SAP_BW_PROCUREMENT_DATA;
-  } else {
-    dataset = USER_MASTER_DATA;
-  }
-  const evaluated = dataset.map(r => evaluateRow(r, pack.rules || [], isAutoFix, dataset));
-  const clean = evaluated.filter(r => r._status === 'clean').length;
-  const fixed = evaluated.filter(r => r._status === 'fixed').length;
-  const total = evaluated.length;
-  const score = total > 0 ? (isAutoFix ? Math.round(((clean + fixed) / total) * 1000) / 10 : Math.round((clean / total) * 1000) / 10) : 95.0;
-
+// Helper: Return unexecuted baseline for prebuilt pack templates
+export const computePackBaseline = (pack) => {
   return {
     ...pack,
-    successRate: score,
-    healthScore: score,
-    status: score >= 90 ? 'healthy' : score >= 75 ? 'warning' : 'draft',
-    statusLabel: score >= 90 ? 'Live' : score >= 75 ? 'Below threshold' : 'Draft'
+    successRate: null,
+    healthScore: null,
+    runCount: 0,
+    runs: '0 runs',
+    status: 'draft',
+    statusLabel: 'Draft'
   };
 };
 
@@ -475,10 +465,11 @@ export const PREBUILT_DOMAIN_PACKS = {
     domain: 'Finance & Audit',
     desc: 'Audit general ledger entries, guarantee zero imbalance, and verify ISO currency standards.',
     pipeline: 'ERP GL → AI rules → Reconciled Core',
-    status: 'healthy',
-    statusLabel: 'Live',
-    successRate: 95.0,
-    healthScore: 95.0,
+    status: 'draft',
+    statusLabel: 'Draft',
+    successRate: null,
+    healthScore: null,
+    runCount: 0,
     runs: '0 runs',
     source: {
       engine: 'postgres',
@@ -514,10 +505,11 @@ export const PREBUILT_DOMAIN_PACKS = {
     domain: 'Healthcare',
     desc: 'Standardise patient records and mask identifiers before analytics.',
     pipeline: 'PostgreSQL → AI rules → PostgreSQL',
-    status: 'warning',
-    statusLabel: 'Below threshold',
-    successRate: 85.0,
-    healthScore: 85.0,
+    status: 'draft',
+    statusLabel: 'Draft',
+    successRate: null,
+    healthScore: null,
+    runCount: 0,
     runs: '0 runs',
     source: {
       engine: 'postgres',
@@ -793,7 +785,17 @@ export function RuleEngineProvider({ children }) {
           if (data.threads && data.threads.length > 0) {
             const merged = [...data.threads];
             Object.values(PREBUILT_DOMAIN_PACKS).forEach(pack => {
-              if (!merged.find(t => t.id === pack.id || t.id === pack.threadId)) {
+              const alreadyExists = merged.some(t => 
+                t.id === pack.id || 
+                t.id === `thread_${pack.id}` || 
+                t.domainPackId === pack.id ||
+                t.threadId === pack.threadId ||
+                (t.name && pack.name && (
+                  t.name.toLowerCase().includes(pack.name.slice(0, 8).toLowerCase()) ||
+                  pack.name.toLowerCase().includes(t.name.slice(0, 8).toLowerCase())
+                ))
+              );
+              if (!alreadyExists) {
                 merged.push(pack);
               }
             });

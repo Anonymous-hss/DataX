@@ -146,6 +146,11 @@ export default function ThreadsPage() {
       icon = <MasterDataIcon />;
     }
 
+    const runCount = typeof t.runCount === 'number' 
+      ? t.runCount 
+      : (t.runs ? parseInt(t.runs) || 0 : 0);
+    const hasExecuted = runCount > 0 && t.healthScore !== null && t.healthScore !== undefined;
+
     return {
       id: t.id || t.threadId || 'TH-001',
       name: t.name || 'Enterprise Pipeline',
@@ -154,23 +159,27 @@ export default function ThreadsPage() {
       domain: t.domain || t.category || 'Data Intelligence',
       desc: t.desc || t.description || 'Automated data reconciliation, verification, and transformation.',
       pipeline: t.pipeline || `${t.source?.database || 'source'} → AI rules → ${t.target?.table || 'target'}`,
-      status: t.status === 'healthy' || t.status === 'active' ? 'healthy' : t.status === 'warning' ? 'warning' : 'draft',
-      statusLabel: t.statusLabel || (t.status === 'healthy' || t.status === 'active' ? 'Live' : t.status === 'warning' ? 'Below threshold' : 'Draft'),
-      successRate: t.successRate || t.healthScore || 96.5,
-      runs: t.runs || `${t.runCount || 18} runs`,
+      runCount,
+      hasExecuted,
+      status: hasExecuted 
+        ? (t.healthScore >= 90 ? 'healthy' : t.healthScore >= 75 ? 'warning' : 'draft')
+        : 'draft',
+      statusLabel: hasExecuted
+        ? (t.healthScore >= 90 ? 'Live' : 'Below threshold')
+        : (runCount === 0 ? 'Draft' : 'Not evaluated'),
+      successRate: hasExecuted ? Number(t.healthScore || t.successRate) : null,
+      runs: `${runCount} ${runCount === 1 ? 'run' : 'runs'}`,
       icon
     };
   });
 
-  const activeCount = formattedThreads.filter(t => t.status === 'healthy').length;
-  const meanHealth = formattedThreads.length 
-    ? Math.round(formattedThreads.reduce((acc, t) => acc + Number(t.successRate || 95), 0) / formattedThreads.length * 10) / 10 
-    : 94.2;
+  const evaluatedThreads = formattedThreads.filter(t => t.hasExecuted && t.successRate != null);
+  const activeCount = formattedThreads.filter(t => t.hasExecuted && t.status === 'healthy').length;
+  const meanHealth = evaluatedThreads.length 
+    ? Math.round(evaluatedThreads.reduce((acc, t) => acc + Number(t.successRate), 0) / evaluatedThreads.length * 10) / 10 
+    : '—';
 
-  const totalRuns = formattedThreads.reduce((acc, t) => {
-    const num = parseInt(t.runs) || 12;
-    return acc + num;
-  }, 0);
+  const totalRuns = formattedThreads.reduce((acc, t) => acc + (t.runCount || 0), 0);
 
   const filteredThreads = formattedThreads.filter((t) => {
     if (filter === 'live' && t.status !== 'healthy') return false;
@@ -209,7 +218,7 @@ export default function ThreadsPage() {
                 Threads
               </Link>
               <Link
-                to="connect-source"
+                to="domain-packs"
                 className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
@@ -220,7 +229,7 @@ export default function ThreadsPage() {
                 Domain packs
               </Link>
               <Link
-                to="connect-source"
+                to="connections"
                 className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
@@ -485,29 +494,44 @@ export default function ThreadsPage() {
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-[#5F6678] font-normal">Health</span>
-                    <span className="text-[#0A0F1F] font-semibold">{thread.successRate}%</span>
+                    {thread.hasExecuted && thread.successRate != null ? (
+                      <span className="text-[#0A0F1F] font-semibold">{thread.successRate}%</span>
+                    ) : (
+                      <span className="text-[#8E95A9] font-medium text-[11px]">— Not evaluated</span>
+                    )}
                   </div>
                   <div className="w-full h-1.5 bg-[#E3E6EE] rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-300 ${
-                        thread.status === 'warning' ? 'bg-[#D97706]' : 'bg-[#2D55F5]'
-                      }`}
-                      style={{ width: `${Math.min(100, thread.successRate)}%` }}
-                    />
+                    {thread.hasExecuted && thread.successRate != null ? (
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${
+                          thread.status === 'warning' ? 'bg-[#D97706]' : 'bg-[#2D55F5]'
+                        }`}
+                        style={{ width: `${Math.min(100, thread.successRate)}%` }}
+                      />
+                    ) : (
+                      <div className="h-full rounded-full bg-slate-200" style={{ width: '0%' }} />
+                    )}
                   </div>
                 </div>
 
                 {/* Status Badge & Open Button */}
                 <div className="flex items-center justify-between pt-4 mt-2 border-t border-[#F2F4F7]">
                   <div className="flex items-center gap-1.5">
-                    {thread.status === 'warning' ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FFF4E3] text-[#A35600] text-[11px] font-medium border border-[#F7D9AE]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#A35600]" />
-                        {thread.statusLabel}
-                      </span>
+                    {thread.hasExecuted ? (
+                      thread.status === 'warning' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FFF4E3] text-[#A35600] text-[11px] font-medium border border-[#F7D9AE]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#A35600]" />
+                          {thread.statusLabel}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#E7F6EE] text-[#127A52] text-[11px] font-medium border border-[#BFE6D2]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#127A52]" />
+                          {thread.statusLabel}
+                        </span>
+                      )
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#E7F6EE] text-[#127A52] text-[11px] font-medium border border-[#BFE6D2]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#127A52]" />
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#F3F4F6] text-[#5F6678] text-[11px] font-medium border border-[#E5E7EB]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#9CA3AF]" />
                         {thread.statusLabel}
                       </span>
                     )}

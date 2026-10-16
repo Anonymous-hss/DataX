@@ -93,30 +93,46 @@ export default function DataXHeader({
             <nav className="hidden md:flex items-center gap-1">
               <button 
                 onClick={() => navigateTo('threads')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/60 transition-colors cursor-pointer"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  currentScreen === 'threads'
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200/60'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
+                }`}
               >
-                <Activity className="w-3.5 h-3.5 text-blue-600" />
+                <Activity className={`w-3.5 h-3.5 ${currentScreen === 'threads' ? 'text-blue-600' : 'text-slate-400'}`} />
                 Threads
               </button>
               <button 
-                onClick={() => navigateTo('new-thread')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                onClick={() => navigateTo('domain-packs')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  currentScreen === 'domain-packs'
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200/60'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
+                }`}
               >
-                <Layers className="w-3.5 h-3.5 text-slate-400" />
+                <Layers className={`w-3.5 h-3.5 ${currentScreen === 'domain-packs' ? 'text-blue-600' : 'text-slate-400'}`} />
                 Domain packs
               </button>
               <button 
-                onClick={() => navigateTo('connect-source')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                onClick={() => navigateTo('connections')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  currentScreen === 'connections'
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200/60'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
+                }`}
               >
-                <Network className="w-3.5 h-3.5 text-slate-400" />
+                <Network className={`w-3.5 h-3.5 ${currentScreen === 'connections' ? 'text-blue-600' : 'text-slate-400'}`} />
                 Connections
               </button>
               <button 
                 onClick={() => navigateTo('history')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  currentScreen === 'history' || currentScreen === 'runs'
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200/60'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
+                }`}
               >
-                <Zap className="w-3.5 h-3.5 text-slate-400" />
+                <Zap className={`w-3.5 h-3.5 ${currentScreen === 'history' || currentScreen === 'runs' ? 'text-blue-600' : 'text-slate-400'}`} />
                 Runs
               </button>
             </nav>
@@ -189,7 +205,7 @@ export default function DataXHeader({
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 font-mono mt-0.5">
-                  {sourceConfig?.table || 'source_data'} → {targetConfig?.table || 'target_data'} · active cleanflow
+                  {sourceConfig?.table || (sourceConfig?.availableTables && sourceConfig.availableTables[0]) || activeThread?.pipeline?.split('→')[0]?.trim() || sourceConfig?.database || 'source'} → {targetConfig?.table || activeThread?.pipeline?.split('→')[2]?.trim() || 'target'} · {activeThread?.domain || 'active cleanflow'}
                 </p>
               </div>
             </div>

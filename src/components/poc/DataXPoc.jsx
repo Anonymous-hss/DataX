@@ -6,6 +6,8 @@ import { RuleEngineProvider } from '../../context/RuleEngineContext';
 // Pages
 import ThreadsPage from '../../pages/ThreadsPage';
 import StartAThreadPage from '../../pages/StartAThreadPage';
+import DomainPacksPage from '../../pages/DomainPacksPage';
+import ConnectionsPage from '../../pages/ConnectionsPage';
 import ConnectSourcePage from '../../pages/ConnectSourcePage';
 import GenerateRulesPage from '../../pages/GenerateRulesPage';
 import RulesPage from '../../pages/RulesPage';
@@ -50,6 +52,24 @@ function ScreenRenderer({ onBackToWebsite }) {
       return (
         <ThreadsPage 
           onOpenLegacyPoc={() => navigateTo('legacy-poc')} 
+          onSwitchToMarketing={onBackToWebsite}
+        />
+      );
+
+    case 'domain-packs':
+    case 'domainpacks':
+    case 'domains':
+      return (
+        <DomainPacksPage 
+          onSwitchToMarketing={onBackToWebsite}
+        />
+      );
+
+    case 'connections':
+    case 'vault':
+    case 'datasources':
+      return (
+        <ConnectionsPage 
           onSwitchToMarketing={onBackToWebsite}
         />
       );

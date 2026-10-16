@@ -90,7 +90,7 @@ export default function ConnectTargetPage() {
                 Threads
               </Link>
               <Link
-                to="new-thread"
+                to="domain-packs"
                 className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
@@ -101,7 +101,7 @@ export default function ConnectTargetPage() {
                 Domain packs
               </Link>
               <Link
-                to="connect-source"
+                to="connections"
                 className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
