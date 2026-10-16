@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useUser } from '@clerk/clerk-react';
 import * as XLSX from 'xlsx';
 import { SAP_BW_PROCUREMENT_DATA, SAP_BW_INVENTORY_DATA, USER_MASTER_DATA } from '../data/sampleDatasets';
 import { ONTOLOGY_GRAPH } from '../data/ontologyGraph';
@@ -518,13 +519,58 @@ export const PREBUILT_DOMAIN_PACKS = {
 const RuleEngineContext = createContext(null);
 
 export function RuleEngineProvider({ children }) {
-  // Global Thread Catalog
-  const [threads, setThreads] = useState([
-    PREBUILT_DOMAIN_PACKS.sap_bw_s4hana,
-    PREBUILT_DOMAIN_PACKS.customer_master_reconciliation,
-    PREBUILT_DOMAIN_PACKS.financial_gl_ledger,
-    PREBUILT_DOMAIN_PACKS.healthcare_hipaa
-  ]);
+  // Clerk Authenticated SaaS Tenant & User Identity
+  const { user } = useUser();
+  const userId = user?.id || 'saas_default';
+  const userEmail = user?.primaryEmailAddress?.emailAddress || 'user@dataglow.ai';
+  const tenantId = user?.id ? `tenant_${user.id.slice(0, 8)}` : 'tenant_enterprise';
+
+  // Global Thread Catalog (Multi-Tenant LocalStorage Scoped)
+  const [threads, setThreads] = useState(() => {
+    try {
+      if (user?.id) {
+        const stored = localStorage.getItem(`datax_threads_${user.id}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not read user threads from local storage:', e);
+    }
+    return [
+      PREBUILT_DOMAIN_PACKS.sap_bw_s4hana,
+      PREBUILT_DOMAIN_PACKS.customer_master_reconciliation,
+      PREBUILT_DOMAIN_PACKS.financial_gl_ledger,
+      PREBUILT_DOMAIN_PACKS.healthcare_hipaa
+    ];
+  });
+
+  // Sync threads per-user on login switch
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      const stored = localStorage.getItem(`datax_threads_${user.id}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setThreads(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed reading stored threads for user:', user.id, e);
+    }
+  }, [user?.id]);
+
+  // Persist threads whenever modified for active SaaS user
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      localStorage.setItem(`datax_threads_${user.id}`, JSON.stringify(threads));
+    } catch (e) {
+      console.warn('Failed storing threads for user:', user.id, e);
+    }
+  }, [threads, user?.id]);
 
   // Active Thread Selection
   const [activeThread, setActiveThread] = useState(PREBUILT_DOMAIN_PACKS.sap_bw_s4hana);
@@ -562,42 +608,81 @@ export function RuleEngineProvider({ children }) {
     ruleOutcomes: []
   });
 
-  // Run History Logs
-  const [runHistory, setRunHistory] = useState([
-    {
-      id: 'RUN-99284',
-      thread: 'SAP BW → S/4HANA Clean Core',
-      trigger: 'Agentic Dry Run',
-      time: 'Just now',
-      duration: '1.4s',
-      records: '50 rows',
-      docNo: '#4500019284',
-      status: 'Clean Core Staged',
-      variant: 'success'
-    },
-    {
-      id: 'RUN-99283',
-      thread: 'Customer Master & Identity',
-      trigger: 'Live Stream Ingestion',
-      time: '45 mins ago',
-      duration: '2.1s',
-      records: '50 rows',
-      docNo: 'CRM-SYNC-881',
-      status: 'Clean Core Posted',
-      variant: 'success'
-    },
-    {
-      id: 'RUN-99282',
-      thread: 'Healthcare Patient Master',
-      trigger: 'Cron Automated Trigger',
-      time: '2 hours ago',
-      duration: '3.6s',
-      records: '50 records',
-      docNo: 'HL7-FHIR-402',
-      status: 'Remediated & Posted',
-      variant: 'volt'
+  // Run History Logs (Multi-Tenant LocalStorage Scoped)
+  const [runHistory, setRunHistory] = useState(() => {
+    try {
+      if (user?.id) {
+        const stored = localStorage.getItem(`datax_run_history_${user.id}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not read user run history:', e);
     }
-  ]);
+    return [
+      {
+        id: 'RUN-99284',
+        thread: 'SAP BW → S/4HANA Clean Core',
+        trigger: 'Agentic Dry Run',
+        time: 'Just now',
+        duration: '1.4s',
+        records: '50 rows',
+        docNo: '#4500019284',
+        status: 'Clean Core Staged',
+        variant: 'success'
+      },
+      {
+        id: 'RUN-99283',
+        thread: 'Customer Master & Identity',
+        trigger: 'Live Stream Ingestion',
+        time: '45 mins ago',
+        duration: '2.1s',
+        records: '50 rows',
+        docNo: 'CRM-SYNC-881',
+        status: 'Clean Core Posted',
+        variant: 'success'
+      },
+      {
+        id: 'RUN-99282',
+        thread: 'Healthcare Patient Master',
+        trigger: 'Cron Automated Trigger',
+        time: '2 hours ago',
+        duration: '3.6s',
+        records: '50 records',
+        docNo: 'HL7-FHIR-402',
+        status: 'Remediated & Posted',
+        variant: 'volt'
+      }
+    ];
+  });
+
+  // Sync run history on user switch
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      const stored = localStorage.getItem(`datax_run_history_${user.id}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setRunHistory(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed reading run history for user:', user.id, e);
+    }
+  }, [user?.id]);
+
+  // Persist run history per user
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      localStorage.setItem(`datax_run_history_${user.id}`, JSON.stringify(runHistory));
+    } catch (e) {
+      console.warn('Failed storing run history for user:', user.id, e);
+    }
+  }, [runHistory, user?.id]);
 
   // Load Dataset into State & Evaluate
   const loadInitialSampleData = useCallback((pack, rulesToUse = null, autoFix = autoFixEnabled) => {
@@ -703,11 +788,17 @@ export function RuleEngineProvider({ children }) {
     }));
   }, [sampleData, dynamicHealthScore, activeRules, autoFixEnabled, activeThread?.id, activeThread?.threadId]);
 
-  // Fetch Live Threads from Backend on Mount
+  // Fetch Live Threads from Backend on Mount (SaaS Multi-Tenant Isolated)
   useEffect(() => {
     const fetchLiveThreads = async () => {
       try {
-        const res = await fetch(`${API_BASE}/threads`);
+        const res = await fetch(`${API_BASE}/threads`, {
+          headers: {
+            'X-User-Id': userId,
+            'X-User-Email': userEmail,
+            'X-Tenant-Id': tenantId
+          }
+        });
         if (res.ok) {
           const data = await res.json();
           if (data.threads && data.threads.length > 0) {
@@ -725,7 +816,7 @@ export function RuleEngineProvider({ children }) {
       }
     };
     fetchLiveThreads();
-  }, []);
+  }, [userId, userEmail, tenantId]);
 
   // Initialize sample data on first mount
   useEffect(() => {
@@ -750,7 +841,7 @@ export function RuleEngineProvider({ children }) {
     loadInitialSampleData({ ...found, rules: rls }, rls);
   };
 
-  // Action: Test Database Connection (calls live backend API)
+  // Action: Test Database Connection (calls live backend API with tenant headers)
   const testConnection = async (config, isTarget = false) => {
     try {
       const payload = {
@@ -766,7 +857,12 @@ export function RuleEngineProvider({ children }) {
 
       const res = await fetch(`${API_BASE}/test-connection`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-User-Id': userId,
+          'X-User-Email': userEmail,
+          'X-Tenant-Id': tenantId
+        },
         body: JSON.stringify(payload)
       });
 
@@ -807,12 +903,17 @@ export function RuleEngineProvider({ children }) {
     }
   };
 
-  // Action: Fetch Real Table Sample (calls live backend /vault/sample)
+  // Action: Fetch Real Table Sample (calls live backend /vault/sample with tenant context)
   const fetchTableSample = async (tableName, limit = 50) => {
     try {
       const res = await fetch(`${API_BASE}/vault/sample`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-User-Id': userId,
+          'X-User-Email': userEmail,
+          'X-Tenant-Id': tenantId
+        },
         body: JSON.stringify({
           engine: sourceConfig.engine || 'postgres',
           connectionUri: sourceConfig.connectionUri || '',
@@ -878,7 +979,7 @@ export function RuleEngineProvider({ children }) {
     setActiveRules(prev => prev.filter(r => r.id !== id));
   };
 
-  // Action: Execute Dry Run (Uses dynamic record evaluation)
+  // Action: Execute Dry Run (Uses dynamic record evaluation with tenant context)
   const executeDryRun = async () => {
     setPipelineStatus('RUNNING');
     const selectedActiveRules = (activeRules || []).filter(r => r.selected !== false && r.enabled !== false);
@@ -887,7 +988,12 @@ export function RuleEngineProvider({ children }) {
     try {
       const res = await fetch(`${API_BASE}/pipeline/execute`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-User-Id': userId,
+          'X-User-Email': userEmail,
+          'X-Tenant-Id': tenantId
+        },
         body: JSON.stringify({
           pipelineName: activeThread.name,
           threadId: activeThread.id,
@@ -1018,7 +1124,13 @@ export function RuleEngineProvider({ children }) {
     agentStepIndex,
     telemetryLogs,
     s4hanaDocNumber,
-    handleExportExcel
+    handleExportExcel,
+
+    // SaaS Multi-Tenant Identity
+    user,
+    userId,
+    userEmail,
+    tenantId
   };
 
   return (

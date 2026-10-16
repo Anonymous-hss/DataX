@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
 import { useRuleEngine } from '../../context/RuleEngineContext';
-import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/clerk-react';
+import DataXUserMenu from '../common/DataXUserMenu';
 
 export default function DataXHeader({ 
   currentPage, 
@@ -108,39 +108,9 @@ export default function DataXHeader({
               <span className="w-1.5 h-1.5 rounded-full bg-blue-600 absolute top-1.5 right-1.5" />
             </button>
 
-            {/* Dynamic Clerk Profile Avatar / Sign-In Button */}
+            {/* Dynamic Clerk Profile Avatar & Profile Details */}
             <div className="flex items-center pl-1 border-l border-slate-200">
-              <SignedIn>
-                <div className="flex items-center gap-2">
-                  <div className="hidden lg:flex flex-col text-right">
-                    <span className="text-xs font-semibold text-slate-800 leading-tight">
-                      {user?.fullName || user?.firstName || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User'}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      {user?.primaryEmailAddress?.emailAddress || 'Workspace Member'}
-                    </span>
-                  </div>
-                  <UserButton 
-                    afterSignOutUrl="/datax" 
-                    appearance={{
-                      elements: {
-                        avatarBox: "w-8 h-8 rounded-full shadow-xs ring-1 ring-slate-200"
-                      }
-                    }}
-                  />
-                </div>
-              </SignedIn>
-
-              <SignedOut>
-                <SignInButton mode="modal">
-                  <button
-                    type="button"
-                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-                  >
-                    Sign in
-                  </button>
-                </SignInButton>
-              </SignedOut>
+              <DataXUserMenu />
             </div>
 
             {onSwitchToMarketing && (

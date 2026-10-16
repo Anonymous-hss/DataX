@@ -1,4 +1,5 @@
-import React, { Suspense, lazy } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useUser } from '@clerk/clerk-react';
 import { NavigationProvider, useNavigation } from '../../context/NavigationContext';
 import { RuleEngineProvider } from '../../context/RuleEngineContext';
 
@@ -12,11 +13,32 @@ import CleanFlowStudio from '../../pages/cleanflow/CleanFlowStudio';
 import LiveAutoFixPage from '../../pages/LiveAutoFixPage';
 import RunHistoryPage from '../../pages/RunHistoryPage';
 import SapBwPocDashboard from './SapBwPocDashboard';
+import DataXAuthPage from '../../pages/auth/DataXAuthPage';
 
 function ScreenRenderer({ onBackToWebsite }) {
   const { currentScreen, navigateTo } = useNavigation();
 
   switch (currentScreen) {
+    case 'login':
+    case 'signin':
+    case 'sign-in':
+      return (
+        <DataXAuthPage 
+          initialMode="login" 
+          onBackToWebsite={onBackToWebsite} 
+        />
+      );
+
+    case 'register':
+    case 'signup':
+    case 'sign-up':
+      return (
+        <DataXAuthPage 
+          initialMode="register" 
+          onBackToWebsite={onBackToWebsite} 
+        />
+      );
+
     case 'new-thread':
     case 'start-thread':
       return (
@@ -31,7 +53,6 @@ function ScreenRenderer({ onBackToWebsite }) {
           onSwitchToMarketing={onBackToWebsite}
         />
       );
-
 
     case 'connect-source':
     case 'source':
@@ -134,6 +155,57 @@ function ScreenRenderer({ onBackToWebsite }) {
 }
 
 export default function DataXPoc({ onBackToWebsite }) {
+  const { isLoaded, isSignedIn, user } = useUser();
+  const [authMode, setAuthMode] = useState(() => {
+    const path = window.location.pathname.toLowerCase();
+    const hash = window.location.hash.toLowerCase();
+    if (path.includes('register') || hash.includes('register') || hash.includes('signup')) {
+      return 'register';
+    }
+    return 'login';
+  });
+
+  useEffect(() => {
+    const handleAuthRoute = () => {
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      if (path.includes('register') || hash.includes('register') || hash.includes('signup')) {
+        setAuthMode('register');
+      } else if (path.includes('login') || hash.includes('login') || hash.includes('signin')) {
+        setAuthMode('login');
+      }
+    };
+    window.addEventListener('hashchange', handleAuthRoute);
+    window.addEventListener('popstate', handleAuthRoute);
+    return () => {
+      window.removeEventListener('hashchange', handleAuthRoute);
+      window.removeEventListener('popstate', handleAuthRoute);
+    };
+  }, []);
+
+  // Show dark enterprise session verification loader
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-[#070B14] flex flex-col items-center justify-center gap-3 font-sans">
+        <div className="w-10 h-10 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+        <span className="text-xs text-slate-400 font-mono tracking-widest uppercase">
+          Verifying DataX Session...
+        </span>
+      </div>
+    );
+  }
+
+  // Force authentication before entering DataX workspace
+  if (!isSignedIn) {
+    return (
+      <DataXAuthPage 
+        initialMode={authMode} 
+        onBackToWebsite={onBackToWebsite} 
+      />
+    );
+  }
+
+  // Authenticated: Render DataX Multi-Tenant SaaS Workspace
   return (
     <RuleEngineProvider>
       <NavigationProvider initialScreen="threads">

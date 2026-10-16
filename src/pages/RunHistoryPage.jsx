@@ -5,6 +5,7 @@ import Button from '../components/ui/Button';
 import Tag from '../components/ui/Tag';
 import Input from '../components/ui/Input';
 import Segmented from '../components/ui/Segmented';
+import DataXUserMenu from '../components/common/DataXUserMenu';
 
 // User-Provided Official DataX Logo
 const DataXLogo = ({ size = 28 }) => (
@@ -106,11 +107,14 @@ export default function RunHistoryPage() {
             <span className="text-sm font-semibold text-[#0A0F1F]">Execution History & Analytics</span>
           </div>
 
-          <Link to="threads">
-            <Button variant="primary" size="md">
-              ← Return to Threads
-            </Button>
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link to="threads">
+              <Button variant="primary" size="md">
+                ← Return to Threads
+              </Button>
+            </Link>
+            <DataXUserMenu />
+          </div>
         </div>
       </header>
 

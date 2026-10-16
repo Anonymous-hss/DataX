@@ -9,6 +9,7 @@ import {
   Bell
 } from 'lucide-react';
 import { useNavigation } from '../context/NavigationContext';
+import DataXUserMenu from '../components/common/DataXUserMenu';
 
 // --- Figma-Exact SVGs ---
 
@@ -204,13 +205,7 @@ export default function StartThreadPage() {
                 <Bell className="w-4 h-4" />
                 <span className="w-1.5 h-1.5 rounded-full bg-[#2D55F5] absolute top-2 right-2" />
               </button>
-              <div className="w-8 h-8 rounded-full overflow-hidden border border-[#D1D5DB] shrink-0 bg-slate-200">
-                <img
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces"
-                  alt="User"
-                  className="w-full h-full object-cover"
-                />
-              </div>
+              <DataXUserMenu />
             </div>
           </div>
         </header>

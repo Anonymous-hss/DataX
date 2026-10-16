@@ -22,6 +22,10 @@ export default function App() {
         path.includes('datax') ||
         path.includes('poc') ||
         path.includes('cleanflow') ||
+        path.includes('login') ||
+        path.includes('register') ||
+        hash.includes('login') ||
+        hash.includes('register') ||
         hash === '#poc' ||
         hash === '#datax' ||
         hash === '#threads' ||

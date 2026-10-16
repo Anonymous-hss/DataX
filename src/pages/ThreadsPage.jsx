@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigation } from '../context/NavigationContext';
 import { useRuleEngine } from '../context/RuleEngineContext';
+import DataXUserMenu from '../components/common/DataXUserMenu';
 
 // --- Figma-Exact Icons & Illustrations with User Brand Logo ---
 
@@ -285,18 +286,8 @@ export default function ThreadsPage() {
               </svg>
             </button>
 
-            {/* User Avatar */}
-            <div className="w-8 h-8 rounded-full overflow-hidden border border-[#D1D5DB] shrink-0 bg-slate-200">
-              <img
-                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80"
-                alt="User Profile"
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.parentNode.innerHTML = '<div class="w-full h-full bg-[#2D55F5] text-white flex items-center justify-center text-xs font-bold">DX</div>';
-                }}
-              />
-            </div>
+            {/* Dynamic Clerk User Profile Section */}
+            <DataXUserMenu />
           </div>
         </div>
       </header>
