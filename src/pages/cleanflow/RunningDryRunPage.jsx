@@ -29,6 +29,10 @@ export default function RunningDryRunPage({ onComplete, onCancel }) {
   const [processedRows, setProcessedRows] = useState(Math.round(totalRows * 0.25));
   const [phase, setPhase] = useState(1);
   const hasExecutedRef = useRef(false);
+  const executeDryRunRef = useRef(executeDryRun);
+  executeDryRunRef.current = executeDryRun;
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     // DO NOT PROCEED WITHOUT CREDENTIALS
@@ -38,37 +42,49 @@ export default function RunningDryRunPage({ onComplete, onCancel }) {
     if (hasExecutedRef.current) return;
     hasExecutedRef.current = true;
 
-    let isCancelled = false;
+    let isMounted = true;
 
-    // Trigger backend or local dynamic dry run execution ONCE
-    executeDryRun();
+    // Phase 1: Handshake and initial progress
+    setProgress(25);
+    setProcessedRows(Math.max(1, Math.round(totalRows * 0.25)));
 
+    // Phase 2: Applying business validation rules
     const t1 = setTimeout(() => {
-      if (isCancelled) return;
-      setPhase(2);
-      setProgress(68);
-      setProcessedRows(Math.round(totalRows * 0.68));
-    }, 600);
+      if (isMounted) {
+        setPhase(2);
+        setProgress(68);
+        setProcessedRows(Math.max(1, Math.round(totalRows * 0.68)));
+      }
+    }, 800);
 
+    // Phase 3: Synthesizing compliance telemetry & 100%
     const t2 = setTimeout(() => {
-      if (isCancelled) return;
-      setProgress(100);
-      setProcessedRows(totalRows);
-      setPhase(3);
-    }, 1300);
+      if (isMounted) {
+        setPhase(3);
+        setProgress(100);
+        setProcessedRows(totalRows);
+      }
+    }, 1600);
 
+    // Phase 4: Transition to results
     const t3 = setTimeout(() => {
-      if (isCancelled) return;
-      if (onComplete) onComplete();
-    }, 2000);
+      if (isMounted && onCompleteRef.current) {
+        onCompleteRef.current();
+      }
+    }, 2400);
+
+    // Trigger backend execute concurrently
+    executeDryRunRef.current().catch(err => {
+      console.warn('Dry run execution error:', err);
+    });
 
     return () => {
-      isCancelled = true;
+      isMounted = false;
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
     };
-  }, [hasAllCredentials, onComplete, totalRows, executeDryRun]);
+  }, []); // Run on mount
 
   // If credentials are NOT configured, block execution with clear remediation actions
   if (!hasAllCredentials) {

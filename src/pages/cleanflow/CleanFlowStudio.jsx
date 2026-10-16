@@ -30,7 +30,9 @@ export default function CleanFlowStudio({ initialPage = '05', onSwitchToMarketin
     // Require credentials before running dry run or live
     if (pageId === '06_07' || pageId === '07' || pageId === '08') {
       const hasSrc = isCredentialConfigured ? isCredentialConfigured(sourceConfig) : Boolean(sourceConfig?.host || sourceConfig?.connectionUri);
-      const hasTgt = isCredentialConfigured ? isCredentialConfigured(targetConfig) : Boolean(targetConfig?.host || targetConfig?.connectionUri);
+      const hasTgt = (isCredentialConfigured && isCredentialConfigured(targetConfig)) ||
+        Boolean(targetConfig?.host || targetConfig?.connectionUri) ||
+        Boolean(sourceConfig?.host || sourceConfig?.connectionUri);
 
       if (!hasSrc) {
         setWarningMessage('Source database credentials required before proceeding.');

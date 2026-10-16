@@ -1030,16 +1030,18 @@ export function RuleEngineProvider({ children }) {
           selectedTables: sourceConfig.table ? [sourceConfig.table] : []
         },
         target1: {
-          engine: targetConfig.engine || 'postgres',
-          connectionUri: targetConfig.connectionUri || undefined,
-          host: targetConfig.host || undefined,
-          port: targetConfig.port ? String(targetConfig.port) : undefined,
-          database: targetConfig.database || 'reconciled_db',
+          engine: targetConfig.engine || sourceConfig.engine || 'postgres',
+          connectionUri: targetConfig.connectionUri || sourceConfig.connectionUri || undefined,
+          host: targetConfig.host || sourceConfig.host || undefined,
+          port: (targetConfig.port || sourceConfig.port) ? String(targetConfig.port || sourceConfig.port) : undefined,
+          database: targetConfig.database || sourceConfig.database || 'reconciled_db',
           table: targetConfig.table || (sourceConfig.table ? `${sourceConfig.table}_clean` : 'clean_records'),
           quarantineTable: targetConfig.quarantineTable || 'quarantined_records',
           writeMode: targetConfig.writeMode || 'append'
         },
-        rules: selectedActiveRules.map(r => ({
+        rules: selectedActiveRules.map((r, idx) => ({
+          id: String(r.id || `r_${idx + 1}`),
+          name: String(r.name || r.title || `Rule ${idx + 1}`),
           column: r.field || r.column || 'GENERAL',
           check_type: r.check_type || 'REGEX_FORMAT',
           condition: r.condition || r.code || '',
@@ -1063,10 +1065,11 @@ export function RuleEngineProvider({ children }) {
       if (res.ok) {
         const data = await res.json();
         if (data.validCount !== undefined || data.summary !== undefined) {
-          const totalCount = data.totalChecked || (data.summary ? data.summary.total_records : sampleData.length);
-          const valid = data.validCount ?? (data.summary ? data.summary.valid_records_count : sampleData.filter(r => r._status === 'clean').length);
-          const fixed = data.autofixedCount ?? (data.summary ? data.summary.remediated_count : sampleData.filter(r => r._status === 'fixed').length);
-          const quarantined = data.quarantinedCount ?? (data.summary ? data.summary.quarantined_records_count : sampleData.filter(r => r._status === 'quarantined').length);
+          const sum = data.summary || {};
+          const totalCount = data.totalChecked || sum.sourceExtracted || sum.total_records || sampleData.length;
+          const valid = data.validCount ?? (sum.compliantValid ?? (sum.valid_records_count ?? sampleData.filter(r => r._status === 'clean').length));
+          const fixed = data.autofixedCount ?? (sum.autoFixedCount ?? (sum.remediated_count ?? sampleData.filter(r => r._status === 'fixed').length));
+          const quarantined = data.quarantinedCount ?? (sum.quarantined ?? (sum.quarantined_records_count ?? sampleData.filter(r => r._status === 'quarantined').length));
           const passRate = data.healthScore || (totalCount > 0 ? Math.round(((valid + fixed) / totalCount) * 1000) / 10 : 100);
 
           const outcome = {
@@ -1084,6 +1087,9 @@ export function RuleEngineProvider({ children }) {
           setPipelineStatus('COMPLETED');
           return outcome;
         }
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        console.warn('Pipeline execute API returned non-OK status:', res.status, errJson);
       }
     } catch (err) {
       console.warn('Pipeline execute API call failed, using live evaluated simulation:', err.message);
@@ -1091,7 +1097,7 @@ export function RuleEngineProvider({ children }) {
       isExecutingDryRunRef.current = false;
     }
 
-    // Dynamic Record Evaluation
+    // Dynamic Record Evaluation Fallback
     const totalCount = sampleData.length;
     const cleanCount = sampleData.filter(r => r._status === 'clean').length;
     const autoFixedCount = sampleData.filter(r => r._status === 'fixed').length;
