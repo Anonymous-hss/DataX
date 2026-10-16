@@ -91,6 +91,22 @@ export default function ConnectSourcePage() {
     }
   }, [contextPreviewRows]);
 
+  const getResolvedUri = () => {
+    if (connectMethod === 'host' && host && username && password) {
+      const p = port || (dbType === 'SAP BW' ? '443' : '5432');
+      if (dbType === 'SAP BW') {
+        return `jdbc:sap://${host}:${p}?encrypt=true&validateCertificate=false` +
+          `&user=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}` +
+          (databaseName ? `&databaseName=${encodeURIComponent(databaseName)}` : '');
+      } else if (dbType === 'MongoDB') {
+        return `mongodb://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}:${p}/${databaseName || ''}`;
+      } else {
+        return `postgresql://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}:${p}/${databaseName || ''}`;
+      }
+    }
+    return connString;
+  };
+
   const handleTest = async () => {
     setIsTesting(true);
     setTestError(null);
@@ -98,9 +114,11 @@ export default function ConnectSourcePage() {
     setTestSuccess(false);
 
     const engineKey = dbType === 'SAP BW' ? 'sap_bw' : dbType === 'MongoDB' ? 'mongodb' : dbType === 'Snowflake' ? 'snowflake' : dbType === 'Databricks' ? 'databricks' : 'postgres';
+    const resolvedUri = getResolvedUri();
+
     const result = await testConnection({
       engine: engineKey,
-      connectionUri: connString,
+      connectionUri: resolvedUri,
       host,
       port,
       database: databaseName,
@@ -112,6 +130,19 @@ export default function ConnectSourcePage() {
     setIsTesting(false);
     if (result.success) {
       setTestSuccess(true);
+      if (resolvedUri) {
+        setConnString(resolvedUri);
+      }
+      setSourceConfig(prev => ({
+        ...prev,
+        engine: engineKey,
+        connectionUri: resolvedUri,
+        host,
+        port,
+        database: databaseName,
+        user: username,
+        password
+      }));
       setTestMeta({
         latencyMs: result.latencyMs || 42,
         tableCount: result.tableCount || (result.tables ? result.tables.length : 0)
@@ -146,11 +177,12 @@ export default function ConnectSourcePage() {
   const handleSaveSource = () => {
     setValidationError(null);
     const engineKey = dbType === 'SAP BW' ? 'sap_bw' : dbType === 'MongoDB' ? 'mongodb' : dbType === 'Snowflake' ? 'snowflake' : dbType === 'Databricks' ? 'databricks' : 'postgres';
+    const resolvedUri = getResolvedUri();
     
     // Check credentials before proceeding
     const candidateCreds = {
       engine: engineKey,
-      connectionUri: connString,
+      connectionUri: resolvedUri,
       host,
       port,
       database: databaseName,
@@ -178,7 +210,7 @@ export default function ConnectSourcePage() {
     setSourceConfig(prev => ({
       ...prev,
       engine: engineKey,
-      connectionUri: connString,
+      connectionUri: resolvedUri,
       host,
       port,
       database: databaseName,

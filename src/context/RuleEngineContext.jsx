@@ -4,7 +4,9 @@ import * as XLSX from 'xlsx';
 import { SAP_BW_PROCUREMENT_DATA, SAP_BW_INVENTORY_DATA, USER_MASTER_DATA } from '../data/sampleDatasets';
 import { ONTOLOGY_GRAPH } from '../data/ontologyGraph';
 
-const API_BASE = 'https://dataglow.ai/datax-api';
+const API_BASE = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? '/datax-api'
+  : 'https://dataglow.ai/datax-api';
 
 // Helper: Live Row Evaluation & Auto-Fix Transformation with Strict Rule Checking
 export const evaluateRow = (row, rules = [], isAutoFix = true, allRows = []) => {
@@ -898,6 +900,21 @@ export function RuleEngineProvider({ children }) {
   // Action: Fetch Real Table Sample (calls live backend /vault/sample with tenant context)
   const fetchTableSample = async (tableName, limit = 50) => {
     try {
+      let resolvedUri = sourceConfig.connectionUri || '';
+      if (!resolvedUri && sourceConfig.host && (sourceConfig.user || sourceConfig.username) && sourceConfig.password) {
+        const p = sourceConfig.port || (sourceConfig.engine === 'sap_bw' ? '443' : '5432');
+        const u = sourceConfig.user || sourceConfig.username;
+        const pass = sourceConfig.password;
+        const db = sourceConfig.database;
+        if (sourceConfig.engine === 'sap_bw') {
+          resolvedUri = `jdbc:sap://${sourceConfig.host}:${p}?encrypt=true&validateCertificate=false&user=${encodeURIComponent(u)}&password=${encodeURIComponent(pass)}${db ? `&databaseName=${encodeURIComponent(db)}` : ''}`;
+        } else if (sourceConfig.engine === 'mongodb') {
+          resolvedUri = `mongodb://${encodeURIComponent(u)}:${encodeURIComponent(pass)}@${sourceConfig.host}:${p}/${db || ''}`;
+        } else {
+          resolvedUri = `postgresql://${encodeURIComponent(u)}:${encodeURIComponent(pass)}@${sourceConfig.host}:${p}/${db || ''}`;
+        }
+      }
+
       const res = await fetch(`${API_BASE}/vault/sample`, {
         method: 'POST',
         headers: { 
@@ -908,7 +925,12 @@ export function RuleEngineProvider({ children }) {
         },
         body: JSON.stringify({
           engine: sourceConfig.engine || 'postgres',
-          connectionUri: sourceConfig.connectionUri || '',
+          connectionUri: resolvedUri,
+          host: sourceConfig.host || undefined,
+          port: sourceConfig.port ? String(sourceConfig.port) : undefined,
+          database: sourceConfig.database || undefined,
+          user: sourceConfig.user || sourceConfig.username || undefined,
+          password: sourceConfig.password || undefined,
           table: tableName || sourceConfig.table,
           limit
         })
