@@ -26,7 +26,7 @@ export default function DataXHeader({
   onSwitchToMarketing,
   hideSubheader = false
 }) {
-  const { navigateTo } = useNavigation();
+  const { currentScreen, navigateTo } = useNavigation();
   const { activeThread, sourceConfig, targetConfig } = useRuleEngine();
   const [saveSuccess, setSaveSuccess] = React.useState(false);
   const [headerAlert, setHeaderAlert] = React.useState(null);
