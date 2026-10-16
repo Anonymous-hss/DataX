@@ -909,9 +909,16 @@ export function RuleEngineProvider({ children }) {
         if (sourceConfig.engine === 'sap_bw') {
           resolvedUri = `jdbc:sap://${sourceConfig.host}:${p}?encrypt=true&validateCertificate=false&user=${encodeURIComponent(u)}&password=${encodeURIComponent(pass)}${db ? `&databaseName=${encodeURIComponent(db)}` : ''}`;
         } else if (sourceConfig.engine === 'mongodb') {
-          resolvedUri = `mongodb://${encodeURIComponent(u)}:${encodeURIComponent(pass)}@${sourceConfig.host}:${p}/${db || ''}`;
+          const isAtlas = sourceConfig.host && sourceConfig.host.includes('.mongodb.net');
+          if (isAtlas) {
+            resolvedUri = `mongodb+srv://${encodeURIComponent(u)}:${encodeURIComponent(pass)}@${sourceConfig.host}/${db || ''}?retryWrites=true&w=majority`;
+          } else {
+            resolvedUri = `mongodb://${encodeURIComponent(u)}:${encodeURIComponent(pass)}@${sourceConfig.host}:${p}/${db || ''}`;
+          }
         } else {
-          resolvedUri = `postgresql://${encodeURIComponent(u)}:${encodeURIComponent(pass)}@${sourceConfig.host}:${p}/${db || ''}`;
+          const isCloudPg = sourceConfig.host && (sourceConfig.host.includes('neon.tech') || sourceConfig.host.includes('rds.amazonaws.com') || sourceConfig.host.includes('supabase.co'));
+          const sslQuery = isCloudPg ? '?sslmode=require' : '';
+          resolvedUri = `postgresql://${encodeURIComponent(u)}:${encodeURIComponent(pass)}@${sourceConfig.host}:${p}/${db || ''}${sslQuery}`;
         }
       }
 

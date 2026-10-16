@@ -93,15 +93,21 @@ export default function ConnectSourcePage() {
 
   const getResolvedUri = () => {
     if (connectMethod === 'host' && host && username && password) {
-      const p = port || (dbType === 'SAP BW' ? '443' : '5432');
+      const p = port || (dbType === 'SAP BW' ? '443' : dbType === 'MongoDB' ? '27017' : '5432');
       if (dbType === 'SAP BW') {
         return `jdbc:sap://${host}:${p}?encrypt=true&validateCertificate=false` +
           `&user=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}` +
           (databaseName ? `&databaseName=${encodeURIComponent(databaseName)}` : '');
       } else if (dbType === 'MongoDB') {
+        const isAtlas = host.includes('.mongodb.net');
+        if (isAtlas) {
+          return `mongodb+srv://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}/${databaseName || ''}?retryWrites=true&w=majority`;
+        }
         return `mongodb://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}:${p}/${databaseName || ''}`;
       } else {
-        return `postgresql://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}:${p}/${databaseName || ''}`;
+        const isCloudPg = host.includes('neon.tech') || host.includes('rds.amazonaws.com') || host.includes('supabase.co');
+        const sslQuery = isCloudPg ? '?sslmode=require' : '';
+        return `postgresql://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}:${p}/${databaseName || ''}${sslQuery}`;
       }
     }
     return connString;
