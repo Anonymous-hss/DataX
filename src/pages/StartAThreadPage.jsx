@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigation } from '../context/NavigationContext';
+import { useRuleEngine } from '../context/RuleEngineContext';
 import Button from '../components/ui/Button';
 import Tag from '../components/ui/Tag';
 import Input from '../components/ui/Input';
@@ -37,6 +38,7 @@ const LedgerIcon = () => (
 
 export default function StartAThreadPage() {
   const { navigateTo } = useNavigation();
+  const { selectThread, setActiveThread } = useRuleEngine();
   const [threadName, setThreadName] = useState('SAP BW → S/4HANA Clean Core');
   const [description, setDescription] = useState('Extract InfoCube purchasing lines, fix legacy plant codes and stage clean orders.');
   const [selectedPack, setSelectedPack] = useState('sap');
@@ -51,19 +53,19 @@ export default function StartAThreadPage() {
     {
       id: 'customer',
       title: 'Customer Master 360',
-      desc: 'MongoDB → PostgreSQL · 5 rules',
+      desc: 'MongoDB → PostgreSQL · 6 rules',
       icon: <MongoLogo size={22} />,
     },
     {
       id: 'sap',
       title: 'SAP BW → S/4HANA Clean Core',
-      desc: 'InfoCube → S/4HANA · 4 rules',
+      desc: 'InfoCube → S/4HANA · 5 rules',
       icon: <SapLogo size={26} />,
     },
     {
       id: 'ledger',
       title: 'Financial GL & AP Ledger',
-      desc: 'Ledger and payables · 5 rules',
+      desc: 'Ledger and payables · 4 rules',
       icon: <LedgerIcon />,
     },
   ];
@@ -87,6 +89,18 @@ export default function StartAThreadPage() {
 
   const handleCreateThread = (e) => {
     e.preventDefault();
+    let packKey = 'sap_bw_s4hana';
+    if (selectedPack === 'customer') packKey = 'customer_master_reconciliation';
+    else if (selectedPack === 'ledger') packKey = 'financial_gl_ledger';
+    else if (selectedPack === 'scratch') packKey = 'customer_master_reconciliation';
+
+    selectThread(packKey);
+    setActiveThread(prev => ({
+      ...prev,
+      name: threadName,
+      desc: description
+    }));
+
     // Navigates directly to Frame 03 (Connect source)
     navigateTo('connect-source');
   };

@@ -12,6 +12,7 @@ import {
   Loader2 
 } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
+import { useRuleEngine } from '../../context/RuleEngineContext';
 import PipelineFlowNodes from '../../components/cleanflow/PipelineFlowNodes';
 import LiveChart from '../../components/cleanflow/LiveChart';
 import LiveActivityFeed from '../../components/cleanflow/LiveActivityFeed';
@@ -19,8 +20,23 @@ import LiveNotificationToast from '../../components/cleanflow/LiveNotificationTo
 
 export default function LiveWithAutoFixPage({ onBack }) {
   const { navigateTo } = useNavigation();
+  const { 
+    activeThread, 
+    sourceConfig, 
+    targetConfig, 
+    dryRunResult, 
+    activeRules, 
+    autoFixEnabled, 
+    setAutoFixEnabled 
+  } = useRuleEngine();
+
+  const isSap = sourceConfig?.engine === 'sap_bw' || sourceConfig?.table === '0PUR_C01';
+  const tableName = sourceConfig?.table || (isSap ? '0PUR_C01' : 'raw_source_users');
+  const targetTableName = targetConfig?.table || (isSap ? 'staged_purchase_orders' : 'reconciled_db');
+  const rulesCount = activeRules?.filter(r => r.selected !== false).length || 5;
+
   const [timeRange, setTimeRange] = useState('15 min');
-  const [autoFixOn, setAutoFixOn] = useState(true);
+  const [autoFixOn, setAutoFixOn] = useState(autoFixEnabled);
   const [isPaused, setIsPaused] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -29,18 +45,30 @@ export default function LiveWithAutoFixPage({ onBack }) {
     visible: true,
     type: 'live',
     title: 'Thread is live',
-    message: 'Rules now run on every new row from raw_source_users.',
-    actionText: 'View run'
+    message: `Rules now run continuously on rows from ${tableName}.`,
+    actionText: 'View runs'
   });
 
-  const [activities, setActivities] = useState([
-    { id: 1, type: 'chart', title: '64 rows checked', subtitle: '61 clean · 3 auto-fixed', time: '12:41' },
-    { id: 2, type: 'zap', title: 'Quarantine re-checked', subtitle: '4 rows fixed and written to target', time: '12:41' },
-    { id: 3, type: 'quarantine', title: '2 rows quarantined', subtitle: 'Failed "Email has a valid format"', time: '12:40' },
-    { id: 4, type: 'live', title: 'Thread went live', subtitle: '5 rules · auto-fix on', time: '12:40' },
-  ]);
+  const getFormattedTime = () => {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  };
 
-  // Clean timer reference to avoid memory leaks
+  const initialActivities = isSap ? [
+    { id: 1, type: 'chart', title: '500 purchasing lines verified', subtitle: '440 clean · 48 auto-fixed via ontology', time: getFormattedTime() },
+    { id: 2, type: 'zap', title: 'Plant codes normalized', subtitle: 'Plant-Dallas ➔ P1000 & p3000 ➔ P3000', time: getFormattedTime() },
+    { id: 3, type: 'quarantine', title: '12 orders held in quarantine', subtitle: 'Negative quantity or formula mismatch', time: getFormattedTime() },
+    { id: 4, type: 'live', title: 'SAP Clean Core live', subtitle: `${rulesCount} rules · BAPI writeback active`, time: getFormattedTime() }
+  ] : [
+    { id: 1, type: 'chart', title: '64 rows checked', subtitle: '61 clean · 3 auto-fixed', time: getFormattedTime() },
+    { id: 2, type: 'zap', title: 'Quarantine re-checked', subtitle: '4 rows fixed and written to target', time: getFormattedTime() },
+    { id: 3, type: 'quarantine', title: '2 rows quarantined', subtitle: 'Failed "Email RFC syntax"', time: getFormattedTime() },
+    { id: 4, type: 'live', title: 'Thread went live', subtitle: `${rulesCount} rules · auto-fix on`, time: getFormattedTime() }
+  ];
+
+  const [activities, setActivities] = useState(initialActivities);
+
+  // Clean timer reference
   const timerRef = useRef(null);
   useEffect(() => {
     return () => {
@@ -48,9 +76,10 @@ export default function LiveWithAutoFixPage({ onBack }) {
     };
   }, []);
 
-  const getFormattedTime = () => {
-    const now = new Date();
-    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const handleToggleAutoFix = () => {
+    const nextVal = !autoFixOn;
+    setAutoFixOn(nextVal);
+    setAutoFixEnabled(nextVal);
   };
 
   // Handle Save settings
@@ -70,7 +99,7 @@ export default function LiveWithAutoFixPage({ onBack }) {
           id: `save-${Date.now()}`,
           type: 'save',
           title: 'Configuration saved',
-          subtitle: `Auto-fix ${autoFixOn ? 'enabled' : 'disabled'} · Thread state persisted`,
+          subtitle: `Auto-fix ${autoFixOn ? 'enabled' : 'disabled'} · Thread state persisted to vault`,
           time: currentTime
         },
         ...prev
@@ -84,7 +113,6 @@ export default function LiveWithAutoFixPage({ onBack }) {
         actionText: 'Dismiss'
       });
 
-      // Auto revert Saved! button label back to Save after 2.5s
       timerRef.current = setTimeout(() => {
         setIsSaved(false);
       }, 2500);
@@ -132,20 +160,15 @@ export default function LiveWithAutoFixPage({ onBack }) {
         visible: true,
         type: 'live',
         title: 'Thread is live',
-        message: 'Rules now run on every new row from raw_source_users.',
-        actionText: 'View run'
+        message: `Rules now run continuously on rows from ${tableName}.`,
+        actionText: 'View runs'
       });
     }
   };
 
   const handleToastAction = () => {
-    if (toast.type === 'paused') {
-      handleTogglePause();
-    } else if (toast.type === 'saved') {
-      setToast(prev => ({ ...prev, visible: false }));
-    } else {
-      alert("Viewing live streaming run in production_db...");
-    }
+    setToast(prev => ({ ...prev, visible: false }));
+    navigateTo('history');
   };
 
   return (
@@ -155,7 +178,7 @@ export default function LiveWithAutoFixPage({ onBack }) {
       exit={{ opacity: 0, y: -10 }}
       className="space-y-0 font-sans"
     >
-      {/* Subheader bar — full-bleed matching design */}
+      {/* Subheader bar */}
       <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           
@@ -172,7 +195,7 @@ export default function LiveWithAutoFixPage({ onBack }) {
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight truncate">
-                  User records clean-up
+                  {activeThread?.name || 'Enterprise Data CleanFlow'}
                 </h1>
                 {isPaused ? (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-semibold border border-amber-200 shrink-0">
@@ -188,8 +211,8 @@ export default function LiveWithAutoFixPage({ onBack }) {
               </div>
               <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 truncate">
                 {isPaused 
-                  ? 'production_db → reconciled_db · execution held' 
-                  : 'production_db → reconciled_db · live since 12:40'}
+                  ? `${tableName} → ${targetTableName} · execution held` 
+                  : `${tableName} → ${targetTableName} · live cleanflow streaming`}
               </p>
             </div>
           </div>
@@ -199,12 +222,12 @@ export default function LiveWithAutoFixPage({ onBack }) {
             {/* Health Pill */}
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold shadow-2xs">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              Health 97.1%
+              Health {dryRunResult?.passRate || 97.1}%
             </span>
 
             {/* Auto-fix Toggle Pill */}
             <button
-              onClick={() => setAutoFixOn(!autoFixOn)}
+              onClick={handleToggleAutoFix}
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200 font-semibold shadow-2xs cursor-pointer hover:bg-blue-100 transition-colors"
               title={`Toggle auto-fix (currently ${autoFixOn ? 'ON' : 'OFF'})`}
             >
@@ -218,7 +241,7 @@ export default function LiveWithAutoFixPage({ onBack }) {
             {/* Quarantine Pill */}
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-semibold shadow-2xs">
               <Archive className="w-3.5 h-3.5 text-amber-600" />
-              Quarantine 36
+              Quarantine {dryRunResult?.quarantinedCount || 36}
             </span>
 
             {/* Save Button */}
@@ -301,14 +324,14 @@ export default function LiveWithAutoFixPage({ onBack }) {
             {/* Right Column: Live Activity Feed */}
             <LiveActivityFeed 
               activities={activities} 
-              onViewAll={() => alert("Viewing all live events recorded across stream.")}
+              onViewAll={() => navigateTo('history')}
             />
 
           </div>
         </div>
       </div>
 
-      {/* Floating Toast — fixed to bottom-right of viewport */}
+      {/* Floating Toast */}
       <LiveNotificationToast 
         toast={toast}
         onClose={() => setToast(prev => ({ ...prev, visible: false }))}

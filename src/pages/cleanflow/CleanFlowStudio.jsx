@@ -24,6 +24,7 @@ export default function CleanFlowStudio({ initialPage = '05', onSwitchToMarketin
   const changePage = (pageId) => {
     setCurrentPage(pageId);
     if (pageId === '03') navigateTo('connect-source');
+    else if (pageId === '04') navigateTo('generate-rules');
     else if (pageId === '05') navigateTo('test-in-sandbox');
     else if (pageId === '06') navigateTo('connect-target');
     else if (pageId === '06_07') navigateTo('running-dry-run');

@@ -1,9 +1,11 @@
 import React from 'react';
 import { Database, FileCode2, ArrowRight } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
+import { useRuleEngine } from '../../context/RuleEngineContext';
 
 export default function PipelineFlowNodes({ currentStep = '04', onNavigate, isPaused = false }) {
   const { navigateTo } = useNavigation();
+  const { sourceConfig, targetConfig, activeRules, dryRunResult } = useRuleEngine();
 
   const handleStepClick = (step) => {
     if (onNavigate) {
@@ -46,9 +48,13 @@ export default function PipelineFlowNodes({ currentStep = '04', onNavigate, isPa
               </div>
               <div className="min-w-0">
                 <div className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Source</div>
-                <div className="text-xs font-bold text-slate-900 truncate">production_db</div>
+                <div className="text-xs font-bold text-slate-900 truncate">
+                  {sourceConfig?.database || 'source_db'}
+                </div>
                 <div className="text-[11px] text-slate-500 font-mono truncate">
-                  {isLive ? '1,312 rows read' : 'raw_source_users'}
+                  {isLive 
+                    ? (dryRunResult?.totalChecked ? `${dryRunResult.totalChecked} rows read` : '1,240 rows read') 
+                    : (sourceConfig?.table || 'source_table')}
                 </div>
               </div>
             </div>
@@ -93,15 +99,17 @@ export default function PipelineFlowNodes({ currentStep = '04', onNavigate, isPa
               </div>
               <div className="min-w-0">
                 <div className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">AI rules</div>
-                <div className="text-xs font-bold text-slate-900 truncate">AI rule generator</div>
+                <div className="text-xs font-bold text-slate-900 truncate">
+                  {activeRules?.filter(r => r.selected !== false).length || 5} rules active
+                </div>
                 <div className="text-[11px] text-slate-500 truncate">
                   {isLive 
-                    ? '1,148 clean · 128 fixed · 36 held' 
+                    ? `${dryRunResult?.cleanCount || 1086} clean · ${dryRunResult?.autoFixedCount || 118} fixed · ${dryRunResult?.quarantinedCount || 36} held` 
                     : isStep04 
                     ? 'Describe it, AI writes it' 
                     : isStep05 
-                    ? 'Testing 5 rules' 
-                    : '5 rules · 90% pass'}
+                    ? `Testing ${activeRules?.filter(r => r.selected !== false).length || 5} rules` 
+                    : `${activeRules?.filter(r => r.selected !== false).length || 5} rules · ${dryRunResult?.passRate || 96.8}% pass`}
                 </div>
               </div>
             </div>
@@ -156,19 +164,22 @@ export default function PipelineFlowNodes({ currentStep = '04', onNavigate, isPa
               <div className="min-w-0">
                 <div className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Target</div>
                 <div className="text-xs font-bold text-slate-900 truncate">
-                  {(isStep03 || isStep04 || isStep05) ? 'Choose a target' : 'reconciled_db'}
+                  {(isStep03 || isStep04 || isStep05) 
+                    ? (targetConfig?.table ? targetConfig.table : 'Choose a target') 
+                    : (targetConfig?.database || targetConfig?.table || 'reconciled_db')}
                 </div>
                 <div className="text-[11px] text-slate-500 font-mono truncate">
                   {(isStep03 || isStep04 || isStep05) 
                     ? 'Where clean rows go' 
                     : isStep06 
-                    ? 'PostgreSQL' 
+                    ? (targetConfig?.engine ? targetConfig.engine.toUpperCase() : 'PostgreSQL') 
                     : isLive 
-                    ? '1,276 rows written'
-                    : 'raw_source_users_clean'}
+                    ? `${(dryRunResult?.cleanCount || 1086) + (dryRunResult?.autoFixedCount || 118)} rows written`
+                    : (targetConfig?.table || 'clean_target')}
                 </div>
               </div>
             </div>
+
 
             {isLive ? (
               <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${isPaused ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'} text-[10px] font-semibold border shrink-0 ml-1`}>

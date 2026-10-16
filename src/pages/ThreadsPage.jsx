@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from '../context/NavigationContext';
+import { Link, useNavigation } from '../context/NavigationContext';
 import { useRuleEngine } from '../context/RuleEngineContext';
 
 // --- Figma-Exact Icons & Illustrations with User Brand Logo ---
@@ -129,74 +129,49 @@ const StartThreadDocIcon = () => (
 );
 
 export default function ThreadsPage() {
-  const { currentData, passedRecords } = useRuleEngine();
-  const [filter, setFilter] = useState('live');
+  const { navigateTo } = useNavigation();
+  const { threads: contextThreads, selectThread, autoFixEnabled } = useRuleEngine();
+  const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
 
-  // Live compliance telemetry if available
-  const total = currentData?.length || 1;
-  const complianceRate = Math.round(((passedRecords?.length || 0) / total) * 100);
+  // Map icons and ensure consistent card formatting
+  const formattedThreads = (contextThreads || []).map(t => {
+    let icon = <MasterDataIcon />;
+    if (t.id === 'sap_bw_s4hana' || t.domainPackId === 'sap_bw_s4hana' || t.name?.includes('SAP')) {
+      icon = <SapCylinderIcon />;
+    } else if (t.name?.includes('Health') || t.domainPackId === 'healthcare_hipaa') {
+      icon = <HealthcareIcon />;
+    } else if (t.name?.includes('Ledger') || t.domainPackId === 'financial_gl_ledger') {
+      icon = <MasterDataIcon />;
+    }
 
-  const threads = [
-    {
-      id: 'TH-0843',
-      name: 'User records clean-up',
-      source: 'production_db',
-      target: 'reconciled_db',
-      domain: 'Core App Database',
-      desc: 'Check user records from production_db (email, name, role, status) and write clean rows to reconciled_db.',
-      pipeline: 'production_db → AI rules → reconciled_db',
-      status: 'healthy',
-      statusLabel: 'Draft',
-      successRate: 97.1,
-      runs: '12 runs',
-      icon: <MasterDataIcon />,
-    },
-    {
-      id: 'TH-0842',
-      name: 'SAP BW → S/4HANA Clean Core',
-      source: 'SAP BW',
-      target: 'S/4HANA',
-      domain: 'ERP modernisation',
-      desc: 'Extract InfoCube purchasing lines, fix legacy plant codes and stage clean orders.',
-      pipeline: 'SAP BW → AI rules → S/4HANA',
-      status: 'healthy',
-      statusLabel: 'Live',
-      successRate: 96.8,
-      runs: '24 runs',
-      icon: <SapCylinderIcon />,
-    },
-    {
-      id: 'TH-0841',
-      name: 'Customer Master & Identity',
-      source: 'MongoDB',
-      target: 'PostgreSQL',
-      domain: 'Master data',
-      desc: 'Merge duplicate customers from CRM and ERP into one golden record.',
-      pipeline: 'MongoDB → AI rules → PostgreSQL',
-      status: 'healthy',
-      statusLabel: 'Live',
-      successRate: 91.2,
-      runs: '18 runs',
-      icon: <MasterDataIcon />,
-    },
-    {
-      id: 'TH-0840',
-      name: 'Healthcare Patient Master',
-      source: 'PostgreSQL',
-      target: 'PostgreSQL',
-      domain: 'Healthcare',
-      desc: 'Standardise patient records and mask identifiers before analytics.',
-      pipeline: 'PostgreSQL → AI rules → PostgreSQL',
-      status: 'warning',
-      statusLabel: 'Below threshold',
-      successRate: 84.9,
-      runs: '9 runs',
-      icon: <HealthcareIcon />,
-    },
-  ];
+    return {
+      id: t.id || t.threadId || 'TH-001',
+      name: t.name || 'Enterprise Pipeline',
+      source: t.source?.engine ? t.source.engine.toUpperCase() : 'SOURCE',
+      target: t.target?.engine ? t.target.engine.toUpperCase() : 'TARGET',
+      domain: t.domain || t.category || 'Data Intelligence',
+      desc: t.desc || t.description || 'Automated data reconciliation, verification, and transformation.',
+      pipeline: t.pipeline || `${t.source?.database || 'source'} → AI rules → ${t.target?.table || 'target'}`,
+      status: t.status === 'healthy' || t.status === 'active' ? 'healthy' : t.status === 'warning' ? 'warning' : 'draft',
+      statusLabel: t.statusLabel || (t.status === 'healthy' || t.status === 'active' ? 'Live' : t.status === 'warning' ? 'Below threshold' : 'Draft'),
+      successRate: t.successRate || t.healthScore || 96.5,
+      runs: t.runs || `${t.runCount || 18} runs`,
+      icon
+    };
+  });
 
-  const filteredThreads = threads.filter((t) => {
+  const activeCount = formattedThreads.filter(t => t.status === 'healthy').length;
+  const meanHealth = formattedThreads.length 
+    ? Math.round(formattedThreads.reduce((acc, t) => acc + Number(t.successRate || 95), 0) / formattedThreads.length * 10) / 10 
+    : 94.2;
+
+  const totalRuns = formattedThreads.reduce((acc, t) => {
+    const num = parseInt(t.runs) || 12;
+    return acc + num;
+  }, 0);
+
+  const filteredThreads = formattedThreads.filter((t) => {
     if (filter === 'live' && t.status !== 'healthy') return false;
     if (filter === 'draft' && t.status !== 'draft') return false;
     if (
@@ -397,24 +372,26 @@ export default function ThreadsPage() {
             <div className="bg-[#070D1F]/75 backdrop-blur-md border border-white/10 rounded-2xl p-4 mt-7 inline-grid grid-cols-4 divide-x divide-white/10 w-full max-w-xl">
               <div className="px-3 first:pl-1">
                 <p className="text-[11px] font-medium text-[#8F9BB3]">Active threads</p>
-                <p className="text-[18px] md:text-[20px] font-bold text-white mt-0.5">3 / 5</p>
+                <p className="text-[18px] md:text-[20px] font-bold text-white mt-0.5">{activeCount} / {formattedThreads.length}</p>
               </div>
               <div className="px-3">
                 <p className="text-[11px] font-medium text-[#8F9BB3]">Mean data health</p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[18px] md:text-[20px] font-bold text-white">87.1%</span>
+                  <span className="text-[18px] md:text-[20px] font-bold text-white">{meanHealth}%</span>
                   <span className="bg-[#D4FF3A] text-[#0A0F1F] text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                    A+
+                    {meanHealth >= 90 ? 'A+' : meanHealth >= 80 ? 'B+' : 'C'}
                   </span>
                 </div>
               </div>
               <div className="px-3">
                 <p className="text-[11px] font-medium text-[#8F9BB3]">Runs this week</p>
-                <p className="text-[18px] md:text-[20px] font-bold text-white mt-0.5">69</p>
+                <p className="text-[18px] md:text-[20px] font-bold text-white mt-0.5">{totalRuns}</p>
               </div>
               <div className="px-3 last:pr-1">
                 <p className="text-[11px] font-medium text-[#8F9BB3]">Auto-fix</p>
-                <p className="text-[18px] md:text-[20px] font-bold text-[#D4FF3A] mt-0.5">On</p>
+                <p className="text-[18px] md:text-[20px] font-bold text-[#D4FF3A] mt-0.5">
+                  {autoFixEnabled ? 'On' : 'Off'}
+                </p>
               </div>
             </div>
           </div>
@@ -473,7 +450,9 @@ export default function ThreadsPage() {
               </button>
             </div>
 
-            <span className="text-xs text-[#9CA3AF] font-medium ml-2">3 of 5 threads</span>
+            <span className="text-xs text-[#9CA3AF] font-medium ml-2">
+              {filteredThreads.length} of {formattedThreads.length} threads
+            </span>
           </div>
         </div>
 
@@ -543,11 +522,15 @@ export default function ThreadsPage() {
                     )}
                     <span className="text-[11px] text-[#5F6678] ml-1">{thread.runs}</span>
                   </div>
-                  <Link to="connect-source">
-                    <button className="px-4 py-1 rounded-full border border-[#CDD2DE] bg-white hover:bg-[#F5F6FA] text-xs font-medium text-[#0A0F1F] transition-all cursor-pointer">
-                      Open
-                    </button>
-                  </Link>
+                  <button 
+                    onClick={() => {
+                      selectThread(thread.id);
+                      navigateTo('connect-source');
+                    }}
+                    className="px-4 py-1 rounded-full border border-[#CDD2DE] bg-white hover:bg-[#EEF2FF] hover:border-[#2D55F5] hover:text-[#2D55F5] text-xs font-semibold text-[#0A0F1F] transition-all cursor-pointer shadow-2xs"
+                  >
+                    Open
+                  </button>
                 </div>
               </div>
             </div>

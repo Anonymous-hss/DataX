@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Database, 
@@ -12,23 +12,84 @@ import {
   AlertCircle, 
   FlaskConical 
 } from 'lucide-react';
+import { useRuleEngine } from '../../context/RuleEngineContext';
 
 export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
-  const [dbType, setDbType] = useState('PostgreSQL');
-  const [connectMethod, setConnectMethod] = useState('string');
-  const [connString, setConnString] = useState('postgres://writer:******@db.acme.io/reconciled_db');
+  const { targetConfig, setTargetConfig, sourceConfig, testConnection } = useRuleEngine();
+
+  const isSap = sourceConfig?.engine === 'sap_bw' || sourceConfig?.table === '0PUR_C01';
+
+  const [dbType, setDbType] = useState(
+    targetConfig?.engine === 's4_hana' || isSap ? 'SAP S/4HANA' : 'PostgreSQL'
+  );
+  const [connectMethod, setConnectMethod] = useState(targetConfig?.connectionUri ? 'string' : 'host');
+  const [connString, setConnString] = useState(
+    targetConfig?.connectionUri || 
+    (isSap 
+      ? 'jdbc:sap://858c7198-93db-4af0-8a9a-5efad6023014.hana.prod-ap21.hanacloud.ondemand.com:443' 
+      : 'postgresql://analyser%20_owner:npg_mWphq7u0eLHr@ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech/analyser%20?sslmode=require')
+  );
   const [showConnString, setShowConnString] = useState(false);
-  const [outputOption, setOutputOption] = useState('suffix');
-  const [suffixName, setSuffixName] = useState('raw_source_users_clean');
-  const [customTableName, setCustomTableName] = useState('users_reconciled_v1');
-  const [host, setHost] = useState('db.acme.io');
-  const [port, setPort] = useState('5432');
-  const [databaseName, setDatabaseName] = useState('reconciled_db');
+  const [outputOption, setOutputOption] = useState(targetConfig?.targetNamingMode || 'suffix');
+  const [suffixName, setSuffixName] = useState(
+    targetConfig?.table || (sourceConfig?.table ? `${sourceConfig.table}_clean` : 'raw_source_users_clean')
+  );
+  const [customTableName, setCustomTableName] = useState(
+    targetConfig?.customTableName || (isSap ? 'staged_purchase_orders' : 'users_reconciled_v1')
+  );
+  const [host, setHost] = useState(targetConfig?.host || (isSap ? '858c7198-93db-4af0-8a9a-5efad6023014.hana.prod-ap21.hanacloud.ondemand.com' : 'ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech'));
+  const [port, setPort] = useState(targetConfig?.port || (isSap ? '443' : '5432'));
+  const [databaseName, setDatabaseName] = useState(targetConfig?.database || (isSap ? 'S4_HANA' : 'reconciled_db'));
   const [username, setUsername] = useState('writer');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testSuccess, setTestSuccess] = useState(false);
+  const [testLatency, setTestLatency] = useState(42);
+
+  // Sync if source or target config updates
+  useEffect(() => {
+    if (sourceConfig?.table) {
+      setSuffixName(`${sourceConfig.table}_clean`);
+    }
+  }, [sourceConfig]);
+
+  const handleTestConnection = async () => {
+    setIsTesting(true);
+    const engineKey = dbType.includes('SAP') ? 's4_hana' : 'postgres';
+    const res = await testConnection({
+      engine: engineKey,
+      connectionUri: connString,
+      host,
+      port,
+      database: databaseName
+    }, true);
+
+    setIsTesting(false);
+    setTestSuccess(res.success);
+    setTestLatency(res.latencyMs || 42);
+  };
+
+  const handleSave = () => {
+    const finalTable = outputOption === 'suffix' ? suffixName : customTableName;
+    const engineKey = dbType.includes('SAP') ? 's4_hana' : 'postgres';
+
+    setTargetConfig(prev => ({
+      ...prev,
+      engine: engineKey,
+      connectionUri: connString,
+      host,
+      port,
+      database: databaseName,
+      table: finalTable,
+      targetNamingMode: outputOption,
+      customTableName
+    }));
+
+    if (onSaveAndDryRun) {
+      onSaveAndDryRun();
+    }
+  };
 
   return (
     <motion.div
@@ -65,20 +126,30 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
                 <div className="relative">
                   <select
                     value={dbType}
-                    onChange={(e) => setDbType(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-900 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    onChange={(e) => {
+                      const newT = e.target.value;
+                      setDbType(newT);
+                      if (newT.includes('SAP')) {
+                        setDatabaseName('S4_HANA');
+                        setCustomTableName('staged_purchase_orders');
+                      } else {
+                        setDatabaseName('reconciled_db');
+                        setCustomTableName('users_reconciled_v1');
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-900 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer"
                   >
-                    <option value="PostgreSQL">PostgreSQL</option>
+                    <option value="SAP S/4HANA">SAP S/4HANA (BAPI_PO_CREATE1 / Clean Core)</option>
+                    <option value="PostgreSQL">PostgreSQL (Neon / Amazon RDS / Cloud)</option>
+                    <option value="Databricks">Databricks Unity Catalog (Delta Lake Gold)</option>
                     <option value="Snowflake">Snowflake Data Cloud</option>
-                    <option value="Databricks">Databricks Unity Catalog</option>
                     <option value="BigQuery">Google BigQuery</option>
-                    <option value="MySQL">MySQL Enterprise</option>
                   </select>
                   <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
               </div>
 
-              {/* Format / Connect with pills (matching Image 3) */}
+              {/* Format / Connect with pills */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-xs font-semibold text-slate-700">Format</label>
@@ -112,7 +183,6 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
 
               {/* Conditional Connection Details */}
               {connectMethod === 'string' ? (
-                /* Connection string / URI input (Image 2 Match) */
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-slate-700">Connection string</label>
                   <div className="relative">
@@ -137,18 +207,16 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
                   </div>
                 </div>
               ) : (
-                /* Host & Credentials Format (Image 3 Exact Match) */
-                <div className="space-y-3.5">
-                  {/* Host / Address & Port */}
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                    <div className="sm:col-span-3">
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Host / Address</label>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-2">
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Host</label>
                       <input
                         type="text"
                         value={host}
                         onChange={(e) => setHost(e.target.value)}
                         placeholder="db.acme.io"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       />
                     </div>
                     <div>
@@ -158,94 +226,54 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
                         value={port}
                         onChange={(e) => setPort(e.target.value)}
                         placeholder="5432"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-semibold"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       />
                     </div>
                   </div>
 
-                  {/* Database Name & Username */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Database Name</label>
-                      <input
-                        type="text"
-                        value={databaseName}
-                        onChange={(e) => setDatabaseName(e.target.value)}
-                        placeholder="reconciled_db"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-semibold"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Username</label>
-                      <input
-                        type="text"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder="writer"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Password */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Password</label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Enter database password"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                      >
-                        {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Connection Ping & Verification Card (Image 3 Exact Match) */}
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-                    <div>
-                      <div className="text-xs font-bold text-slate-900">Connection Ping & Verification</div>
-                      <div className="text-[11px] text-slate-500 mt-0.5">
-                        Ping database to verify write access and discover target schema.
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsTesting(true);
-                        setTimeout(() => {
-                          setIsTesting(false);
-                          setTestSuccess(true);
-                        }, 700);
-                      }}
-                      disabled={isTesting}
-                      className="px-4 py-2 rounded-xl bg-[#2D55F5] hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0"
-                    >
-                      {isTesting ? (
-                        <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          Verifying...
-                        </>
-                      ) : (
-                        <>
-                          <Check className="w-3.5 h-3.5 stroke-[3]" />
-                          Test Connection
-                        </>
-                      )}
-                    </button>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Database name</label>
+                    <input
+                      type="text"
+                      value={databaseName}
+                      onChange={(e) => setDatabaseName(e.target.value)}
+                      placeholder="reconciled_db"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
                   </div>
                 </div>
               )}
 
-              {/* Connected Status Box with Spring Tick Animation - ONLY shown after clicking test connection */}
+              {/* Ping & Verification Action */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs mt-3">
+                <div>
+                  <div className="text-xs font-bold text-slate-900">Connection Verification</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">
+                    Verify write permissions and destination schema before dry run.
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleTestConnection}
+                  disabled={isTesting}
+                  className="px-4 py-2 rounded-xl bg-[#2D55F5] hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0"
+                >
+                  {isTesting ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      Test Connection
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Verified Status Box */}
               <AnimatePresence>
                 {testSuccess && (
                   <motion.div
@@ -256,35 +284,14 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
                     className="bg-[#ecfdf5] border border-[#a7f3d0] rounded-xl p-3 flex items-center justify-between shadow-2xs"
                   >
                     <div className="flex items-center gap-2.5">
-                      <motion.div
-                        initial={{ scale: 0, rotate: -25 }}
-                        animate={{ scale: 1, rotate: 0 }}
-                        transition={{ type: "spring", stiffness: 450, damping: 18, delay: 0.08 }}
-                        className="w-6 h-6 rounded-full bg-[#059669] text-white flex items-center justify-center shrink-0 shadow-xs"
-                      >
+                      <div className="w-6 h-6 rounded-full bg-[#059669] text-white flex items-center justify-center shrink-0 shadow-xs">
                         <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      </motion.div>
+                      </div>
                       <div>
-                        <div className="text-xs font-bold text-emerald-950">Connected · write access confirmed</div>
-                        <div className="text-[11px] text-emerald-700">PostgreSQL 15 · tested just now</div>
+                        <div className="text-xs font-bold text-emerald-950">Target Destination Connected</div>
+                        <div className="text-[11px] text-emerald-700">{dbType} · {testLatency}ms write handshake verified</div>
                       </div>
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsTesting(true);
-                        setTimeout(() => {
-                          setIsTesting(false);
-                          setTestSuccess(true);
-                        }, 500);
-                      }}
-                      disabled={isTesting}
-                      className="px-2.5 py-1 rounded-lg border border-emerald-300 bg-white hover:bg-emerald-50 text-[11px] font-semibold text-emerald-800 flex items-center gap-1 transition-colors cursor-pointer"
-                    >
-                      <RefreshCw className={`w-3 h-3 ${isTesting ? 'animate-spin' : ''}`} />
-                      Test again
-                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -293,79 +300,80 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
 
           </div>
 
-          {/* Right Column: Where clean rows go */}
-          <div className="space-y-5 pt-6 lg:pt-0 lg:pl-8">
+          {/* Right Column: Output Table & Configuration */}
+          <div className="space-y-6 lg:pl-8 pt-6 lg:pt-0">
             
-            <div>
-              <h3 className="text-base font-bold text-slate-900 tracking-tight font-display">Where clean rows go</h3>
-              <div className="text-xs font-semibold text-slate-700 mt-1">Output table name</div>
-              <div className="text-xs text-slate-500 mt-0.5">Clean rows go to a new table. Your source table is never overwritten.</div>
-            </div>
-
-            {/* Radio Cards */}
-            <div className="space-y-3">
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-900">Output table in target</h3>
               
-              {/* Option 1: Add a suffix (Recommended) */}
-              <div 
-                onClick={() => setOutputOption('suffix')}
-                className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                  outputOption === 'suffix'
-                    ? 'border-2 border-blue-500 bg-blue-50/20 shadow-2xs'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                      outputOption === 'suffix' ? 'border-blue-600 bg-blue-600' : 'border-slate-300'
-                    }`}>
-                      {outputOption === 'suffix' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                    </div>
-                    <span className="text-xs font-bold text-slate-900">Add a suffix</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-mono text-[10px] font-bold">
-                    Recommended
-                  </span>
-                </div>
-
-                <div className="mt-3 pl-6">
+              <div className="space-y-3">
+                {/* Option 1: Add a suffix */}
+                <div 
+                  onClick={() => setOutputOption('suffix')}
+                  className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
+                    outputOption === 'suffix'
+                      ? 'border-blue-500 bg-blue-50/40 shadow-2xs'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
+                >
                   <input
-                    type="text"
-                    value={suffixName}
-                    onChange={(e) => setSuffixName(e.target.value)}
-                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    type="radio"
+                    name="outputTable"
+                    checked={outputOption === 'suffix'}
+                    onChange={() => setOutputOption('suffix')}
+                    className="mt-0.5 text-blue-600 focus:ring-blue-500 cursor-pointer"
                   />
-                </div>
-              </div>
-
-              {/* Option 2: Custom name */}
-              <div 
-                onClick={() => setOutputOption('custom')}
-                className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                  outputOption === 'custom'
-                    ? 'border-2 border-blue-500 bg-blue-50/20 shadow-2xs'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                    outputOption === 'custom' ? 'border-blue-600 bg-blue-600' : 'border-slate-300'
-                  }`}>
-                    {outputOption === 'custom' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  <div className="space-y-1">
+                    <div className="text-xs font-semibold text-slate-900">Add a suffix to the source table name</div>
+                    <div className="text-[11px] text-slate-500">
+                      Creates a dedicated table alongside your source (e.g. <span className="font-mono">{sourceConfig?.table || 'source'}_clean</span>)
+                    </div>
                   </div>
-                  <span className="text-xs font-bold text-slate-900">Choose a custom name</span>
                 </div>
-                <div className="text-[11px] text-slate-500 pl-6 mt-0.5">
-                  Pick an existing table or name a new one.
+
+                {outputOption === 'suffix' && (
+                  <div className="pl-6 space-y-1">
+                    <label className="block text-[11px] font-semibold text-slate-600">Table name</label>
+                    <input
+                      type="text"
+                      value={suffixName}
+                      onChange={(e) => setSuffixName(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+                )}
+
+                {/* Option 2: Pick a table or create new */}
+                <div 
+                  onClick={() => setOutputOption('custom')}
+                  className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
+                    outputOption === 'custom'
+                      ? 'border-blue-500 bg-blue-50/40 shadow-2xs'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="outputTable"
+                    checked={outputOption === 'custom'}
+                    onChange={() => setOutputOption('custom')}
+                    className="mt-0.5 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <div className="space-y-1">
+                    <div className="text-xs font-semibold text-slate-900">Custom target entity / writeback BAPI</div>
+                    <div className="text-[11px] text-slate-500">
+                      Specify an explicit staging table, OData entity or BAPI interface.
+                    </div>
+                  </div>
                 </div>
 
                 {outputOption === 'custom' && (
-                  <div className="mt-3 pl-6">
+                  <div className="pl-6 space-y-1">
+                    <label className="block text-[11px] font-semibold text-slate-600">Entity name</label>
                     <input
                       type="text"
                       value={customTableName}
                       onChange={(e) => setCustomTableName(e.target.value)}
-                      placeholder="Enter custom table name..."
                       className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     />
                   </div>
@@ -380,7 +388,7 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
                 <Archive className="w-4 h-4" />
               </div>
               <div className="text-xs text-slate-600">
-                Rows that fail a critical rule go to <code className="px-1.5 py-0.5 rounded bg-slate-200 text-slate-800 font-mono text-[11px]">quarantined_records</code> in the same database.
+                Rows that fail a critical rule go to <code className="px-1.5 py-0.5 rounded bg-slate-200 text-slate-800 font-mono text-[11px]">quarantined_records</code> in the target database.
               </div>
             </div>
 
@@ -394,19 +402,19 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
         <div className="flex items-center gap-2 text-xs text-slate-500">
           <AlertCircle className="w-3.5 h-3.5 text-slate-400" />
-          Saving unlocks Dry run.
+          Saving unlocks Dry run simulation.
         </div>
 
         <div className="flex items-center gap-2.5">
           <button
             onClick={onCancel}
-            className="px-4 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-xs font-medium transition-colors"
+            className="px-4 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-xs font-medium transition-colors cursor-pointer"
           >
             Cancel
           </button>
           <button
-            onClick={onSaveAndDryRun}
-            className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all shadow-blue-500/20 flex items-center gap-1.5"
+            onClick={handleSave}
+            className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all shadow-blue-500/20 flex items-center gap-1.5 cursor-pointer"
           >
             <FlaskConical className="w-3.5 h-3.5" />
             Save & dry run

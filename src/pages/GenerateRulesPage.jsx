@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FileCode2, 
   Sparkles, 
@@ -7,6 +7,7 @@ import {
   AlertCircle 
 } from 'lucide-react';
 import { useNavigation } from '../context/NavigationContext';
+import { useRuleEngine } from '../context/RuleEngineContext';
 import DataXHeader from '../components/cleanflow/DataXHeader';
 import PipelineFlowNodes from '../components/cleanflow/PipelineFlowNodes';
 import DescribeRulesForm from '../components/cleanflow/DescribeRulesForm';
@@ -14,77 +15,50 @@ import GeneratedRulesList from '../components/cleanflow/GeneratedRulesList';
 
 export default function GenerateRulesPage() {
   const { navigateTo } = useNavigation();
+  const { 
+    sourceConfig, 
+    activeRules, 
+    setActiveRules, 
+    activeThread 
+  } = useRuleEngine();
 
-  const [columns, setColumns] = useState([
-    'id', 'email', 'full_name', 'role', 'status', 'created_at', 'total_rows'
-  ]);
+  const isSap = sourceConfig?.engine === 'sap_bw' || sourceConfig?.table === '0PUR_C01';
 
-  const [prompt, setPrompt] = useState(
-    'Every user needs a valid email and a full name. Role must be admin, analyst, manager or viewer. Status must be active or inactive. No two users can share an id.'
-  );
+  const defaultCols = sourceConfig?.discoveredColumns?.length 
+    ? sourceConfig.discoveredColumns 
+    : isSap 
+    ? ['PO_NUMBER', 'ITEM_NO', 'MATERIAL_ID', 'QUANTITY', 'UNIT_PRICE', 'DELIVERY_PLANT', 'VENDOR_ID', 'TOTAL_AMOUNT']
+    : ['id', 'email', 'full_name', 'role', 'status', 'created_at', 'account_balance'];
 
+  const defaultPrompt = isSap
+    ? 'Purchasing line items must have positive quantities. Total amount must strictly equal quantity times unit price. Delivery plant must be recognized in S/4HANA or resolved via ontology graph. Vendor ID is mandatory.'
+    : 'Every user needs a valid email and a full name. Role must be admin, analyst, manager or viewer. Status must be active or inactive. No two users can share an id. Non-negative account balances.';
+
+  const [columns, setColumns] = useState(defaultCols);
+  const [prompt, setPrompt] = useState(defaultPrompt);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [rules, setRules] = useState(activeRules || []);
 
-  // Initial rules matching Image 2 formations exactly: 5 of 6 selected
-  const [rules, setRules] = useState([
-    {
-      id: 'r1',
-      name: 'Email has a valid format',
-      field: 'email',
-      severity: 'Critical',
-      code: 'REGEX_MATCH(email, EMAIL_RFC_5322)',
-      selected: true,
-    },
-    {
-      id: 'r2',
-      name: 'Full name is required',
-      field: 'full_name',
-      severity: 'Critical',
-      code: 'full_name IS NOT NULL AND LENGTH(TRIM(full_name)) > 1',
-      selected: true,
-    },
-    {
-      id: 'r3',
-      name: 'Role is an allowed value',
-      field: 'role',
-      severity: 'Warning',
-      code: "LOWER(role) IN ('admin', 'analyst', 'manager', 'viewer')",
-      selected: true,
-    },
-    {
-      id: 'r4',
-      name: 'Status is active or inactive',
-      field: 'status',
-      severity: 'Warning',
-      code: "status IN ('active', 'inactive')",
-      selected: true,
-    },
-    {
-      id: 'r5',
-      name: 'User id is unique',
-      field: 'id',
-      severity: 'Critical',
-      code: 'COUNT(id) = COUNT(DISTINCT id)',
-      selected: true,
-    },
-    {
-      id: 'r6',
-      name: 'Created at timestamp is valid',
-      field: 'created_at',
-      severity: 'Warning',
-      code: 'created_at IS NOT NULL AND created_at <= CURRENT_TIMESTAMP()',
-      selected: false,
-    },
-  ]);
+  useEffect(() => {
+    if (sourceConfig?.discoveredColumns?.length) {
+      setColumns(sourceConfig.discoveredColumns);
+    }
+  }, [sourceConfig]);
+
+  useEffect(() => {
+    if (activeRules?.length) {
+      setRules(activeRules);
+    }
+  }, [activeRules]);
 
   const handleToggleRule = (id) => {
     setRules((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, selected: !r.selected } : r))
+      prev.map((r) => (r.id === id ? { ...r, selected: r.selected === undefined ? false : !r.selected } : r))
     );
   };
 
   const handleToggleAll = () => {
-    const allSelected = rules.every((r) => r.selected);
+    const allSelected = rules.every((r) => r.selected !== false);
     setRules((prev) => prev.map((r) => ({ ...r, selected: !allSelected })));
   };
 
@@ -116,16 +90,20 @@ export default function GenerateRulesPage() {
     setIsGenerating(true);
     setTimeout(() => {
       setIsGenerating(false);
-      // Ensure all 6 rules are ready
       setRules((prev) =>
-        prev.map((r, i) => (i < 5 ? { ...r, selected: true } : { ...r, selected: false }))
+        prev.map((r) => ({ ...r, selected: true }))
       );
-    }, 500);
+    }, 600);
+  };
+
+  const handleSaveRules = () => {
+    setActiveRules(rules);
+    navigateTo('test-in-sandbox');
   };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col antialiased">
-      {/* Top Header & Subheader (Matching Image 2 Pre-frame) */}
+      {/* Top Header & Subheader */}
       <DataXHeader
         currentPage="04"
         onBack={() => navigateTo('connect-source')}
@@ -133,10 +111,10 @@ export default function GenerateRulesPage() {
         onRunLive={() => navigateTo('dry-run-results')}
       />
 
-      {/* 3 Pipeline Flow Nodes (Matching Image 2 Flow Offs) */}
+      {/* 3 Pipeline Flow Nodes */}
       <PipelineFlowNodes currentStep="04" />
 
-      {/* Main Card: Step 2 of 3 · AI rules / Create rules with AI (Image 2 exact match) */}
+      {/* Main Card: Step 2 of 3 · AI rules / Create rules with AI */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-4">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
           
@@ -161,7 +139,7 @@ export default function GenerateRulesPage() {
                 Generate rules
               </button>
               <button 
-                onClick={() => navigateTo('test-in-sandbox')}
+                onClick={handleSaveRules}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <FlaskConical className="w-3.5 h-3.5 text-slate-400" />
@@ -178,6 +156,8 @@ export default function GenerateRulesPage() {
             
             {/* Left Column: Input Table, Columns & Description */}
             <DescribeRulesForm
+              tableName={sourceConfig?.table || (isSap ? '0PUR_C01' : 'raw_source_users')}
+              dbName={sourceConfig?.database || (isSap ? 'SAP_BW' : 'production_db')}
               columns={columns}
               onRemoveColumn={handleRemoveColumn}
               onAddColumn={handleAddColumn}
@@ -187,7 +167,7 @@ export default function GenerateRulesPage() {
               onRegenerate={handleRegenerate}
             />
 
-            {/* Right Column: Generated rules list with checkboxes & actions (Image 2) */}
+            {/* Right Column: Generated rules list with checkboxes & actions */}
             <GeneratedRulesList
               rules={rules}
               columns={columns}
@@ -200,7 +180,7 @@ export default function GenerateRulesPage() {
 
           </div>
 
-          {/* Bottom Footer Bar (Image 2 exact match) */}
+          {/* Bottom Footer Bar */}
           <div className="bg-slate-50/70 border-t border-slate-200/80 px-6 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-xs text-slate-500">
               <AlertCircle className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -210,7 +190,7 @@ export default function GenerateRulesPage() {
             <div className="flex items-center gap-2.5 shrink-0">
               <button
                 type="button"
-                onClick={() => navigateTo('test-in-sandbox')}
+                onClick={handleSaveRules}
                 className="px-4 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
               >
                 <FlaskConical className="w-3.5 h-3.5 text-slate-600" />
@@ -218,7 +198,7 @@ export default function GenerateRulesPage() {
               </button>
               <button
                 type="button"
-                onClick={() => navigateTo('test-in-sandbox')}
+                onClick={handleSaveRules}
                 className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all shadow-blue-500/20 flex items-center gap-1.5 cursor-pointer"
               >
                 <Check className="w-3.5 h-3.5 stroke-[3]" />

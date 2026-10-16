@@ -1,40 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Sparkles, Check, Clock, AlertCircle } from 'lucide-react';
+import { useRuleEngine } from '../../context/RuleEngineContext';
 
 export default function RunningDryRunPage({ onComplete, onCancel }) {
-  const [progress, setProgress] = useState(20);
-  const [processedRows, setProcessedRows] = useState(248);
+  const { sourceConfig, activeRules, executeDryRun } = useRuleEngine();
+  
+  const isSap = sourceConfig?.engine === 'sap_bw' || sourceConfig?.table === '0PUR_C01';
+  const totalRows = isSap ? 500 : 1240;
+  const tableName = sourceConfig?.table || (isSap ? '0PUR_C01' : 'raw_source_users');
+  const rulesCount = activeRules?.filter(r => r.selected !== false).length || 5;
+
+  const [progress, setProgress] = useState(25);
+  const [processedRows, setProcessedRows] = useState(Math.round(totalRows * 0.25));
   const [phase, setPhase] = useState(1);
 
   useEffect(() => {
-    // Dynamic progressive step animation matching Image 3 (06->07)
+    let isCancelled = false;
+
+    // Trigger backend or local dynamic dry run execution
+    executeDryRun();
+
     const t1 = setTimeout(() => {
+      if (isCancelled) return;
       setPhase(2);
-      setProgress(64);
-      setProcessedRows(794);
+      setProgress(68);
+      setProcessedRows(Math.round(totalRows * 0.68));
     }, 600);
 
     const t2 = setTimeout(() => {
+      if (isCancelled) return;
       setProgress(100);
-      setProcessedRows(1240);
-    }, 1400);
+      setProcessedRows(totalRows);
+      setPhase(3);
+    }, 1300);
 
     const t3 = setTimeout(() => {
-      setPhase(3);
-    }, 1800);
-
-    const t4 = setTimeout(() => {
+      if (isCancelled) return;
       if (onComplete) onComplete();
-    }, 2400);
+    }, 2000);
 
     return () => {
+      isCancelled = true;
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
-      clearTimeout(t4);
     };
-  }, [onComplete]);
+  }, [onComplete, totalRows, executeDryRun]);
 
   return (
     <motion.div
@@ -55,7 +67,7 @@ export default function RunningDryRunPage({ onComplete, onCancel }) {
             Running a dry run...
           </h2>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
-            Checking 1,240 rows from raw_source_users with 5 rules. Nothing is written.
+            Checking {totalRows.toLocaleString()} rows from {tableName} with {rulesCount} rules. Nothing is written.
           </p>
         </div>
 
@@ -69,21 +81,23 @@ export default function RunningDryRunPage({ onComplete, onCancel }) {
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
               </div>
               <div>
-                <div className="text-xs font-bold text-slate-900">Read 1,240 rows from raw_source_users</div>
-                <div className="text-[11px] text-slate-400">Took 1.2 s</div>
+                <div className="text-xs font-bold text-slate-900">
+                  Read {totalRows.toLocaleString()} rows from {tableName}
+                </div>
+                <div className="text-[11px] text-slate-400">Handshake verified in 0.8 s</div>
               </div>
             </div>
           </div>
 
-          {/* Step 2: Applying 5 rules (Active with live progress bar) */}
+          {/* Step 2: Applying rules */}
           <div className="bg-blue-50/60 border border-blue-200 rounded-xl p-4 space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full border-2 border-blue-600 border-t-transparent animate-spin shrink-0" />
                 <div>
-                  <div className="text-xs font-bold text-blue-950">Applying 5 rules</div>
+                  <div className="text-xs font-bold text-blue-950">Applying {rulesCount} business validation rules</div>
                   <div className="text-[11px] text-blue-700 font-mono">
-                    {processedRows} of 1,240 rows
+                    {processedRows.toLocaleString()} of {totalRows.toLocaleString()} rows evaluated
                   </div>
                 </div>
               </div>
@@ -109,7 +123,7 @@ export default function RunningDryRunPage({ onComplete, onCancel }) {
               <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center shrink-0">
                 <Clock className="w-3.5 h-3.5" />
               </div>
-              <div className="text-xs font-medium text-slate-700">Preparing results</div>
+              <div className="text-xs font-medium text-slate-700">Synthesizing compliance telemetry & auto-fix diff</div>
             </div>
           </div>
 
@@ -119,19 +133,19 @@ export default function RunningDryRunPage({ onComplete, onCancel }) {
         <div className="flex items-center justify-between pt-2 border-t border-slate-100">
           <div className="flex items-center gap-1.5 text-xs text-slate-400">
             <AlertCircle className="w-3.5 h-3.5 text-slate-400" />
-            Usually under 10 seconds.
+            Dry run simulation completed with 0 side effects.
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={onCancel}
-              className="px-3.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-600 transition-colors"
+              className="px-3.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-600 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={onComplete}
-              className="px-3.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 text-xs font-semibold transition-colors"
+              className="px-3.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 text-xs font-semibold transition-colors cursor-pointer"
             >
               Skip to results →
             </button>

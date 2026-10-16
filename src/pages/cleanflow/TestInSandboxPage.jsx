@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   FileCode2, 
@@ -7,67 +7,54 @@ import {
   RefreshCw, 
   Check, 
   Zap, 
-  AlertCircle 
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
+import { useRuleEngine } from '../../context/RuleEngineContext';
 
 export default function TestInSandboxPage({ onNext, onBackToRules }) {
-  const [selectedRowId, setSelectedRowId] = useState('usr_104');
-  const [sampleFilter, setSampleFilter] = useState('live');
+  const { 
+    sampleData, 
+    sourceConfig, 
+    fetchTableSample, 
+    autoFixEnabled,
+    activeRules 
+  } = useRuleEngine();
+
+  const [selectedRowIndex, setSelectedRowIndex] = useState(0);
+  const [sampleFilter, setSampleFilter] = useState('live'); // 'live' | 'edge' | 'custom'
   const [sampleCount, setSampleCount] = useState(20);
+  const [isFetching, setIsFetching] = useState(false);
 
-  const sampleRows = [
-    { 
-      id: 'usr_101', 
-      name: 'Sarah Jenkins', 
-      email: 'sarah.j@acme.com', 
-      role: 'member', 
-      status: 'active', 
-      badgeText: 'Clean', 
-      badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-    },
-    { 
-      id: 'usr_102', 
-      name: 'malformed.email@bad_domain', 
-      email: 'malformed.email@bad_domain', 
-      role: 'analyst', 
-      status: 'active', 
-      badgeText: 'Quarantined', 
-      badgeClass: 'bg-amber-50 text-amber-700 border-amber-200' 
-    },
-    { 
-      id: 'usr_103', 
-      name: 'Marcus Vance', 
-      email: 'm.vance@acme.com', 
-      role: 'admin', 
-      status: 'active', 
-      badgeText: 'Clean', 
-      badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-    },
-    { 
-      id: 'usr_104', 
-      name: 'Elena Rostova', 
-      email: '-Elena.Rostova@ACME.com-', 
-      fixedEmail: 'elena.rostova@acme.com', 
-      role: 'Admin*', 
-      fixedRole: 'admin', 
-      status: 'active', 
-      badgeText: 'Auto-fixed', 
-      badgeClass: 'bg-blue-50 text-blue-700 border-blue-200' 
-    },
-    { 
-      id: 'usr_105', 
-      name: 'David Kim', 
-      email: 'david.kim+test@acme.com', 
-      fixedEmail: 'david.kim@acme.com', 
-      role: 'Manager ', 
-      fixedRole: 'manager', 
-      status: 'active', 
-      badgeText: 'Auto-fixed', 
-      badgeClass: 'bg-blue-50 text-blue-700 border-blue-200' 
-    },
-  ];
+  const isSap = sourceConfig?.engine === 'sap_bw' || sourceConfig?.table === '0PUR_C01';
 
-  const currentRow = sampleRows.find(r => r.id === selectedRowId) || sampleRows[3];
+  // Compute metrics dynamically from sampleData
+  const totalRows = sampleData.length || 1;
+  const cleanRows = sampleData.filter(r => r._status === 'clean');
+  const fixedRows = sampleData.filter(r => r._status === 'fixed');
+  const heldRows = sampleData.filter(r => r._status === 'quarantined');
+  const passRate = Math.round(((cleanRows.length + fixedRows.length) / totalRows) * 100);
+
+  // Filter sample data based on active tab
+  const displayedRows = sampleData.filter(r => {
+    if (sampleFilter === 'edge') return r._status !== 'clean';
+    if (sampleFilter === 'custom') return r._status === 'quarantined';
+    return true;
+  });
+
+  const currentRow = displayedRows[selectedRowIndex] || displayedRows[0] || sampleData[0] || {};
+  const currentTransformed = currentRow._transformed || currentRow;
+
+  // Key fields to display in Before & After
+  const comparisonFields = isSap 
+    ? ['DELIVERY_PLANT', 'QUANTITY', 'UNIT_PRICE', 'TOTAL_AMOUNT', 'VENDOR_ID']
+    : ['email', 'full_name', 'role', 'status', 'account_balance'];
+
+  const handleFetchRows = async (count = sampleCount) => {
+    setIsFetching(true);
+    await fetchTableSample(sourceConfig?.table || (isSap ? '0PUR_C01' : 'raw_source_users'), count);
+    setIsFetching(false);
+  };
 
   return (
     <motion.div
@@ -95,7 +82,7 @@ export default function TestInSandboxPage({ onNext, onBackToRules }) {
           <div className="flex items-center gap-2 mt-5">
             <button 
               onClick={onBackToRules}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5 text-slate-400" />
               Generate rules
@@ -103,7 +90,9 @@ export default function TestInSandboxPage({ onNext, onBackToRules }) {
             <button className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 transition-all shadow-2xs">
               <FlaskConical className="w-3.5 h-3.5 text-blue-600" />
               Test in sandbox
-              <span className="px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[10px] font-mono">20 rows</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[10px] font-mono">
+                {sampleData.length} rows
+              </span>
             </button>
           </div>
         </div>
@@ -115,8 +104,10 @@ export default function TestInSandboxPage({ onNext, onBackToRules }) {
               <FlaskConical className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-xs font-bold text-slate-900 font-mono">raw_source_users · production_db</div>
-              <div className="text-[11px] text-slate-500">Rules run on a sample. Nothing is written to the target.</div>
+              <div className="text-xs font-bold text-slate-900 font-mono">
+                {sourceConfig?.table || 'source_table'} · {sourceConfig?.database || 'source_db'}
+              </div>
+              <div className="text-[11px] text-slate-500">Rules run on a live sample. Nothing is written to the target.</div>
             </div>
           </div>
 
@@ -124,28 +115,28 @@ export default function TestInSandboxPage({ onNext, onBackToRules }) {
             {/* Filter buttons */}
             <div className="flex items-center bg-white p-0.5 rounded-lg border border-slate-200 shadow-2xs">
               <button
-                onClick={() => setSampleFilter('live')}
-                className={`px-2.5 py-1 rounded text-xs transition-colors ${
+                onClick={() => { setSampleFilter('live'); setSelectedRowIndex(0); }}
+                className={`px-2.5 py-1 rounded text-xs transition-colors cursor-pointer ${
                   sampleFilter === 'live' ? 'bg-slate-100 font-semibold text-slate-900' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
                 Live rows
               </button>
               <button
-                onClick={() => setSampleFilter('edge')}
-                className={`px-2.5 py-1 rounded text-xs transition-colors ${
+                onClick={() => { setSampleFilter('edge'); setSelectedRowIndex(0); }}
+                className={`px-2.5 py-1 rounded text-xs transition-colors cursor-pointer ${
                   sampleFilter === 'edge' ? 'bg-slate-100 font-semibold text-slate-900' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                Edge cases
+                Edge cases ({fixedRows.length + heldRows.length})
               </button>
               <button
-                onClick={() => setSampleFilter('custom')}
-                className={`px-2.5 py-1 rounded text-xs transition-colors ${
+                onClick={() => { setSampleFilter('custom'); setSelectedRowIndex(0); }}
+                className={`px-2.5 py-1 rounded text-xs transition-colors cursor-pointer ${
                   sampleFilter === 'custom' ? 'bg-slate-100 font-semibold text-slate-900' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                Custom record
+                Quarantined ({heldRows.length})
               </button>
             </div>
 
@@ -154,8 +145,11 @@ export default function TestInSandboxPage({ onNext, onBackToRules }) {
               {[5, 20, 100].map(cnt => (
                 <button
                   key={cnt}
-                  onClick={() => setSampleCount(cnt)}
-                  className={`px-2 py-1 rounded transition-colors ${
+                  onClick={() => {
+                    setSampleCount(cnt);
+                    handleFetchRows(cnt);
+                  }}
+                  className={`px-2 py-1 rounded transition-colors cursor-pointer ${
                     sampleCount === cnt ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
@@ -164,8 +158,12 @@ export default function TestInSandboxPage({ onNext, onBackToRules }) {
               ))}
             </div>
 
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-700 shadow-2xs transition-colors">
-              <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+            <button 
+              onClick={() => handleFetchRows()}
+              disabled={isFetching}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-700 shadow-2xs transition-colors cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${isFetching ? 'animate-spin' : ''}`} />
               Fetch rows
             </button>
           </div>
@@ -181,31 +179,31 @@ export default function TestInSandboxPage({ onNext, onBackToRules }) {
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 Clean
               </div>
-              <div className="text-2xl font-bold text-emerald-600 font-display mt-1">14</div>
+              <div className="text-2xl font-bold text-emerald-600 font-display mt-1">{cleanRows.length}</div>
             </div>
 
             {/* Fixed */}
             <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 flex flex-col justify-between">
               <div className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
                 <span className="w-2 h-2 rounded-full bg-blue-500" />
-                Fixed
+                Auto-fixed
               </div>
-              <div className="text-2xl font-bold text-blue-600 font-display mt-1">4</div>
+              <div className="text-2xl font-bold text-blue-600 font-display mt-1">{fixedRows.length}</div>
             </div>
 
             {/* Held */}
             <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 flex flex-col justify-between">
               <div className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
                 <span className="w-2 h-2 rounded-full bg-amber-500" />
-                Held
+                Quarantined
               </div>
-              <div className="text-2xl font-bold text-amber-600 font-display mt-1">2</div>
+              <div className="text-2xl font-bold text-amber-600 font-display mt-1">{heldRows.length}</div>
             </div>
 
             {/* Pass rate */}
             <div className="bg-slate-900 rounded-xl p-3.5 flex flex-col justify-between text-white shadow-2xs">
               <div className="text-xs font-medium text-slate-400">Pass rate</div>
-              <div className="text-2xl font-extrabold text-[#a3e635] font-display mt-1 tracking-tight">90%</div>
+              <div className="text-2xl font-extrabold text-[#a3e635] font-display mt-1 tracking-tight">{passRate}%</div>
             </div>
 
           </div>
@@ -218,29 +216,32 @@ export default function TestInSandboxPage({ onNext, onBackToRules }) {
           <div className="lg:col-span-4 space-y-2">
             <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
               <span>Sample rows</span>
-              <span>5 of 20</span>
+              <span>{displayedRows.length} available</span>
             </div>
 
-            <div className="space-y-1.5">
-              {sampleRows.map(row => {
-                const isSelected = selectedRowId === row.id;
+            <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
+              {displayedRows.map((row, idx) => {
+                const isSelected = selectedRowIndex === idx;
+                const rowId = row.PO_NUMBER || row.id || `REC-${idx + 1}`;
+                const rowLabel = row.MATERIAL_DESC || row.full_name || row.MATERIAL_ID || row.email || row.VENDOR_ID || '';
+                
                 return (
                   <div
-                    key={row.id}
-                    onClick={() => setSelectedRowId(row.id)}
+                    key={idx}
+                    onClick={() => setSelectedRowIndex(idx)}
                     className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
                       isSelected
                         ? 'bg-blue-50/50 border-blue-500 shadow-2xs'
                         : 'bg-white border-slate-200 hover:border-slate-300'
                     }`}
                   >
-                    <div>
-                      <div className="text-xs font-bold text-slate-900 font-mono">{row.id}</div>
-                      <div className="text-xs text-slate-500 truncate max-w-[150px]">{row.name}</div>
+                    <div className="min-w-0 pr-2">
+                      <div className="text-xs font-bold text-slate-900 font-mono">{rowId}</div>
+                      <div className="text-xs text-slate-500 truncate max-w-[150px]">{rowLabel}</div>
                     </div>
 
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${row.badgeClass}`}>
-                      ● {row.badgeText}
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border shrink-0 ${row.badgeClass || 'bg-slate-100 text-slate-600'}`}>
+                      ● {row.badgeText || 'Clean'}
                     </span>
                   </div>
                 );
@@ -255,10 +256,12 @@ export default function TestInSandboxPage({ onNext, onBackToRules }) {
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-slate-900">Before and after</h3>
                 <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-mono text-xs font-medium">
-                  {currentRow.id}
+                  {currentRow.PO_NUMBER || currentRow.id || 'Selected Row'}
                 </span>
               </div>
-              <span className="text-xs text-slate-400 font-medium">5 rules applied</span>
+              <span className="text-xs text-slate-400 font-medium">
+                {activeRules?.filter(r => r.selected !== false).length || 5} rules applied
+              </span>
             </div>
 
             {/* Comparison Table */}
@@ -268,89 +271,84 @@ export default function TestInSandboxPage({ onNext, onBackToRules }) {
                   <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-semibold text-slate-500">
                     <th className="py-2 px-3 w-1/4">Field</th>
                     <th className="py-2 px-3 w-3/8">Before</th>
-                    <th className="py-2 px-3 w-3/8">After</th>
+                    <th className="py-2 px-3 w-3/8">After (Clean Core)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-mono">
-                  
-                  {/* Email */}
-                  <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 text-slate-600 font-sans font-medium">email</td>
-                    <td className="py-2.5 px-3">
-                      {currentRow.fixedEmail ? (
-                        <span className="px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 line-through">
-                          "{currentRow.email}"
-                        </span>
-                      ) : (
-                        <span className="text-slate-700">"{currentRow.email}"</span>
-                      )}
-                    </td>
-                    <td className="py-2.5 px-3">
-                      {currentRow.fixedEmail ? (
-                        <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1 w-fit">
-                          "{currentRow.fixedEmail}"
-                          <Check className="w-3 h-3 text-emerald-600" />
-                        </span>
-                      ) : (
-                        <span className="text-slate-700">"{currentRow.email}"</span>
-                      )}
-                    </td>
-                  </tr>
+                  {comparisonFields.map(field => {
+                    const beforeVal = currentRow[field] !== undefined ? String(currentRow[field]) : '—';
+                    const isFixed = currentRow._fixedFields && currentRow._fixedFields[field] !== undefined;
+                    const afterVal = isFixed ? String(currentRow._fixedFields[field]) : beforeVal;
 
-                  {/* Full name */}
-                  <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 text-slate-600 font-sans font-medium">full_name</td>
-                    <td className="py-2.5 px-3 text-slate-700">"{currentRow.name}"</td>
-                    <td className="py-2.5 px-3 text-slate-700">"{currentRow.name}"</td>
-                  </tr>
-
-                  {/* Role */}
-                  <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 text-slate-600 font-sans font-medium">role</td>
-                    <td className="py-2.5 px-3">
-                      {currentRow.fixedRole ? (
-                        <span className="px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 line-through">
-                          "{currentRow.role}"
-                        </span>
-                      ) : (
-                        <span className="text-slate-700">"{currentRow.role}"</span>
-                      )}
-                    </td>
-                    <td className="py-2.5 px-3">
-                      {currentRow.fixedRole ? (
-                        <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1 w-fit">
-                          "{currentRow.fixedRole}"
-                          <Check className="w-3 h-3 text-emerald-600" />
-                        </span>
-                      ) : (
-                        <span className="text-slate-700">"{currentRow.role}"</span>
-                      )}
-                    </td>
-                  </tr>
-
-                  {/* Status */}
-                  <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 text-slate-600 font-sans font-medium">status</td>
-                    <td className="py-2.5 px-3 text-slate-700">"{currentRow.status}"</td>
-                    <td className="py-2.5 px-3 text-slate-700">"{currentRow.status}"</td>
-                  </tr>
-
+                    return (
+                      <tr key={field} className="hover:bg-slate-50/60">
+                        <td className="py-2.5 px-3 text-slate-600 font-sans font-medium">{field}</td>
+                        <td className="py-2.5 px-3">
+                          {isFixed ? (
+                            <span className="px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 line-through">
+                              "{beforeVal}"
+                            </span>
+                          ) : (
+                            <span className="text-slate-700">"{beforeVal}"</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          {isFixed ? (
+                            <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1 w-fit font-bold">
+                              "{afterVal}"
+                              <Check className="w-3 h-3 text-emerald-600" />
+                            </span>
+                          ) : (
+                            <span className="text-slate-700">"{afterVal}"</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
-            {/* Alert banner */}
-            <div className="bg-blue-50/80 border border-blue-200/80 rounded-xl p-3 flex items-start gap-2.5">
-              <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 mt-0.5">
-                <Zap className="w-3.5 h-3.5 fill-current" />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-blue-900">Auto-fixed · ready for the target</div>
-                <div className="text-xs text-blue-700 mt-0.5">
-                  2 fields changed by "Email has a valid format" and "Role is an allowed value".
+            {/* Status Alert Banner */}
+            {currentRow._status === 'quarantined' ? (
+              <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl p-3 flex items-start gap-2.5">
+                <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+                  <AlertTriangle className="w-3.5 h-3.5 fill-current" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-amber-950">Diverted to quarantine · Target write held</div>
+                  <div className="text-xs text-amber-800 mt-0.5 space-y-0.5">
+                    {(currentRow._violations || ['Record failed critical business validation']).map((v, i) => (
+                      <div key={i}>• {v}</div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : currentRow._status === 'fixed' ? (
+              <div className="bg-blue-50/80 border border-blue-200/80 rounded-xl p-3 flex items-start gap-2.5">
+                <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 mt-0.5">
+                  <Zap className="w-3.5 h-3.5 fill-current" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-blue-900">Auto-fixed by engine · Ready for target</div>
+                  <div className="text-xs text-blue-700 mt-0.5">
+                    {Object.keys(currentRow._fixedFields || {}).length} field(s) normalized ({Object.keys(currentRow._fixedFields || {}).join(', ')}).
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-xl p-3 flex items-start gap-2.5">
+                <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-emerald-950">Fully compliant record</div>
+                  <div className="text-xs text-emerald-700 mt-0.5">
+                    All {activeRules?.filter(r => r.selected !== false).length || 5} active rules evaluated successfully.
+                  </div>
+                </div>
+              </div>
+            )}
 
           </div>
 
@@ -368,13 +366,13 @@ export default function TestInSandboxPage({ onNext, onBackToRules }) {
         <div className="flex items-center gap-2.5">
           <button
             onClick={onBackToRules}
-            className="px-4 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition-colors"
+            className="px-4 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
           >
             ← Back to rules
           </button>
           <button
             onClick={onNext}
-            className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all shadow-blue-500/20 flex items-center gap-1.5"
+            className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all shadow-blue-500/20 flex items-center gap-1.5 cursor-pointer"
           >
             <Check className="w-3.5 h-3.5" />
             Use these rules

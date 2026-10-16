@@ -14,6 +14,7 @@ import {
   Save 
 } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
+import { useRuleEngine } from '../../context/RuleEngineContext';
 
 export default function DataXHeader({ 
   currentPage, 
@@ -25,6 +26,13 @@ export default function DataXHeader({
   hideSubheader = false
 }) {
   const { navigateTo } = useNavigation();
+  const { activeThread, sourceConfig, targetConfig } = useRuleEngine();
+  const [saveSuccess, setSaveSuccess] = React.useState(false);
+
+  const handleSaveClick = () => {
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 2000);
+  };
 
   return (
     <>
@@ -136,14 +144,20 @@ export default function DataXHeader({
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-base font-bold text-slate-900 tracking-tight">
-                    User records clean-up
+                    {activeThread?.name || 'User records clean-up'}
                   </h1>
-                  <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-medium border border-slate-200">
-                    Draft
+                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium border ${
+                    activeThread?.status === 'healthy' 
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                      : activeThread?.status === 'warning'
+                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                      : 'bg-slate-100 text-slate-600 border-slate-200'
+                  }`}>
+                    {activeThread?.statusLabel || (activeThread?.status === 'healthy' ? 'Live' : 'Draft')}
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 font-mono mt-0.5">
-                  production_db → reconciled_db · saved just now
+                  {sourceConfig?.table || 'source_data'} → {targetConfig?.table || 'target_data'} · active cleanflow
                 </p>
               </div>
             </div>
@@ -151,11 +165,11 @@ export default function DataXHeader({
             {/* Action Buttons */}
             <div className="flex items-center gap-2">
               <button 
-                onClick={() => alert("Draft state saved.")}
+                onClick={handleSaveClick}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors cursor-pointer shadow-2xs"
               >
-                <Save className="w-3.5 h-3.5 text-slate-500" />
-                Save
+                <Save className={`w-3.5 h-3.5 ${saveSuccess ? 'text-emerald-600' : 'text-slate-500'}`} />
+                {saveSuccess ? 'Saved!' : 'Save'}
               </button>
 
               <button

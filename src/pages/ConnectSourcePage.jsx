@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Database, 
@@ -17,51 +17,147 @@ import {
   Play
 } from 'lucide-react';
 import { useNavigation } from '../context/NavigationContext';
+import { useRuleEngine } from '../context/RuleEngineContext';
 import PipelineFlowNodes from '../components/cleanflow/PipelineFlowNodes';
 import DataXHeader from '../components/cleanflow/DataXHeader';
 
 export default function ConnectSourcePage() {
   const { navigateTo } = useNavigation();
-  const [dbType, setDbType] = useState('PostgreSQL');
-  const [connectMethod, setConnectMethod] = useState('string');
-  const [connString, setConnString] = useState('postgres://reader:******@db.acme.io/production_db');
+  const { 
+    sourceConfig, 
+    setSourceConfig, 
+    testConnection, 
+    fetchTableSample, 
+    previewRows: contextPreviewRows 
+  } = useRuleEngine();
+
+  const [dbType, setDbType] = useState(
+    sourceConfig?.engine === 'sap_bw' ? 'SAP BW' : 
+    sourceConfig?.engine === 'mongodb' ? 'MongoDB' : 'PostgreSQL'
+  );
+  const [connectMethod, setConnectMethod] = useState(sourceConfig?.connectionUri ? 'string' : 'host');
+  const [connString, setConnString] = useState(sourceConfig?.connectionUri || '');
   const [showConnString, setShowConnString] = useState(false);
-  const [host, setHost] = useState('');
-  const [port, setPort] = useState('5432');
-  const [databaseName, setDatabaseName] = useState('retaildata');
-  const [username, setUsername] = useState('');
+  const [host, setHost] = useState(sourceConfig?.host || '');
+  const [port, setPort] = useState(sourceConfig?.port || '5432');
+  const [databaseName, setDatabaseName] = useState(sourceConfig?.database || 'production_db');
+  const [username, setUsername] = useState('reader');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [readScope, setReadScope] = useState('selected');
-  const [selectedTables, setSelectedTables] = useState(['raw_source_users']);
+  const [selectedTables, setSelectedTables] = useState([sourceConfig?.table || '0PUR_C01']);
   const [tableSearch, setTableSearch] = useState('');
   const [isTesting, setIsTesting] = useState(false);
   const [testSuccess, setTestSuccess] = useState(false);
+  const [testMeta, setTestMeta] = useState({ latencyMs: 38, tableCount: 6 });
+  const [availableTables, setAvailableTables] = useState(
+    (sourceConfig?.availableTables || ['0PUR_C01', '0IC_C03', 'BAPI_PO_CREATE1', 'MARA']).map(name => ({
+      name,
+      rows: name === '0PUR_C01' ? '500 rows' : name.includes('users') ? '1,240 rows' : '16,204 rows'
+    }))
+  );
 
-  const availableTables = [
-    { name: 'purchase_orders', rows: '16,204 rows' },
-    { name: 'raw_source_users', rows: '1,240 rows' },
-    { name: 'sales', rows: '52,019 rows' },
-  ];
+  const [previewRows, setPreviewRows] = useState(contextPreviewRows || []);
 
-  const previewRows = [
-    { id: '101', email: 'sarah.j@acme.com', full_name: 'Sarah Jenkins', role: 'analyst' },
-    { id: '102', email: 'malformed.email@bad', full_name: 'Mark Lee', role: 'viewer' },
-    { id: '103', email: 'marcus.v@acme.com', full_name: 'empty', role: 'manager' },
-    { id: '104', email: 'Elena.RO@ACME.com', full_name: 'Elena Rostova', role: 'Admin' },
-  ];
+  // Sync state if sourceConfig changes
+  useEffect(() => {
+    if (sourceConfig) {
+      setDbType(
+        sourceConfig.engine === 'sap_bw' ? 'SAP BW' : 
+        sourceConfig.engine === 'mongodb' ? 'MongoDB' : 'PostgreSQL'
+      );
+      if (sourceConfig.connectionUri) setConnString(sourceConfig.connectionUri);
+      if (sourceConfig.host) setHost(sourceConfig.host);
+      if (sourceConfig.database) setDatabaseName(sourceConfig.database);
+      if (sourceConfig.table) setSelectedTables([sourceConfig.table]);
+      if (sourceConfig.availableTables) {
+        setAvailableTables(
+          sourceConfig.availableTables.map(name => ({
+            name,
+            rows: name === '0PUR_C01' ? '500 rows' : name.includes('users') ? '1,240 rows' : '16,204 rows'
+          }))
+        );
+      }
+    }
+  }, [sourceConfig]);
 
-  const handleTest = () => {
+  // Sync preview rows with context
+  useEffect(() => {
+    if (contextPreviewRows && contextPreviewRows.length > 0) {
+      setPreviewRows(contextPreviewRows);
+    }
+  }, [contextPreviewRows]);
+
+  const handleTest = async () => {
     setIsTesting(true);
-    setTimeout(() => {
-      setIsTesting(false);
-      setTestSuccess(true);
-    }, 600);
+    const engineKey = dbType === 'SAP BW' ? 'sap_bw' : dbType === 'MongoDB' ? 'mongodb' : 'postgres';
+    const result = await testConnection({
+      engine: engineKey,
+      connectionUri: connString,
+      host,
+      port,
+      database: databaseName,
+      availableTables: availableTables.map(t => t.name)
+    });
+
+    setIsTesting(false);
+    setTestSuccess(result.success);
+    setTestMeta({
+      latencyMs: result.latencyMs || 42,
+      tableCount: result.tableCount || availableTables.length
+    });
+
+    if (result.tables && result.tables.length > 0) {
+      setAvailableTables(
+        result.tables.map(name => ({
+          name,
+          rows: name === '0PUR_C01' ? '500 rows' : name.includes('users') ? '1,240 rows' : '16,204 rows'
+        }))
+      );
+    }
+  };
+
+  const handleSelectTable = async (tableName) => {
+    setSelectedTables([tableName]);
+    const sampleRes = await fetchTableSample(tableName, 5);
+    if (sampleRes && sampleRes.rows) {
+      setPreviewRows(sampleRes.rows);
+    }
   };
 
   const handleSaveSource = () => {
+    const primaryTable = selectedTables[0] || sourceConfig.table;
+    const engineKey = dbType === 'SAP BW' ? 'sap_bw' : dbType === 'MongoDB' ? 'mongodb' : 'postgres';
+    
+    // Auto-discover columns from sample data if available
+    let discoveredCols = sourceConfig.discoveredColumns || [];
+    if (previewRows.length > 0) {
+      discoveredCols = Object.keys(previewRows[0]).filter(k => !k.startsWith('_'));
+    }
+
+    setSourceConfig(prev => ({
+      ...prev,
+      engine: engineKey,
+      connectionUri: connString,
+      host,
+      port,
+      database: databaseName,
+      table: primaryTable,
+      availableTables: availableTables.map(t => t.name),
+      discoveredColumns: discoveredCols
+    }));
+
     navigateTo('generate-rules');
   };
+
+  const filteredAvailableTables = availableTables.filter(t => 
+    !tableSearch.trim() || t.name.toLowerCase().includes(tableSearch.toLowerCase())
+  );
+
+  // Discover display columns for preview
+  const displayCols = previewRows.length > 0 
+    ? Object.keys(previewRows[0]).filter(k => !k.startsWith('_')).slice(0, 4)
+    : (sourceConfig.discoveredColumns || ['id', 'email', 'full_name', 'role']).slice(0, 4);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col antialiased">
@@ -76,7 +172,7 @@ export default function ConnectSourcePage() {
       {/* 3 Pipeline Flow Nodes */}
       <PipelineFlowNodes currentStep="03" />
 
-      {/* Main 2-Column Content: Step 1 Source & Choose Table (Image 4) */}
+      {/* Main 2-Column Content */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           
@@ -100,20 +196,36 @@ export default function ConnectSourcePage() {
                 <div className="relative">
                   <select
                     value={dbType}
-                    onChange={(e) => setDbType(e.target.value)}
+                    onChange={(e) => {
+                      const newType = e.target.value;
+                      setDbType(newType);
+                      if (newType === 'SAP BW') {
+                        setConnString('jdbc:sap://858c7198-93db-4af0-8a9a-5efad6023014.hana.prod-ap21.hanacloud.ondemand.com:443');
+                        setDatabaseName('SAP_BW');
+                        setSelectedTables(['0PUR_C01']);
+                      } else if (newType === 'MongoDB') {
+                        setConnString('mongodb+srv://harshal:harshal@cluster0.tb6bhff.mongodb.net/');
+                        setDatabaseName('datax_staging');
+                        setSelectedTables(['raw_users']);
+                      } else {
+                        setConnString('postgresql://analyser%20_owner:npg_mWphq7u0eLHr@ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech/analyser%20?sslmode=require');
+                        setDatabaseName('PostgreSQL');
+                        setSelectedTables(['raw_source_users']);
+                      }
+                    }}
                     className="w-full appearance-none px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 pr-8 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
                   >
-                    <option value="PostgreSQL">PostgreSQL</option>
-                    <option value="SAP BW">SAP BW InfoCube</option>
+                    <option value="SAP BW">SAP BW InfoCube / HANA Cloud</option>
+                    <option value="PostgreSQL">PostgreSQL (Neon / Amazon RDS)</option>
+                    <option value="MongoDB">MongoDB Atlas (NoSQL)</option>
                     <option value="Snowflake">Snowflake Data Cloud</option>
                     <option value="Databricks">Databricks Lakehouse</option>
-                    <option value="MySQL">MySQL 8</option>
                   </select>
                   <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
               </div>
 
-              {/* Format / Connect with pills (matching Image 3) */}
+              {/* Format / Connect with pills */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-xs font-semibold text-slate-700">Format</label>
@@ -145,39 +257,38 @@ export default function ConnectSourcePage() {
                 </div>
               </div>
 
-              {/* Conditional Connection Details: URI vs Host & Credentials */}
+              {/* Conditional Inputs */}
               {connectMethod === 'string' ? (
-                /* Connection string / URI input (Image 2 Match) */
-                <div className="space-y-3.5">
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-slate-700">Connection string</label>
-                    <div className="relative">
-                      <input
-                        type={showConnString ? 'text' : 'password'}
-                        value={connString}
-                        onChange={(e) => setConnString(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConnString(!showConnString)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                      >
-                        {showConnString ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400 pt-1">
-                      <Lock className="w-3 h-3" />
-                      Encrypted in transit and kept in your vault. Never shown in logs.
-                    </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">Connection string</label>
+                  <div className="relative">
+                    <input
+                      type={showConnString ? 'text' : 'password'}
+                      value={connString}
+                      onChange={(e) => setConnString(e.target.value)}
+                      placeholder="Enter connection string"
+                      className="w-full pl-3 pr-10 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConnString(!showConnString)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      {showConnString ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400 pt-1">
+                    <Lock className="w-3 h-3 text-slate-400" />
+                    Encrypted in transit and kept in your vault. Never shown in logs.
                   </div>
 
-                  {/* Connection Ping & Verification Card — also shown in URI mode */}
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                  {/* Ping & Verification Button */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
                     <div>
                       <div className="text-xs font-bold text-slate-900">Connection Ping & Verification</div>
                       <div className="text-[11px] text-slate-500 mt-0.5">
-                        Ping database to verify write access and discover target schema.
+                        Ping database to verify connectivity and discover schema tables.
                       </div>
                     </div>
 
@@ -202,12 +313,10 @@ export default function ConnectSourcePage() {
                   </div>
                 </div>
               ) : (
-                /* Host & Credentials Format (Image 3 Exact Match) */
-                <div className="space-y-3.5">
-                  {/* Host / Address & Port */}
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                    <div className="sm:col-span-3">
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Host / Address</label>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-2">
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Host</label>
                       <input
                         type="text"
                         value={host}
@@ -223,57 +332,23 @@ export default function ConnectSourcePage() {
                         value={port}
                         onChange={(e) => setPort(e.target.value)}
                         placeholder="5432"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-semibold"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Database Name & Username */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Database Name</label>
-                      <input
-                        type="text"
-                        value={databaseName}
-                        onChange={(e) => setDatabaseName(e.target.value)}
-                        placeholder="production_db"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-semibold"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Username</label>
-                      <input
-                        type="text"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder="reader"
                         className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       />
                     </div>
                   </div>
 
-                  {/* Password */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Password</label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Enter database password"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                      >
-                        {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
-                    </div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Database name</label>
+                    <input
+                      type="text"
+                      value={databaseName}
+                      onChange={(e) => setDatabaseName(e.target.value)}
+                      placeholder="production_db"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                    />
                   </div>
 
-                  {/* Connection Ping & Verification Card (Image 3 Exact Match) */}
+                  {/* Ping Card */}
                   <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
                     <div>
                       <div className="text-xs font-bold text-slate-900">Connection Ping & Verification</div>
@@ -304,7 +379,7 @@ export default function ConnectSourcePage() {
                 </div>
               )}
 
-              {/* Connected Status Box with Spring Tick Animation - ONLY shown after clicking test connection */}
+              {/* Connected Status Box with Spring Animation */}
               <AnimatePresence>
                 {testSuccess && (
                   <motion.div
@@ -324,8 +399,12 @@ export default function ConnectSourcePage() {
                         <Check className="w-3.5 h-3.5 stroke-[3]" />
                       </motion.div>
                       <div>
-                        <div className="text-xs font-bold text-emerald-950">Connected · 39 tables found</div>
-                        <div className="text-[11px] text-emerald-700">PostgreSQL 15 · tested just now</div>
+                        <div className="text-xs font-bold text-emerald-950">
+                          Connected · {testMeta.tableCount} tables discovered
+                        </div>
+                        <div className="text-[11px] text-emerald-700">
+                          {dbType} · {testMeta.latencyMs}ms latency · tested just now
+                        </div>
                       </div>
                     </div>
 
@@ -370,13 +449,13 @@ export default function ConnectSourcePage() {
                   </button>
                 </div>
                 <p className="text-[11px] text-slate-500">
-                  AI uses the columns of the selected table to suggest rules.
+                  AI uses the columns of the selected table to generate and optimize rules.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Choose a Table & Preview (Image 4) */}
+          {/* Right Column: Choose a Table & Live Preview */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-4">
             <div className="flex items-center justify-between pb-1 border-b border-slate-100">
               <h3 className="text-sm font-bold text-slate-900">Choose a table</h3>
@@ -409,20 +488,13 @@ export default function ConnectSourcePage() {
             </div>
 
             {/* Tables List */}
-            <div className="space-y-1.5">
-              {availableTables.map((table) => {
+            <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+              {filteredAvailableTables.map((table) => {
                 const isChecked = selectedTables.includes(table.name);
-                const toggleTable = () => {
-                  setSelectedTables(prev => 
-                    prev.includes(table.name)
-                      ? prev.filter(t => t !== table.name)
-                      : [...prev, table.name]
-                  );
-                };
                 return (
                   <div
                     key={table.name}
-                    onClick={toggleTable}
+                    onClick={() => handleSelectTable(table.name)}
                     className={`px-3 py-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
                       isChecked
                         ? 'border-blue-500 bg-blue-50/50'
@@ -436,7 +508,7 @@ export default function ConnectSourcePage() {
                         onClick={(e) => e.stopPropagation()}
                         onChange={(e) => {
                           e.stopPropagation();
-                          toggleTable();
+                          handleSelectTable(table.name);
                         }}
                         className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                       />
@@ -448,32 +520,36 @@ export default function ConnectSourcePage() {
               })}
             </div>
 
-            {/* Preview Selected Table */}
+            {/* Live Preview Selected Table */}
             <div className="pt-2 space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-semibold text-slate-700 font-mono">
-                  Preview <span className="text-blue-600 underline">raw_source_users</span>
+                  Preview <span className="text-blue-600 underline">{selectedTables[0] || 'table'}</span>
                 </span>
-                <span className="text-slate-400 font-mono text-[11px]">first 4 of 1,240 rows</span>
+                <span className="text-slate-400 font-mono text-[11px]">
+                  {previewRows.length} sample rows
+                </span>
               </div>
 
               <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
                 <table className="w-full text-left text-xs font-mono">
                   <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
                     <tr>
-                      <th className="py-2 px-2.5 font-semibold">id</th>
-                      <th className="py-2 px-2.5 font-semibold">email</th>
-                      <th className="py-2 px-2.5 font-semibold">full_name</th>
-                      <th className="py-2 px-2.5 font-semibold">role</th>
+                      {displayCols.map(col => (
+                        <th key={col} className="py-2 px-2.5 font-semibold capitalize truncate max-w-[120px]">
+                          {col}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {previewRows.map((row) => (
-                      <tr key={row.id} className="hover:bg-slate-50/70">
-                        <td className="py-2 px-2.5 text-slate-500">{row.id}</td>
-                        <td className="py-2 px-2.5 text-slate-800 truncate max-w-[140px]">{row.email}</td>
-                        <td className="py-2 px-2.5 text-slate-800">{row.full_name}</td>
-                        <td className="py-2 px-2.5 text-slate-800">{row.role}</td>
+                    {previewRows.slice(0, 4).map((row, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/70">
+                        {displayCols.map(col => (
+                          <td key={col} className="py-2 px-2.5 text-slate-700 truncate max-w-[140px]">
+                            {row[col] !== null && row[col] !== undefined ? String(row[col]) : <span className="text-slate-300 italic">null</span>}
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
@@ -485,11 +561,11 @@ export default function ConnectSourcePage() {
 
         </div>
 
-        {/* Bottom Bar: Next AI Rules (Image 4) */}
+        {/* Bottom Bar: Next AI Rules */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-6 mt-4 border-t border-slate-200">
           <div className="flex items-center gap-2 text-xs text-slate-500">
             <AlertCircle className="w-3.5 h-3.5 text-blue-500" />
-            Next: AI rules
+            Next: AI rules synthesis
           </div>
 
           <div className="flex items-center gap-2.5">
@@ -501,7 +577,7 @@ export default function ConnectSourcePage() {
             </button>
             <button
               onClick={handleSaveSource}
-              className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all shadow-blue-500/20 flex items-center gap-1.5"
+              className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all shadow-blue-500/20 flex items-center gap-1.5 cursor-pointer"
             >
               <Check className="w-3.5 h-3.5 stroke-[3]" />
               Save source

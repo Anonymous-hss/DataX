@@ -219,3 +219,97 @@ export const SAP_BW_INVENTORY_DATA = [
     REORDER_POINT: 150
   }
 ];
+
+export const USER_MASTER_DATA = [
+  {
+    id: "usr_101",
+    full_name: "Sarah Jenkins",
+    email: "sarah.j@acme.com",
+    role: "analyst",
+    status: "active",
+    account_balance: 1450.00,
+    created_at: "2024-01-15T08:30:00Z"
+  },
+  {
+    id: "usr_102",
+    full_name: "Mark Lee",
+    email: "malformed.email@bad_domain",
+    role: "viewer",
+    status: "active",
+    account_balance: 890.50,
+    created_at: "2024-01-16T09:12:00Z"
+  },
+  {
+    id: "usr_103",
+    full_name: "Marcus Vance",
+    email: "m.vance@acme.com",
+    role: "manager",
+    status: "active",
+    account_balance: 2300.00,
+    created_at: "2024-01-18T11:45:00Z"
+  },
+  {
+    id: "usr_104",
+    full_name: "Elena Rostova",
+    email: "-Elena.Rostova@ACME.com-",
+    role: "Admin*",
+    status: "active",
+    account_balance: 4500.50,
+    created_at: "2024-01-20T14:20:00Z"
+  },
+  {
+    id: "usr_105",
+    full_name: "David Kim",
+    email: "david.kim+test@acme.com",
+    role: "Manager ",
+    status: "active",
+    account_balance: 120.00,
+    created_at: "2024-01-22T16:05:00Z"
+  },
+  {
+    id: "usr_106",
+    full_name: "Aisha Patel",
+    email: "aisha.patel@globaltech.com",
+    role: "analyst",
+    status: "active",
+    account_balance: -850.00,
+    created_at: "2024-01-24T10:15:00Z"
+  },
+  {
+    id: "usr_107",
+    full_name: "Alexander Hayes",
+    email: "a.hayes@cybercorp.net",
+    role: "god_mode",
+    status: "active",
+    account_balance: 3100.00,
+    created_at: "2024-01-25T13:40:00Z"
+  },
+  {
+    id: "usr_108",
+    full_name: "Carlos Rivera",
+    email: "carlos.r@logistics.org",
+    role: "viewer",
+    status: "pending_review",
+    account_balance: 450.00,
+    created_at: "2024-01-26T15:20:00Z"
+  },
+  {
+    id: "usr_109",
+    full_name: "Emily Watson",
+    email: "emily.w@acme.com",
+    role: "analyst",
+    status: "active",
+    account_balance: 1780.20,
+    created_at: "2024-01-27T09:00:00Z"
+  },
+  {
+    id: "usr_110",
+    full_name: "Tariq Mansoor",
+    email: "t.mansoor@apexsupply.io",
+    role: "manager",
+    status: "inactive",
+    account_balance: 0.00,
+    created_at: "2024-01-28T11:10:00Z"
+  }
+];
+

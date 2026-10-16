@@ -17,7 +17,7 @@ const DataXLogo = ({ size = 28 }) => (
 );
 
 export default function RunHistoryPage() {
-  const { s4hanaDocNumber, passedRecords, quarantinedRecords } = useRuleEngine();
+  const { s4hanaDocNumber, passedRecords, quarantinedRecords, runHistory, activeThread } = useRuleEngine();
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
 
@@ -32,14 +32,14 @@ export default function RunHistoryPage() {
     { day: 'Sun', clean: 9, remediated: 2, total: 11 },
   ];
 
-  const runs = [
+  const runs = runHistory && runHistory.length > 0 ? runHistory : [
     {
       id: `RUN-${s4hanaDocNumber ? s4hanaDocNumber.slice(-5) : '99284'}`,
-      thread: 'SAP BW → S/4HANA Clean Core',
+      thread: activeThread?.name || 'SAP BW → S/4HANA Clean Core',
       trigger: 'ReAct Agentic Loop',
       time: 'Just now',
       duration: '1.4s',
-      records: `${passedRecords.length + quarantinedRecords.length || 8} rows`,
+      records: `${passedRecords.length + quarantinedRecords.length || 500} rows`,
       docNo: s4hanaDocNumber ? `#${s4hanaDocNumber}` : '#4500019284',
       status: 'Clean Core Posted',
       variant: 'success',
