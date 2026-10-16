@@ -98,9 +98,18 @@ export default function ConnectSourcePage() {
     setTestSuccess(false);
 
     const engineKey = dbType === 'SAP BW' ? 'sap_bw' : dbType === 'MongoDB' ? 'mongodb' : dbType === 'Snowflake' ? 'snowflake' : dbType === 'Databricks' ? 'databricks' : 'postgres';
+
+    const effectiveUri = connectMethod === 'string' && connString.trim()
+      ? connString.trim()
+      : (engineKey === 'sap_bw' && host.trim())
+      ? `jdbc:sap://${host.trim()}:${port || '443'}?encrypt=true&validateCertificate=false&user=${username || ''}&password=${password || ''}`
+      : (engineKey === 'mongodb' && host.trim())
+      ? `mongodb://${username || ''}:${password || ''}@${host.trim()}:${port || '27017'}/${databaseName || ''}`
+      : (host.trim() ? `postgresql://${username || ''}:${password || ''}@${host.trim()}:${port || '5432'}/${databaseName || ''}` : connString);
+
     const result = await testConnection({
       engine: engineKey,
-      connectionUri: connString,
+      connectionUri: effectiveUri,
       host,
       port,
       database: databaseName,
@@ -146,11 +155,19 @@ export default function ConnectSourcePage() {
   const handleSaveSource = () => {
     setValidationError(null);
     const engineKey = dbType === 'SAP BW' ? 'sap_bw' : dbType === 'MongoDB' ? 'mongodb' : dbType === 'Snowflake' ? 'snowflake' : dbType === 'Databricks' ? 'databricks' : 'postgres';
+
+    const effectiveUri = connectMethod === 'string' && connString.trim()
+      ? connString.trim()
+      : (engineKey === 'sap_bw' && host.trim())
+      ? `jdbc:sap://${host.trim()}:${port || '443'}?encrypt=true&validateCertificate=false&user=${username || ''}&password=${password || ''}`
+      : (engineKey === 'mongodb' && host.trim())
+      ? `mongodb://${username || ''}:${password || ''}@${host.trim()}:${port || '27017'}/${databaseName || ''}`
+      : (host.trim() ? `postgresql://${username || ''}:${password || ''}@${host.trim()}:${port || '5432'}/${databaseName || ''}` : connString);
     
     // Check credentials before proceeding
     const candidateCreds = {
       engine: engineKey,
-      connectionUri: connString,
+      connectionUri: effectiveUri,
       host,
       port,
       database: databaseName,
@@ -178,7 +195,7 @@ export default function ConnectSourcePage() {
     setSourceConfig(prev => ({
       ...prev,
       engine: engineKey,
-      connectionUri: connString,
+      connectionUri: effectiveUri,
       host,
       port,
       database: databaseName,
