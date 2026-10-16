@@ -15,9 +15,9 @@ import {
 import { useRuleEngine } from '../../context/RuleEngineContext';
 
 export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
-  const { targetConfig, setTargetConfig, sourceConfig, testConnection } = useRuleEngine();
+  const { targetConfig, setTargetConfig, sourceConfig, testConnection, isCredentialConfigured } = useRuleEngine();
 
-  const isSap = sourceConfig?.engine === 'sap_bw' || sourceConfig?.table === '0PUR_C01';
+  const isSap = sourceConfig?.engine === 'sap_bw';
 
   const [dbType, setDbType] = useState(
     targetConfig?.engine === 's4_hana' || isSap ? 'SAP S/4HANA' : 'PostgreSQL'
@@ -27,20 +27,19 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
   const [showConnString, setShowConnString] = useState(false);
   const [outputOption, setOutputOption] = useState(targetConfig?.targetNamingMode || 'suffix');
   const [suffixName, setSuffixName] = useState(
-    targetConfig?.table || (sourceConfig?.table ? `${sourceConfig.table}_clean` : 'raw_source_users_clean')
+    targetConfig?.table || (sourceConfig?.table ? `${sourceConfig.table}_clean` : '')
   );
-  const [customTableName, setCustomTableName] = useState(
-    targetConfig?.customTableName || (isSap ? 'staged_purchase_orders' : 'users_reconciled_v1')
-  );
+  const [customTableName, setCustomTableName] = useState(targetConfig?.customTableName || '');
   const [host, setHost] = useState(targetConfig?.host || '');
   const [port, setPort] = useState(targetConfig?.port || (isSap ? '443' : '5432'));
-  const [databaseName, setDatabaseName] = useState(targetConfig?.database || (isSap ? 'S4_HANA' : 'reconciled_db'));
+  const [databaseName, setDatabaseName] = useState(targetConfig?.database || '');
   const [username, setUsername] = useState(targetConfig?.user || targetConfig?.username || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testSuccess, setTestSuccess] = useState(false);
   const [testError, setTestError] = useState(null);
+  const [validationError, setValidationError] = useState(null);
   const [testLatency, setTestLatency] = useState(42);
 
   // Sync if source or target config updates
@@ -53,6 +52,7 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
   const handleTestConnection = async () => {
     setIsTesting(true);
     setTestError(null);
+    setValidationError(null);
     setTestSuccess(false);
 
     const engineKey = dbType.includes('SAP') ? 's4_hana' : dbType.includes('Databricks') ? 'databricks' : dbType.includes('Snowflake') ? 'snowflake' : 'postgres';
@@ -77,8 +77,29 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
   };
 
   const handleSave = () => {
+    setValidationError(null);
     const finalTable = outputOption === 'suffix' ? suffixName : customTableName;
-    const engineKey = dbType.includes('SAP') ? 's4_hana' : 'postgres';
+    const engineKey = dbType.includes('SAP') ? 's4_hana' : dbType.includes('Databricks') ? 'databricks' : dbType.includes('Snowflake') ? 'snowflake' : 'postgres';
+
+    const candidateCreds = {
+      engine: engineKey,
+      connectionUri: connString,
+      host,
+      port,
+      database: databaseName,
+      user: username,
+      password
+    };
+
+    if (isCredentialConfigured && !isCredentialConfigured(candidateCreds)) {
+      setValidationError('Target credentials required: Please enter connection URI or Host, Database, Username, and Password.');
+      return;
+    }
+
+    if (!finalTable || !finalTable.trim()) {
+      setValidationError('Target table name required: Please specify the staging destination table name.');
+      return;
+    }
 
     setTargetConfig(prev => ({
       ...prev,
@@ -87,7 +108,9 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
       host,
       port,
       database: databaseName,
-      table: finalTable,
+      user: username,
+      password,
+      table: finalTable.trim(),
       targetNamingMode: outputOption,
       customTableName
     }));
@@ -461,6 +484,14 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
         </div>
 
       </div>
+
+      {/* Validation Error Banner */}
+      {validationError && (
+        <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-center gap-2.5">
+          <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+          <span>{validationError}</span>
+        </div>
+      )}
 
       {/* Bottom Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">

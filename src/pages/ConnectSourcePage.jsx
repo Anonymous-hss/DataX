@@ -17,7 +17,7 @@ import {
   Play
 } from 'lucide-react';
 import { useNavigation } from '../context/NavigationContext';
-import { useRuleEngine } from '../context/RuleEngineContext';
+import { useRuleEngine, isCredentialConfigured } from '../context/RuleEngineContext';
 import PipelineFlowNodes from '../components/cleanflow/PipelineFlowNodes';
 import DataXHeader from '../components/cleanflow/DataXHeader';
 
@@ -39,22 +39,23 @@ export default function ConnectSourcePage() {
   const [connString, setConnString] = useState(sourceConfig?.connectionUri || '');
   const [showConnString, setShowConnString] = useState(false);
   const [host, setHost] = useState(sourceConfig?.host || '');
-  const [port, setPort] = useState(sourceConfig?.port || '5432');
-  const [databaseName, setDatabaseName] = useState(sourceConfig?.database || 'production_db');
+  const [port, setPort] = useState(sourceConfig?.port || (sourceConfig?.engine === 'sap_bw' ? '443' : '5432'));
+  const [databaseName, setDatabaseName] = useState(sourceConfig?.database || '');
   const [username, setUsername] = useState(sourceConfig?.user || sourceConfig?.username || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [readScope, setReadScope] = useState('selected');
-  const [selectedTables, setSelectedTables] = useState([sourceConfig?.table || '0PUR_C01']);
+  const [selectedTables, setSelectedTables] = useState(sourceConfig?.table ? [sourceConfig.table] : []);
   const [tableSearch, setTableSearch] = useState('');
   const [isTesting, setIsTesting] = useState(false);
   const [testSuccess, setTestSuccess] = useState(false);
   const [testError, setTestError] = useState(null);
-  const [testMeta, setTestMeta] = useState({ latencyMs: 38, tableCount: 6 });
+  const [validationError, setValidationError] = useState(null);
+  const [testMeta, setTestMeta] = useState({ latencyMs: 0, tableCount: 0 });
   const [availableTables, setAvailableTables] = useState(
-    (sourceConfig?.availableTables || ['0PUR_C01', '0IC_C03', 'BAPI_PO_CREATE1', 'MARA']).map(name => ({
+    (sourceConfig?.availableTables || []).map(name => ({
       name,
-      rows: name === '0PUR_C01' ? '500 rows' : name.includes('users') ? '1,240 rows' : '16,204 rows'
+      rows: 'Live table'
     }))
   );
 
@@ -69,13 +70,14 @@ export default function ConnectSourcePage() {
       );
       if (sourceConfig.connectionUri) setConnString(sourceConfig.connectionUri);
       if (sourceConfig.host) setHost(sourceConfig.host);
+      if (sourceConfig.port) setPort(sourceConfig.port);
       if (sourceConfig.database) setDatabaseName(sourceConfig.database);
       if (sourceConfig.table) setSelectedTables([sourceConfig.table]);
-      if (sourceConfig.availableTables) {
+      if (sourceConfig.availableTables && sourceConfig.availableTables.length > 0) {
         setAvailableTables(
           sourceConfig.availableTables.map(name => ({
             name,
-            rows: name === '0PUR_C01' ? '500 rows' : name.includes('users') ? '1,240 rows' : '16,204 rows'
+            rows: 'Live table'
           }))
         );
       }
@@ -92,6 +94,7 @@ export default function ConnectSourcePage() {
   const handleTest = async () => {
     setIsTesting(true);
     setTestError(null);
+    setValidationError(null);
     setTestSuccess(false);
 
     const engineKey = dbType === 'SAP BW' ? 'sap_bw' : dbType === 'MongoDB' ? 'mongodb' : dbType === 'Snowflake' ? 'snowflake' : dbType === 'Databricks' ? 'databricks' : 'postgres';
@@ -111,16 +114,20 @@ export default function ConnectSourcePage() {
       setTestSuccess(true);
       setTestMeta({
         latencyMs: result.latencyMs || 42,
-        tableCount: result.tableCount || availableTables.length
+        tableCount: result.tableCount || (result.tables ? result.tables.length : 0)
       });
 
       if (result.tables && result.tables.length > 0) {
         setAvailableTables(
           result.tables.map(name => ({
             name,
-            rows: name === '0PUR_C01' ? '500 rows' : name.includes('users') ? '1,240 rows' : '16,204 rows'
+            rows: 'Live table'
           }))
         );
+        // Automatically select the first table if none selected yet
+        if (selectedTables.length === 0) {
+          handleSelectTable(result.tables[0]);
+        }
       }
     } else {
       setTestSuccess(false);
@@ -137,9 +144,31 @@ export default function ConnectSourcePage() {
   };
 
   const handleSaveSource = () => {
-    const primaryTable = selectedTables[0] || sourceConfig.table;
-    const engineKey = dbType === 'SAP BW' ? 'sap_bw' : dbType === 'MongoDB' ? 'mongodb' : 'postgres';
+    setValidationError(null);
+    const engineKey = dbType === 'SAP BW' ? 'sap_bw' : dbType === 'MongoDB' ? 'mongodb' : dbType === 'Snowflake' ? 'snowflake' : dbType === 'Databricks' ? 'databricks' : 'postgres';
     
+    // Check credentials before proceeding
+    const candidateCreds = {
+      engine: engineKey,
+      connectionUri: connString,
+      host,
+      port,
+      database: databaseName,
+      user: username,
+      password
+    };
+
+    if (!isCredentialConfigured(candidateCreds)) {
+      setValidationError('Source credentials required: Please enter valid Connection URI or Host, Database, Username, and Password.');
+      return;
+    }
+
+    const primaryTable = selectedTables[0];
+    if (!primaryTable) {
+      setValidationError('Table selection required: Please test connection and select a source table before saving.');
+      return;
+    }
+
     // Auto-discover columns from sample data if available
     let discoveredCols = sourceConfig.discoveredColumns || [];
     if (previewRows.length > 0) {
@@ -153,6 +182,8 @@ export default function ConnectSourcePage() {
       host,
       port,
       database: databaseName,
+      user: username,
+      password,
       table: primaryTable,
       availableTables: availableTables.map(t => t.name),
       discoveredColumns: discoveredCols
@@ -167,8 +198,8 @@ export default function ConnectSourcePage() {
 
   // Discover display columns for preview
   const displayCols = previewRows.length > 0 
-    ? Object.keys(previewRows[0]).filter(k => !k.startsWith('_')).slice(0, 4)
-    : (sourceConfig.discoveredColumns || ['id', 'email', 'full_name', 'role']).slice(0, 4);
+    ? Object.keys(previewRows[0]).filter(k => !k.startsWith('_')).slice(0, 5)
+    : (sourceConfig?.discoveredColumns || []).slice(0, 5);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col antialiased">
@@ -212,24 +243,15 @@ export default function ConnectSourcePage() {
                       setDbType(newType);
                       setTestSuccess(false);
                       setTestError(null);
+                      setValidationError(null);
                       if (newType === 'SAP BW') {
                         setPort('443');
-                        setDatabaseName('SAP_BW');
-                        setSelectedTables(['0PUR_C01']);
                       } else if (newType === 'MongoDB') {
                         setPort('27017');
-                        setDatabaseName('datax_staging');
-                        setSelectedTables(['raw_users']);
-                      } else if (newType === 'Snowflake') {
+                      } else if (newType === 'Snowflake' || newType === 'Databricks') {
                         setPort('443');
-                        setDatabaseName('SNOWFLAKE_DB');
-                      } else if (newType === 'Databricks') {
-                        setPort('443');
-                        setDatabaseName('lakehouse');
                       } else {
                         setPort('5432');
-                        setDatabaseName('PostgreSQL');
-                        setSelectedTables(['raw_source_users']);
                       }
                     }}
                     className="w-full appearance-none px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 pr-8 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
@@ -576,35 +598,43 @@ export default function ConnectSourcePage() {
 
             {/* Tables List */}
             <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-              {filteredAvailableTables.map((table) => {
-                const isChecked = selectedTables.includes(table.name);
-                return (
-                  <div
-                    key={table.name}
-                    onClick={() => handleSelectTable(table.name)}
-                    className={`px-3 py-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                      isChecked
-                        ? 'border-blue-500 bg-blue-50/50'
-                        : 'border-slate-200 hover:border-slate-300 bg-white'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          handleSelectTable(table.name);
-                        }}
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                      />
-                      <span className="font-mono text-xs font-semibold text-slate-800">{table.name}</span>
+              {filteredAvailableTables.length === 0 ? (
+                <div className="border border-dashed border-slate-200 rounded-xl p-6 text-center text-xs text-slate-400 bg-slate-50/50">
+                  <Database className="w-5 h-5 mx-auto text-slate-300 mb-1.5" />
+                  <p className="font-semibold text-slate-600">No tables discovered yet</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Enter connection details on the left and click <strong>Test Connection</strong> to discover tables.</p>
+                </div>
+              ) : (
+                filteredAvailableTables.map((table) => {
+                  const isChecked = selectedTables.includes(table.name);
+                  return (
+                    <div
+                      key={table.name}
+                      onClick={() => handleSelectTable(table.name)}
+                      className={`px-3 py-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                        isChecked
+                          ? 'border-blue-500 bg-blue-50/50'
+                          : 'border-slate-200 hover:border-slate-300 bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleSelectTable(table.name);
+                          }}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        />
+                        <span className="font-mono text-xs font-semibold text-slate-800">{table.name}</span>
+                      </div>
+                      <span className="text-xs text-slate-400 font-mono">{table.rows}</span>
                     </div>
-                    <span className="text-xs text-slate-400 font-mono">{table.rows}</span>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
 
             {/* Live Preview Selected Table */}
@@ -618,35 +648,51 @@ export default function ConnectSourcePage() {
                 </span>
               </div>
 
-              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                <table className="w-full text-left text-xs font-mono">
-                  <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
-                    <tr>
-                      {displayCols.map(col => (
-                        <th key={col} className="py-2 px-2.5 font-semibold capitalize truncate max-w-[120px]">
-                          {col}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {previewRows.slice(0, 4).map((row, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50/70">
+              {previewRows.length === 0 ? (
+                <div className="border border-dashed border-slate-200 rounded-xl p-6 text-center text-xs text-slate-400 bg-slate-50/50">
+                  <Database className="w-5 h-5 mx-auto text-slate-300 mb-1.5" />
+                  <p className="font-semibold text-slate-600">No sample records</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Select a table above to load live sample rows from your database.</p>
+                </div>
+              ) : (
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+                      <tr>
                         {displayCols.map(col => (
-                          <td key={col} className="py-2 px-2.5 text-slate-700 truncate max-w-[140px]">
-                            {row[col] !== null && row[col] !== undefined ? String(row[col]) : <span className="text-slate-300 italic">null</span>}
-                          </td>
+                          <th key={col} className="py-2 px-2.5 font-semibold capitalize truncate max-w-[120px]">
+                            {col}
+                          </th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {previewRows.slice(0, 4).map((row, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50/70">
+                          {displayCols.map(col => (
+                            <td key={col} className="py-2 px-2.5 text-slate-700 truncate max-w-[140px]">
+                              {row[col] !== null && row[col] !== undefined ? String(row[col]) : <span className="text-slate-300 italic">null</span>}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
           </div>
 
         </div>
+
+        {/* Validation Error Banner */}
+        {validationError && (
+          <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-center gap-2.5 mt-4">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+            <span>{validationError}</span>
+          </div>
+        )}
 
         {/* Bottom Bar: Next AI Rules */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-6 mt-4 border-t border-slate-200">
