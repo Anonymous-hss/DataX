@@ -15,12 +15,11 @@ export default function DryRunResultsPage({ onBack, onRunLive }) {
     executeLiveRun 
   } = useRuleEngine();
 
-  const isSap = sourceConfig?.engine === 'sap_bw' || sourceConfig?.table === '0PUR_C01';
-  const totalRows = dryRunResult?.totalChecked || (isSap ? 500 : 1240);
-  const cleanCount = dryRunResult?.cleanCount || Math.round(totalRows * 0.88);
-  const fixedCount = dryRunResult?.autoFixedCount || Math.round(totalRows * 0.095);
-  const heldCount = dryRunResult?.quarantinedCount || (totalRows - cleanCount - fixedCount);
-  const passRate = dryRunResult?.passRate || 97.1;
+  const totalRows = dryRunResult?.totalChecked ?? 50;
+  const cleanCount = dryRunResult?.cleanCount ?? 0;
+  const fixedCount = dryRunResult?.autoFixedCount ?? 0;
+  const heldCount = dryRunResult?.quarantinedCount ?? 0;
+  const passRate = dryRunResult?.passRate ?? (totalRows > 0 ? Math.round(((cleanCount + fixedCount) / totalRows) * 1000) / 10 : 94.0);
   const outcomes = dryRunResult?.ruleOutcomes || [];
 
   const handleRunLiveClick = async () => {

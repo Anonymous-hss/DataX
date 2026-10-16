@@ -17,7 +17,7 @@ const DataXLogo = ({ size = 28 }) => (
 );
 
 export default function RunHistoryPage() {
-  const { s4hanaDocNumber, passedRecords, quarantinedRecords, runHistory, activeThread } = useRuleEngine();
+  const { s4hanaDocNumber, passedRecords, quarantinedRecords, runHistory, activeThread, dynamicHealthScore } = useRuleEngine();
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
 
@@ -142,8 +142,12 @@ export default function RunHistoryPage() {
           <div className="bg-white border border-[#E3E6EE] rounded-[18px] p-5 shadow-xs">
             <span className="text-xs font-semibold text-[#5F6678]">Mean Data Health</span>
             <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-2xl font-bold text-[#0A0F1F]">96.8%</span>
-              <Tag variant="volt">A+ Grade</Tag>
+              <span className="text-2xl font-bold text-[#0A0F1F]">
+                {dynamicHealthScore || activeThread?.successRate || 94.0}%
+              </span>
+              <Tag variant={(dynamicHealthScore || activeThread?.successRate || 94.0) >= 90 ? 'volt' : 'warning'}>
+                {(dynamicHealthScore || activeThread?.successRate || 94.0) >= 90 ? 'A+ Grade' : (dynamicHealthScore || activeThread?.successRate || 94.0) >= 75 ? 'B+ Grade' : 'C Grade'}
+              </Tag>
             </div>
             <p className="text-[11px] text-[#8E95A9] mt-1">Evaluated across all business rules</p>
           </div>

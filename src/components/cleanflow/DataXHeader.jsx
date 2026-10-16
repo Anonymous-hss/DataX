@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
 import { useRuleEngine } from '../../context/RuleEngineContext';
+import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/clerk-react';
 
 export default function DataXHeader({ 
   currentPage, 
@@ -28,6 +29,8 @@ export default function DataXHeader({
   const { navigateTo } = useNavigation();
   const { activeThread, sourceConfig, targetConfig } = useRuleEngine();
   const [saveSuccess, setSaveSuccess] = React.useState(false);
+
+  const { user } = useUser();
 
   const handleSaveClick = () => {
     setSaveSuccess(true);
@@ -63,7 +66,7 @@ export default function DataXHeader({
                 Threads
               </button>
               <button 
-                onClick={() => navigateTo('connect-source')}
+                onClick={() => navigateTo('new-thread')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <Layers className="w-3.5 h-3.5 text-slate-400" />
@@ -86,8 +89,6 @@ export default function DataXHeader({
             </nav>
           </div>
 
-
-
           {/* Search, Notifications & User */}
           <div className="flex items-center gap-3">
             <div className="relative hidden sm:block w-48 md:w-56">
@@ -107,11 +108,39 @@ export default function DataXHeader({
               <span className="w-1.5 h-1.5 rounded-full bg-blue-600 absolute top-1.5 right-1.5" />
             </button>
 
-            {/* User Avatar */}
-            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-500 to-indigo-600 p-0.5 shadow-xs cursor-pointer">
-              <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                <span className="text-[10px] font-bold text-slate-700">AK</span>
-              </div>
+            {/* Dynamic Clerk Profile Avatar / Sign-In Button */}
+            <div className="flex items-center pl-1 border-l border-slate-200">
+              <SignedIn>
+                <div className="flex items-center gap-2">
+                  <div className="hidden lg:flex flex-col text-right">
+                    <span className="text-xs font-semibold text-slate-800 leading-tight">
+                      {user?.fullName || user?.firstName || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User'}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {user?.primaryEmailAddress?.emailAddress || 'Workspace Member'}
+                    </span>
+                  </div>
+                  <UserButton 
+                    afterSignOutUrl="/datax" 
+                    appearance={{
+                      elements: {
+                        avatarBox: "w-8 h-8 rounded-full shadow-xs ring-1 ring-slate-200"
+                      }
+                    }}
+                  />
+                </div>
+              </SignedIn>
+
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <button
+                    type="button"
+                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                  >
+                    Sign in
+                  </button>
+                </SignInButton>
+              </SignedOut>
             </div>
 
             {onSwitchToMarketing && (
@@ -119,7 +148,7 @@ export default function DataXHeader({
                 onClick={onSwitchToMarketing}
                 className="hidden xl:block text-xs font-mono text-slate-400 hover:text-slate-600 underline pl-1"
               >
-                Marketing →
+                Website →
               </button>
             )}
           </div>

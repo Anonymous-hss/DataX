@@ -23,12 +23,7 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
     targetConfig?.engine === 's4_hana' || isSap ? 'SAP S/4HANA' : 'PostgreSQL'
   );
   const [connectMethod, setConnectMethod] = useState(targetConfig?.connectionUri ? 'string' : 'host');
-  const [connString, setConnString] = useState(
-    targetConfig?.connectionUri || 
-    (isSap 
-      ? 'jdbc:sap://858c7198-93db-4af0-8a9a-5efad6023014.hana.prod-ap21.hanacloud.ondemand.com:443' 
-      : 'postgresql://analyser%20_owner:npg_mWphq7u0eLHr@ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech/analyser%20?sslmode=require')
-  );
+  const [connString, setConnString] = useState(targetConfig?.connectionUri || '');
   const [showConnString, setShowConnString] = useState(false);
   const [outputOption, setOutputOption] = useState(targetConfig?.targetNamingMode || 'suffix');
   const [suffixName, setSuffixName] = useState(
@@ -37,14 +32,15 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
   const [customTableName, setCustomTableName] = useState(
     targetConfig?.customTableName || (isSap ? 'staged_purchase_orders' : 'users_reconciled_v1')
   );
-  const [host, setHost] = useState(targetConfig?.host || (isSap ? '858c7198-93db-4af0-8a9a-5efad6023014.hana.prod-ap21.hanacloud.ondemand.com' : 'ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech'));
+  const [host, setHost] = useState(targetConfig?.host || '');
   const [port, setPort] = useState(targetConfig?.port || (isSap ? '443' : '5432'));
   const [databaseName, setDatabaseName] = useState(targetConfig?.database || (isSap ? 'S4_HANA' : 'reconciled_db'));
-  const [username, setUsername] = useState('writer');
+  const [username, setUsername] = useState(targetConfig?.user || targetConfig?.username || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testSuccess, setTestSuccess] = useState(false);
+  const [testError, setTestError] = useState(null);
   const [testLatency, setTestLatency] = useState(42);
 
   // Sync if source or target config updates
@@ -56,18 +52,28 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
 
   const handleTestConnection = async () => {
     setIsTesting(true);
-    const engineKey = dbType.includes('SAP') ? 's4_hana' : 'postgres';
+    setTestError(null);
+    setTestSuccess(false);
+
+    const engineKey = dbType.includes('SAP') ? 's4_hana' : dbType.includes('Databricks') ? 'databricks' : dbType.includes('Snowflake') ? 'snowflake' : 'postgres';
     const res = await testConnection({
       engine: engineKey,
       connectionUri: connString,
       host,
       port,
-      database: databaseName
+      database: databaseName,
+      user: username,
+      password: password
     }, true);
 
     setIsTesting(false);
-    setTestSuccess(res.success);
-    setTestLatency(res.latencyMs || 42);
+    if (res.success) {
+      setTestSuccess(true);
+      setTestLatency(res.latencyMs || 42);
+    } else {
+      setTestSuccess(false);
+      setTestError(res.error || res.message || 'Target database connection failed.');
+    }
   };
 
   const handleSave = () => {
@@ -190,6 +196,12 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
                       type={showConnString ? 'text' : 'password'}
                       value={connString}
                       onChange={(e) => setConnString(e.target.value)}
+                      placeholder={
+                        dbType.includes('SAP') ? 'jdbc:sap://<s4hana-host>:443' :
+                        dbType.includes('Databricks') ? 'https://<workspace>.azuredatabricks.net' :
+                        dbType.includes('Snowflake') ? 'https://<account>.snowflakecomputing.com' :
+                        'postgresql://<user>:<password>@<host>:5432/<database>?sslmode=require'
+                      }
                       className="w-full pl-3 pr-10 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     />
                     <button
@@ -215,7 +227,7 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
                         type="text"
                         value={host}
                         onChange={(e) => setHost(e.target.value)}
-                        placeholder="db.acme.io"
+                        placeholder={dbType.includes('SAP') ? 's4hana-core.corp.ondemand.com' : 'target-db.company.com'}
                         className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       />
                     </div>
@@ -225,7 +237,7 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
                         type="text"
                         value={port}
                         onChange={(e) => setPort(e.target.value)}
-                        placeholder="5432"
+                        placeholder={dbType.includes('SAP') ? '443' : '5432'}
                         className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       />
                     </div>
@@ -237,9 +249,41 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
                       type="text"
                       value={databaseName}
                       onChange={(e) => setDatabaseName(e.target.value)}
-                      placeholder="reconciled_db"
+                      placeholder={dbType.includes('SAP') ? 'S4_HANA' : 'clean_core_db'}
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Username</label>
+                      <input
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="db_user"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="w-full pl-3 pr-8 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -281,7 +325,7 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -8, scale: 0.97 }}
                     transition={{ duration: 0.35, ease: "easeOut" }}
-                    className="bg-[#ecfdf5] border border-[#a7f3d0] rounded-xl p-3 flex items-center justify-between shadow-2xs"
+                    className="bg-[#ecfdf5] border border-[#a7f3d0] rounded-xl p-3 flex items-center justify-between shadow-2xs mt-3"
                   >
                     <div className="flex items-center gap-2.5">
                       <div className="w-6 h-6 rounded-full bg-[#059669] text-white flex items-center justify-center shrink-0 shadow-xs">
@@ -290,6 +334,26 @@ export default function ConnectTargetPage({ onSaveAndDryRun, onCancel }) {
                       <div>
                         <div className="text-xs font-bold text-emerald-950">Target Destination Connected</div>
                         <div className="text-[11px] text-emerald-700">{dbType} · {testLatency}ms write handshake verified</div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {testError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                    transition={{ duration: 0.35, ease: "easeOut" }}
+                    className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-center justify-between shadow-2xs mt-3"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-rose-950">Connection Failed</div>
+                        <div className="text-[11px] text-rose-700">{testError}</div>
                       </div>
                     </div>
                   </motion.div>

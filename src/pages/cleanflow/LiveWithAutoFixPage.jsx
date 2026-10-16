@@ -27,7 +27,8 @@ export default function LiveWithAutoFixPage({ onBack }) {
     dryRunResult, 
     activeRules, 
     autoFixEnabled, 
-    setAutoFixEnabled 
+    setAutoFixEnabled,
+    dynamicHealthScore 
   } = useRuleEngine();
 
   const isSap = sourceConfig?.engine === 'sap_bw' || sourceConfig?.table === '0PUR_C01';
@@ -40,6 +41,10 @@ export default function LiveWithAutoFixPage({ onBack }) {
   const [isPaused, setIsPaused] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+
+  useEffect(() => {
+    setAutoFixOn(autoFixEnabled);
+  }, [autoFixEnabled]);
 
   const [toast, setToast] = useState({
     visible: true,
@@ -222,7 +227,7 @@ export default function LiveWithAutoFixPage({ onBack }) {
             {/* Health Pill */}
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold shadow-2xs">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              Health {dryRunResult?.passRate || 97.1}%
+              Health {dynamicHealthScore || dryRunResult?.passRate || 94.0}%
             </span>
 
             {/* Auto-fix Toggle Pill */}
@@ -241,7 +246,7 @@ export default function LiveWithAutoFixPage({ onBack }) {
             {/* Quarantine Pill */}
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-semibold shadow-2xs">
               <Archive className="w-3.5 h-3.5 text-amber-600" />
-              Quarantine {dryRunResult?.quarantinedCount || 36}
+              Quarantine {dryRunResult?.quarantinedCount ?? 0}
             </span>
 
             {/* Save Button */}

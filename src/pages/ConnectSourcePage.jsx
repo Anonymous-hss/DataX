@@ -41,7 +41,7 @@ export default function ConnectSourcePage() {
   const [host, setHost] = useState(sourceConfig?.host || '');
   const [port, setPort] = useState(sourceConfig?.port || '5432');
   const [databaseName, setDatabaseName] = useState(sourceConfig?.database || 'production_db');
-  const [username, setUsername] = useState('reader');
+  const [username, setUsername] = useState(sourceConfig?.user || sourceConfig?.username || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [readScope, setReadScope] = useState('selected');
@@ -49,6 +49,7 @@ export default function ConnectSourcePage() {
   const [tableSearch, setTableSearch] = useState('');
   const [isTesting, setIsTesting] = useState(false);
   const [testSuccess, setTestSuccess] = useState(false);
+  const [testError, setTestError] = useState(null);
   const [testMeta, setTestMeta] = useState({ latencyMs: 38, tableCount: 6 });
   const [availableTables, setAvailableTables] = useState(
     (sourceConfig?.availableTables || ['0PUR_C01', '0IC_C03', 'BAPI_PO_CREATE1', 'MARA']).map(name => ({
@@ -90,30 +91,40 @@ export default function ConnectSourcePage() {
 
   const handleTest = async () => {
     setIsTesting(true);
-    const engineKey = dbType === 'SAP BW' ? 'sap_bw' : dbType === 'MongoDB' ? 'mongodb' : 'postgres';
+    setTestError(null);
+    setTestSuccess(false);
+
+    const engineKey = dbType === 'SAP BW' ? 'sap_bw' : dbType === 'MongoDB' ? 'mongodb' : dbType === 'Snowflake' ? 'snowflake' : dbType === 'Databricks' ? 'databricks' : 'postgres';
     const result = await testConnection({
       engine: engineKey,
       connectionUri: connString,
       host,
       port,
       database: databaseName,
+      user: username,
+      password: password,
       availableTables: availableTables.map(t => t.name)
     });
 
     setIsTesting(false);
-    setTestSuccess(result.success);
-    setTestMeta({
-      latencyMs: result.latencyMs || 42,
-      tableCount: result.tableCount || availableTables.length
-    });
+    if (result.success) {
+      setTestSuccess(true);
+      setTestMeta({
+        latencyMs: result.latencyMs || 42,
+        tableCount: result.tableCount || availableTables.length
+      });
 
-    if (result.tables && result.tables.length > 0) {
-      setAvailableTables(
-        result.tables.map(name => ({
-          name,
-          rows: name === '0PUR_C01' ? '500 rows' : name.includes('users') ? '1,240 rows' : '16,204 rows'
-        }))
-      );
+      if (result.tables && result.tables.length > 0) {
+        setAvailableTables(
+          result.tables.map(name => ({
+            name,
+            rows: name === '0PUR_C01' ? '500 rows' : name.includes('users') ? '1,240 rows' : '16,204 rows'
+          }))
+        );
+      }
+    } else {
+      setTestSuccess(false);
+      setTestError(result.error || result.message || 'Connection failed: Unable to connect with provided credentials.');
     }
   };
 
@@ -199,16 +210,24 @@ export default function ConnectSourcePage() {
                     onChange={(e) => {
                       const newType = e.target.value;
                       setDbType(newType);
+                      setTestSuccess(false);
+                      setTestError(null);
                       if (newType === 'SAP BW') {
-                        setConnString('jdbc:sap://858c7198-93db-4af0-8a9a-5efad6023014.hana.prod-ap21.hanacloud.ondemand.com:443');
+                        setPort('443');
                         setDatabaseName('SAP_BW');
                         setSelectedTables(['0PUR_C01']);
                       } else if (newType === 'MongoDB') {
-                        setConnString('mongodb+srv://harshal:harshal@cluster0.tb6bhff.mongodb.net/');
+                        setPort('27017');
                         setDatabaseName('datax_staging');
                         setSelectedTables(['raw_users']);
+                      } else if (newType === 'Snowflake') {
+                        setPort('443');
+                        setDatabaseName('SNOWFLAKE_DB');
+                      } else if (newType === 'Databricks') {
+                        setPort('443');
+                        setDatabaseName('lakehouse');
                       } else {
-                        setConnString('postgresql://analyser%20_owner:npg_mWphq7u0eLHr@ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech/analyser%20?sslmode=require');
+                        setPort('5432');
                         setDatabaseName('PostgreSQL');
                         setSelectedTables(['raw_source_users']);
                       }
@@ -266,7 +285,13 @@ export default function ConnectSourcePage() {
                       type={showConnString ? 'text' : 'password'}
                       value={connString}
                       onChange={(e) => setConnString(e.target.value)}
-                      placeholder="Enter connection string"
+                      placeholder={
+                        dbType === 'SAP BW' ? 'jdbc:sap://<host>:443' :
+                        dbType === 'MongoDB' ? 'mongodb+srv://<user>:<password>@<cluster>.mongodb.net/<database>' :
+                        dbType === 'Snowflake' ? 'https://<account>.snowflakecomputing.com' :
+                        dbType === 'Databricks' ? 'https://<workspace>.azuredatabricks.net' :
+                        'postgresql://<user>:<password>@<host>:5432/<database>?sslmode=require'
+                      }
                       className="w-full pl-3 pr-10 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                     />
                     <button
@@ -321,7 +346,7 @@ export default function ConnectSourcePage() {
                         type="text"
                         value={host}
                         onChange={(e) => setHost(e.target.value)}
-                        placeholder="db.acme.io"
+                        placeholder={dbType === 'SAP BW' ? 'hana.corp.ondemand.com' : 'db.company.com'}
                         className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       />
                     </div>
@@ -331,7 +356,7 @@ export default function ConnectSourcePage() {
                         type="text"
                         value={port}
                         onChange={(e) => setPort(e.target.value)}
-                        placeholder="5432"
+                        placeholder={dbType === 'SAP BW' ? '443' : dbType === 'MongoDB' ? '27017' : '5432'}
                         className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       />
                     </div>
@@ -343,9 +368,41 @@ export default function ConnectSourcePage() {
                       type="text"
                       value={databaseName}
                       onChange={(e) => setDatabaseName(e.target.value)}
-                      placeholder="production_db"
+                      placeholder={dbType === 'SAP BW' ? 'SAP_BW' : 'production_db'}
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                     />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Username</label>
+                      <input
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="db_user"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="w-full pl-3 pr-8 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Ping Card */}
@@ -416,6 +473,36 @@ export default function ConnectSourcePage() {
                     >
                       <RefreshCw className={`w-3 h-3 ${isTesting ? 'animate-spin' : ''}`} />
                       Test again
+                    </button>
+                  </motion.div>
+                )}
+
+                {testError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                    transition={{ duration: 0.35, ease: "easeOut" }}
+                    className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-center justify-between shadow-2xs mt-3"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-rose-950">Connection Failed</div>
+                        <div className="text-[11px] text-rose-700">{testError}</div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleTest}
+                      disabled={isTesting}
+                      className="px-2.5 py-1 rounded-lg border border-rose-300 bg-white hover:bg-rose-50 text-[11px] font-semibold text-rose-800 flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isTesting ? 'animate-spin' : ''}`} />
+                      Retry
                     </button>
                   </motion.div>
                 )}
