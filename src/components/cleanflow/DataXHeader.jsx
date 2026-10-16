@@ -30,8 +30,6 @@ export default function DataXHeader({
   const { activeThread, sourceConfig, targetConfig } = useRuleEngine();
   const [saveSuccess, setSaveSuccess] = React.useState(false);
 
-  const { user } = useUser();
-
   const handleSaveClick = () => {
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2000);
