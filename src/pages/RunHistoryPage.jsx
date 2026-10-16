@@ -17,7 +17,7 @@ const DataXLogo = ({ size = 28 }) => (
 );
 
 export default function RunHistoryPage() {
-  const { s4hanaDocNumber, passedRecords, quarantinedRecords, runHistory, activeThread, dynamicHealthScore } = useRuleEngine();
+  const { s4hanaDocNumber, dryRunResult, runHistory, activeThread, dynamicHealthScore } = useRuleEngine();
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
 
@@ -32,14 +32,14 @@ export default function RunHistoryPage() {
     { day: 'Sun', clean: 9, remediated: 2, total: 11 },
   ];
 
-  const runs = runHistory && runHistory.length > 0 ? runHistory : [
+  const displayRuns = runHistory && runHistory.length > 0 ? runHistory : [
     {
       id: `RUN-${s4hanaDocNumber ? s4hanaDocNumber.slice(-5) : '99284'}`,
       thread: activeThread?.name || 'SAP BW → S/4HANA Clean Core',
       trigger: 'ReAct Agentic Loop',
       time: 'Just now',
       duration: '1.4s',
-      records: `${passedRecords.length + quarantinedRecords.length || 500} rows`,
+      records: `${dryRunResult?.totalChecked || 50} rows`,
       docNo: s4hanaDocNumber ? `#${s4hanaDocNumber}` : '#4500019284',
       status: 'Clean Core Posted',
       variant: 'success',
@@ -50,7 +50,7 @@ export default function RunHistoryPage() {
       trigger: 'Dry Run Simulation',
       time: '45 mins ago',
       duration: '2.1s',
-      records: '18 records',
+      records: '50 rows',
       docNo: 'CRM-SYNC-881',
       status: 'Clean Core Posted',
       variant: 'success',
@@ -61,7 +61,7 @@ export default function RunHistoryPage() {
       trigger: 'Cron Automated Trigger',
       time: '2 hours ago',
       duration: '3.6s',
-      records: '9 records',
+      records: '50 rows',
       docNo: 'HL7-FHIR-402',
       status: 'Remediated & Posted',
       variant: 'volt',
@@ -72,14 +72,14 @@ export default function RunHistoryPage() {
       trigger: 'Manual Dry Run',
       time: 'Yesterday',
       duration: '1.8s',
-      records: '8 records',
+      records: '50 rows',
       docNo: '#4500019210',
       status: 'Clean Core Posted',
       variant: 'success',
     },
   ];
 
-  const filteredRuns = runs.filter((r) => {
+  const filteredRuns = displayRuns.filter((r) => {
     if (filter === 'success' && r.variant !== 'success') return false;
     if (filter === 'remediated' && r.variant !== 'volt') return false;
     if (
