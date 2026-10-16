@@ -7,52 +7,87 @@ import ExpertiseSection from './components/website/ExpertiseSection';
 import ArchitecturePipeline from './components/website/ArchitecturePipeline';
 import CaseStudiesSection from './components/website/CaseStudiesSection';
 import BookDemoModal from './components/website/BookDemoModal';
-import DataXPoc from './components/poc/DataXPoc';
+const DataXPoc = React.lazy(() => import('./components/poc/DataXPoc'));
 
 export default function App() {
-  const [activeView, setActiveView] = useState('website'); // 'website' | 'poc'
+  const [activeView, setActiveView] = useState('poc'); // Default to DataX PoC app view
   const [demoModalOpen, setDemoModalOpen] = useState(false);
 
-  // Sync with URL hash
+  // Sync with URL hash and pathname
   useEffect(() => {
-    const handleHashChange = () => {
-      if (window.location.hash === '#poc' || window.location.hash === '#datax') {
+    const handleLocationChange = () => {
+      const hash = window.location.hash;
+      const path = window.location.pathname.toLowerCase();
+      if (
+        path.includes('datax') ||
+        path.includes('poc') ||
+        path.includes('cleanflow') ||
+        path.includes('login') ||
+        path.includes('register') ||
+        hash.includes('login') ||
+        hash.includes('register') ||
+        hash === '#poc' ||
+        hash === '#datax' ||
+        hash === '#threads' ||
+        hash === '#new-thread' ||
+        hash === '#connect-source' ||
+        hash === '#connect-target' ||
+        hash === '#rules' ||
+        hash === '#running-dry-run' ||
+        hash === '#dry-run-results' ||
+        hash === '#live-auto-fix' ||
+        hash === '#history'
+      ) {
         setActiveView('poc');
-      } else {
+      } else if (hash === '#website') {
         setActiveView('website');
       }
     };
 
-    handleHashChange();
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    handleLocationChange();
+    window.addEventListener('hashchange', handleLocationChange);
+    window.addEventListener('popstate', handleLocationChange);
+    return () => {
+      window.removeEventListener('hashchange', handleLocationChange);
+      window.removeEventListener('popstate', handleLocationChange);
+    };
   }, []);
 
   const handleViewChange = (view) => {
     setActiveView(view);
-    if (view === 'poc') {
+    if (view === 'sandbox') {
+      window.location.hash = '#sandbox';
+    } else if (view === 'poc') {
       window.location.hash = '#poc';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      window.location.hash = '';
+      window.location.hash = '#website';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
-    <div className="min-h-screen bg-[#060a12] text-slate-100 flex flex-col font-sans selection:bg-cyan-500/20 selection:text-cyan-300">
-      
-      {/* Universal Navbar */}
-      <Navbar 
-        activeView={activeView} 
-        setActiveView={handleViewChange} 
-        onOpenDemo={() => setDemoModalOpen(true)} 
-      />
+    <div className={`min-h-screen ${activeView === 'website' ? 'bg-[#060a12] text-slate-100 selection:bg-cyan-500/20 selection:text-cyan-300' : 'bg-[#F8FAFC] text-slate-900 selection:bg-blue-500/20 selection:text-blue-700'} flex flex-col font-sans`}>
+      {/* Universal Navbar (Only show on website view, DataX app has its own dedicated top bar) */}
+      {activeView === 'website' && (
+        <Navbar 
+          activeView={activeView} 
+          setActiveView={handleViewChange} 
+          onOpenDemo={() => setDemoModalOpen(true)} 
+        />
+      )}
 
-      {/* Main Body View */}
       <main className="flex-1">
-        {activeView === 'website' ? (
-          <div>
+        {activeView === 'poc' ? (
+          <React.Suspense fallback={
+            <div className="min-h-screen bg-[#0A0F1F] flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+            </div>
+          }>
+            <DataXPoc onBackToWebsite={() => handleViewChange('website')} />
+          </React.Suspense>
+        ) : (
+          <>
             <Hero 
               setActiveView={handleViewChange} 
               onOpenDemo={() => setDemoModalOpen(true)} 
@@ -66,26 +101,23 @@ export default function App() {
               setActiveView={handleViewChange} 
             />
             <CaseStudiesSection />
-          </div>
-        ) : (
-          <DataXPoc 
-            onBackToWebsite={() => handleViewChange('website')} 
-          />
+          </>
         )}
       </main>
 
-      {/* Universal Footer */}
-      <Footer 
-        setActiveView={handleViewChange} 
-        onOpenDemo={() => setDemoModalOpen(true)} 
-      />
+      {/* Universal Footer (Only on website view) */}
+      {activeView === 'website' && (
+        <Footer 
+          setActiveView={handleViewChange} 
+          onOpenDemo={() => setDemoModalOpen(true)} 
+        />
+      )}
 
       {/* Enterprise Demo Modal */}
       <BookDemoModal 
         isOpen={demoModalOpen} 
         onClose={() => setDemoModalOpen(false)} 
       />
-
     </div>
   );
 }

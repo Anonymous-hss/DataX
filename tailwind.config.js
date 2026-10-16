@@ -21,9 +21,11 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Outfit', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+        geist: ['Geist', 'sans-serif'],
+        'geist-mono': ['Geist Mono', 'monospace'],
+        sans: ['Geist', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['Geist', 'Outfit', 'sans-serif'],
+        mono: ['Geist Mono', 'JetBrains Mono', 'Fira Code', 'monospace'],
       },
       boxShadow: {
         'glow-cyan': '0 0 25px -5px rgba(6, 182, 212, 0.4)',
