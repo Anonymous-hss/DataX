@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, AlertCircle } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
+import { useRuleEngine, isCredentialConfigured } from '../../context/RuleEngineContext';
 import DataXHeader from '../../components/cleanflow/DataXHeader';
 import PipelineFlowNodes from '../../components/cleanflow/PipelineFlowNodes';
 import TestInSandboxPage from './TestInSandboxPage';
@@ -12,8 +13,10 @@ import LiveWithAutoFixPage from './LiveWithAutoFixPage';
 
 export default function CleanFlowStudio({ initialPage = '05', onSwitchToMarketing, onBackToRules }) {
   const { navigateTo } = useNavigation();
+  const { sourceConfig, targetConfig } = useRuleEngine();
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [liveModalOpen, setLiveModalOpen] = useState(false);
+  const [warningMessage, setWarningMessage] = useState(null);
 
   useEffect(() => {
     if (initialPage) {
@@ -22,6 +25,25 @@ export default function CleanFlowStudio({ initialPage = '05', onSwitchToMarketin
   }, [initialPage]);
 
   const changePage = (pageId) => {
+    setWarningMessage(null);
+
+    // Require credentials before running dry run or live
+    if (pageId === '06_07' || pageId === '07' || pageId === '08') {
+      const hasSrc = isCredentialConfigured ? isCredentialConfigured(sourceConfig) : Boolean(sourceConfig?.host || sourceConfig?.connectionUri);
+      const hasTgt = isCredentialConfigured ? isCredentialConfigured(targetConfig) : Boolean(targetConfig?.host || targetConfig?.connectionUri);
+
+      if (!hasSrc) {
+        setWarningMessage('Source database credentials required before proceeding.');
+        navigateTo('connect-source');
+        return;
+      }
+      if (!hasTgt && pageId !== '06_07') {
+        setWarningMessage('Target database credentials required before proceeding.');
+        navigateTo('connect-target');
+        return;
+      }
+    }
+
     setCurrentPage(pageId);
     if (pageId === '03') navigateTo('connect-source');
     else if (pageId === '04') navigateTo('generate-rules');

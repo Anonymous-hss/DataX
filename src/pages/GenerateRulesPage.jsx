@@ -26,13 +26,11 @@ export default function GenerateRulesPage() {
 
   const defaultCols = sourceConfig?.discoveredColumns?.length 
     ? sourceConfig.discoveredColumns 
-    : isSap 
-    ? ['PO_NUMBER', 'ITEM_NO', 'MATERIAL_ID', 'QUANTITY', 'UNIT_PRICE', 'DELIVERY_PLANT', 'VENDOR_ID', 'TOTAL_AMOUNT']
-    : ['id', 'email', 'full_name', 'role', 'status', 'created_at', 'account_balance'];
+    : [];
 
   const defaultPrompt = isSap
-    ? 'Purchasing line items must have positive quantities. Total amount must strictly equal quantity times unit price. Delivery plant must be recognized in S/4HANA or resolved via ontology graph. Vendor ID is mandatory.'
-    : 'Every user needs a valid email and a full name. Role must be admin, analyst, manager or viewer. Status must be active or inactive. No two users can share an id. Non-negative account balances.';
+    ? 'Line items must have positive quantities. Total amount must equal quantity times unit price. Delivery plant must be recognized. Vendor ID is mandatory.'
+    : 'Every record needs valid format and required fields. Status must be active or inactive. Unique identifiers required.';
 
   const [columns, setColumns] = useState(defaultCols);
   const [prompt, setPrompt] = useState(defaultPrompt);
@@ -145,7 +143,7 @@ export default function GenerateRulesPage() {
                 <FlaskConical className="w-3.5 h-3.5 text-slate-400" />
                 Test in sandbox
                 <span className="px-1.5 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-mono font-medium">
-                  20 rows
+                  {rules.length} rules
                 </span>
               </button>
             </div>
@@ -156,8 +154,8 @@ export default function GenerateRulesPage() {
             
             {/* Left Column: Input Table, Columns & Description */}
             <DescribeRulesForm
-              tableName={sourceConfig?.table || (isSap ? '0PUR_C01' : 'raw_source_users')}
-              dbName={sourceConfig?.database || (isSap ? 'SAP_BW' : 'production_db')}
+              tableName={sourceConfig?.table || 'No table selected'}
+              dbName={sourceConfig?.database || 'No database configured'}
               columns={columns}
               onRemoveColumn={handleRemoveColumn}
               onAddColumn={handleAddColumn}

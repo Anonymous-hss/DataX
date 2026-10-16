@@ -26,14 +26,14 @@ export default function TestInSandboxPage({ onNext, onBackToRules }) {
   const [sampleCount, setSampleCount] = useState(20);
   const [isFetching, setIsFetching] = useState(false);
 
-  const isSap = sourceConfig?.engine === 'sap_bw' || sourceConfig?.table === '0PUR_C01';
+  const isSap = sourceConfig?.engine === 'sap_bw';
 
   // Compute metrics dynamically from sampleData
-  const totalRows = sampleData.length || 1;
+  const totalRows = sampleData.length;
   const cleanRows = sampleData.filter(r => r._status === 'clean');
   const fixedRows = sampleData.filter(r => r._status === 'fixed');
   const heldRows = sampleData.filter(r => r._status === 'quarantined');
-  const passRate = Math.round(((cleanRows.length + fixedRows.length) / totalRows) * 100);
+  const passRate = totalRows > 0 ? Math.round(((cleanRows.length + fixedRows.length) / totalRows) * 100) : 0;
 
   // Filter sample data based on active tab
   const displayedRows = sampleData.filter(r => {
@@ -46,13 +46,14 @@ export default function TestInSandboxPage({ onNext, onBackToRules }) {
   const currentTransformed = currentRow._transformed || currentRow;
 
   // Key fields to display in Before & After
-  const comparisonFields = isSap 
-    ? ['DELIVERY_PLANT', 'QUANTITY', 'UNIT_PRICE', 'TOTAL_AMOUNT', 'VENDOR_ID']
-    : ['email', 'full_name', 'role', 'status', 'account_balance'];
+  const comparisonFields = sampleData.length > 0 && Object.keys(sampleData[0]).length > 0
+    ? Object.keys(sampleData[0]).filter(k => !k.startsWith('_')).slice(0, 6)
+    : (sourceConfig?.discoveredColumns || []).slice(0, 6);
 
   const handleFetchRows = async (count = sampleCount) => {
+    if (!sourceConfig?.table) return;
     setIsFetching(true);
-    await fetchTableSample(sourceConfig?.table || (isSap ? '0PUR_C01' : 'raw_source_users'), count);
+    await fetchTableSample(sourceConfig.table, count);
     setIsFetching(false);
   };
 
@@ -210,16 +211,25 @@ export default function TestInSandboxPage({ onNext, onBackToRules }) {
         </div>
 
         {/* Split View: Sample List & Before/After */}
-        <div className="px-6 pb-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          {/* Left Column (Sample rows) */}
-          <div className="lg:col-span-4 space-y-2">
-            <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
-              <span>Sample rows</span>
-              <span>{displayedRows.length} available</span>
-            </div>
+        {sampleData.length === 0 ? (
+          <div className="mx-6 mb-6 p-12 text-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50 space-y-2">
+            <FlaskConical className="w-8 h-8 text-slate-300 mx-auto" />
+            <h4 className="text-sm font-semibold text-slate-700">No sandbox records loaded</h4>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              Configure and test your database connection in Step 1 to load and evaluate live records through your AI rules in sandbox mode.
+            </p>
+          </div>
+        ) : (
+          <div className="px-6 pb-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            {/* Left Column (Sample rows) */}
+            <div className="lg:col-span-4 space-y-2">
+              <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
+                <span>Sample rows</span>
+                <span>{displayedRows.length} available</span>
+              </div>
 
-            <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
+              <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
               {displayedRows.map((row, idx) => {
                 const isSelected = selectedRowIndex === idx;
                 const rowId = row.PO_NUMBER || row.id || `REC-${idx + 1}`;
@@ -353,6 +363,7 @@ export default function TestInSandboxPage({ onNext, onBackToRules }) {
           </div>
 
         </div>
+        )}
 
       </div>
 

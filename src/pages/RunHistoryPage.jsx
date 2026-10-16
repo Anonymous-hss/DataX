@@ -33,52 +33,7 @@ export default function RunHistoryPage() {
     { day: 'Sun', clean: 9, remediated: 2, total: 11 },
   ];
 
-  const displayRuns = runHistory && runHistory.length > 0 ? runHistory : [
-    {
-      id: `RUN-${s4hanaDocNumber ? s4hanaDocNumber.slice(-5) : '99284'}`,
-      thread: activeThread?.name || 'SAP BW → S/4HANA Clean Core',
-      trigger: 'ReAct Agentic Loop',
-      time: 'Just now',
-      duration: '1.4s',
-      records: `${dryRunResult?.totalChecked || 50} rows`,
-      docNo: s4hanaDocNumber ? `#${s4hanaDocNumber}` : '#4500019284',
-      status: 'Clean Core Posted',
-      variant: 'success',
-    },
-    {
-      id: 'RUN-99283',
-      thread: 'Customer Master & Identity',
-      trigger: 'Dry Run Simulation',
-      time: '45 mins ago',
-      duration: '2.1s',
-      records: '50 rows',
-      docNo: 'CRM-SYNC-881',
-      status: 'Clean Core Posted',
-      variant: 'success',
-    },
-    {
-      id: 'RUN-99282',
-      thread: 'Healthcare Patient Master',
-      trigger: 'Cron Automated Trigger',
-      time: '2 hours ago',
-      duration: '3.6s',
-      records: '50 rows',
-      docNo: 'HL7-FHIR-402',
-      status: 'Remediated & Posted',
-      variant: 'volt',
-    },
-    {
-      id: 'RUN-99281',
-      thread: 'SAP BW → S/4HANA Clean Core',
-      trigger: 'Manual Dry Run',
-      time: 'Yesterday',
-      duration: '1.8s',
-      records: '50 rows',
-      docNo: '#4500019210',
-      status: 'Clean Core Posted',
-      variant: 'success',
-    },
-  ];
+  const displayRuns = runHistory || [];
 
   const filteredRuns = displayRuns.filter((r) => {
     if (filter === 'success' && r.variant !== 'success') return false;
@@ -250,19 +205,32 @@ export default function RunHistoryPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E3E6EE]">
-                {filteredRuns.map((run) => (
-                  <tr key={run.id} className="hover:bg-[#F9FAFC] transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-[#0A0F1F]">{run.id}</td>
-                    <td className="py-3.5 px-4 font-medium text-[#0A0F1F]">{run.thread}</td>
-                    <td className="py-3.5 px-4 text-[#5F6678]">{run.trigger}</td>
-                    <td className="py-3.5 px-4 font-mono">{run.records}</td>
-                    <td className="py-3.5 px-4 font-mono text-[#2D55F5] font-semibold">{run.docNo}</td>
-                    <td className="py-3.5 px-4 text-[#5F6678]">{run.duration}</td>
-                    <td className="py-3.5 px-4">
-                      <Tag variant={run.variant}>{run.status}</Tag>
+                {filteredRuns.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-xs text-[#5F6678]">
+                      <div className="max-w-xs mx-auto space-y-1">
+                        <p className="font-semibold text-slate-700">No pipeline runs recorded yet</p>
+                        <p className="text-[11px] text-slate-400">
+                          Execute a dry run or live stream run from your connected pipeline to see telemetry and execution audit history here.
+                        </p>
+                      </div>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredRuns.map((run) => (
+                    <tr key={run.id} className="hover:bg-[#F9FAFC] transition-colors">
+                      <td className="py-3.5 px-4 font-mono font-bold text-[#0A0F1F]">{run.id}</td>
+                      <td className="py-3.5 px-4 font-medium text-[#0A0F1F]">{run.thread}</td>
+                      <td className="py-3.5 px-4 text-[#5F6678]">{run.trigger}</td>
+                      <td className="py-3.5 px-4 font-mono">{run.records}</td>
+                      <td className="py-3.5 px-4 font-mono text-[#2D55F5] font-semibold">{run.docNo}</td>
+                      <td className="py-3.5 px-4 text-[#5F6678]">{run.duration}</td>
+                      <td className="py-3.5 px-4">
+                        <Tag variant={run.variant}>{run.status}</Tag>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Database, FileCode2, ArrowRight } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
-import { useRuleEngine } from '../../context/RuleEngineContext';
+import { useRuleEngine, isCredentialConfigured } from '../../context/RuleEngineContext';
 
 export default function PipelineFlowNodes({ currentStep = '04', onNavigate, isPaused = false }) {
   const { navigateTo } = useNavigation();
@@ -24,6 +24,9 @@ export default function PipelineFlowNodes({ currentStep = '04', onNavigate, isPa
   const isStep04 = currentStep === '04';
   const isStep05 = currentStep === '05';
   const isStep06 = currentStep === '06';
+
+  const hasSourceCreds = isCredentialConfigured ? isCredentialConfigured(sourceConfig) : Boolean(sourceConfig?.host || sourceConfig?.connectionUri);
+  const hasTargetCreds = isCredentialConfigured ? isCredentialConfigured(targetConfig) : Boolean(targetConfig?.host || targetConfig?.connectionUri);
 
   return (
     <section className="px-4 sm:px-6 pt-5 pb-2">
@@ -49,12 +52,12 @@ export default function PipelineFlowNodes({ currentStep = '04', onNavigate, isPa
               <div className="min-w-0">
                 <div className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Source</div>
                 <div className="text-xs font-bold text-slate-900 truncate">
-                  {sourceConfig?.database || 'source_db'}
+                  {sourceConfig?.database || (hasSourceCreds ? 'Connected Source' : 'Connect source')}
                 </div>
                 <div className="text-[11px] text-slate-500 font-mono truncate">
                   {isLive 
-                    ? (dryRunResult?.totalChecked ? `${dryRunResult.totalChecked} rows read` : '1,240 rows read') 
-                    : (sourceConfig?.table || 'source_table')}
+                    ? `${dryRunResult?.totalChecked || 0} rows read` 
+                    : (sourceConfig?.table || 'No table selected')}
                 </div>
               </div>
             </div>
@@ -68,10 +71,14 @@ export default function PipelineFlowNodes({ currentStep = '04', onNavigate, isPa
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
                 Setting up
               </span>
-            ) : (
+            ) : hasSourceCreds ? (
               <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-semibold border border-emerald-200 shrink-0 ml-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 Ready
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-semibold border border-slate-200 shrink-0 ml-1">
+                To do
               </span>
             )}
           </div>
@@ -100,16 +107,16 @@ export default function PipelineFlowNodes({ currentStep = '04', onNavigate, isPa
               <div className="min-w-0">
                 <div className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">AI rules</div>
                 <div className="text-xs font-bold text-slate-900 truncate">
-                  {activeRules?.filter(r => r.selected !== false).length || 5} rules active
+                  {activeRules?.filter(r => r.selected !== false).length || 0} rules active
                 </div>
                 <div className="text-[11px] text-slate-500 truncate">
                   {isLive 
-                    ? `${dryRunResult?.cleanCount || 1086} clean · ${dryRunResult?.autoFixedCount || 118} fixed · ${dryRunResult?.quarantinedCount || 36} held` 
+                    ? `${dryRunResult?.cleanCount || 0} clean · ${dryRunResult?.autoFixedCount || 0} fixed · ${dryRunResult?.quarantinedCount || 0} held` 
                     : isStep04 
                     ? 'Describe it, AI writes it' 
                     : isStep05 
-                    ? `Testing ${activeRules?.filter(r => r.selected !== false).length || 5} rules` 
-                    : `${activeRules?.filter(r => r.selected !== false).length || 5} rules · ${dryRunResult?.passRate || 96.8}% pass`}
+                    ? `Testing ${activeRules?.filter(r => r.selected !== false).length || 0} rules` 
+                    : `${activeRules?.filter(r => r.selected !== false).length || 0} rules active`}
                 </div>
               </div>
             </div>
@@ -165,40 +172,39 @@ export default function PipelineFlowNodes({ currentStep = '04', onNavigate, isPa
                 <div className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Target</div>
                 <div className="text-xs font-bold text-slate-900 truncate">
                   {(isStep03 || isStep04 || isStep05) 
-                    ? (targetConfig?.table ? targetConfig.table : 'Choose a target') 
-                    : (targetConfig?.database || targetConfig?.table || 'reconciled_db')}
+                    ? (targetConfig?.table || (hasTargetCreds ? 'Connected Target' : 'Choose a target')) 
+                    : (targetConfig?.database || targetConfig?.table || 'Target Database')}
                 </div>
                 <div className="text-[11px] text-slate-500 font-mono truncate">
                   {(isStep03 || isStep04 || isStep05) 
-                    ? 'Where clean rows go' 
+                    ? (targetConfig?.table || 'Where clean rows go') 
                     : isStep06 
-                    ? (targetConfig?.engine ? targetConfig.engine.toUpperCase() : 'PostgreSQL') 
+                    ? (targetConfig?.engine ? targetConfig.engine.toUpperCase() : 'Target setup') 
                     : isLive 
-                    ? `${(dryRunResult?.cleanCount || 1086) + (dryRunResult?.autoFixedCount || 118)} rows written`
+                    ? `${(dryRunResult?.cleanCount || 0) + (dryRunResult?.autoFixedCount || 0)} rows written`
                     : (targetConfig?.table || 'clean_target')}
                 </div>
               </div>
             </div>
-
 
             {isLive ? (
               <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${isPaused ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'} text-[10px] font-semibold border shrink-0 ml-1`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${isPaused ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`} />
                 {isPaused ? 'Paused' : 'Live'}
               </span>
-            ) : (isStep03 || isStep04 || isStep05) ? (
-              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-semibold border border-slate-200 shrink-0 ml-1">
-                To do
-              </span>
             ) : isStep06 ? (
               <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-semibold border border-blue-200 shrink-0 ml-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
                 Setting up
               </span>
-            ) : (
+            ) : hasTargetCreds ? (
               <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-semibold border border-emerald-200 shrink-0 ml-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 Ready
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-semibold border border-slate-200 shrink-0 ml-1">
+                To do
               </span>
             )}
           </div>

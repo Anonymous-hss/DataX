@@ -14,7 +14,7 @@ import {
   Save 
 } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
-import { useRuleEngine } from '../../context/RuleEngineContext';
+import { useRuleEngine, isCredentialConfigured } from '../../context/RuleEngineContext';
 import DataXUserMenu from '../common/DataXUserMenu';
 
 export default function DataXHeader({ 
@@ -29,10 +29,45 @@ export default function DataXHeader({
   const { navigateTo } = useNavigation();
   const { activeThread, sourceConfig, targetConfig } = useRuleEngine();
   const [saveSuccess, setSaveSuccess] = React.useState(false);
+  const [headerAlert, setHeaderAlert] = React.useState(null);
 
   const handleSaveClick = () => {
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2000);
+  };
+
+  const handleDryRunClick = () => {
+    setHeaderAlert(null);
+    const hasSrc = isCredentialConfigured ? isCredentialConfigured(sourceConfig) : Boolean(sourceConfig?.host || sourceConfig?.connectionUri);
+    const hasTgt = isCredentialConfigured ? isCredentialConfigured(targetConfig) : Boolean(targetConfig?.host || targetConfig?.connectionUri);
+    if (!hasSrc) {
+      setHeaderAlert('Source database credentials required before dry run.');
+      navigateTo('connect-source');
+      return;
+    }
+    if (!hasTgt) {
+      setHeaderAlert('Target database credentials required before dry run.');
+      navigateTo('connect-target');
+      return;
+    }
+    if (onDryRun) onDryRun();
+  };
+
+  const handleRunLiveClick = () => {
+    setHeaderAlert(null);
+    const hasSrc = isCredentialConfigured ? isCredentialConfigured(sourceConfig) : Boolean(sourceConfig?.host || sourceConfig?.connectionUri);
+    const hasTgt = isCredentialConfigured ? isCredentialConfigured(targetConfig) : Boolean(targetConfig?.host || targetConfig?.connectionUri);
+    if (!hasSrc) {
+      setHeaderAlert('Source database credentials required before running live.');
+      navigateTo('connect-source');
+      return;
+    }
+    if (!hasTgt) {
+      setHeaderAlert('Target database credentials required before running live.');
+      navigateTo('connect-target');
+      return;
+    }
+    if (onRunLive) onRunLive();
   };
 
   return (
@@ -170,7 +205,7 @@ export default function DataXHeader({
               </button>
 
               <button
-                onClick={onDryRun}
+                onClick={handleDryRunClick}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer shadow-2xs ${
                   currentPage === '06_07' || currentPage === '07'
                     ? 'border-blue-300 bg-blue-50 text-blue-700 font-semibold'
@@ -182,7 +217,7 @@ export default function DataXHeader({
               </button>
 
               <button
-                onClick={onRunLive}
+                onClick={handleRunLiveClick}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors cursor-pointer shadow-2xs"
               >
                 <Play className="w-3.5 h-3.5 text-slate-500 fill-slate-500" />
@@ -191,6 +226,18 @@ export default function DataXHeader({
             </div>
 
           </div>
+
+          {headerAlert && (
+            <div className="max-w-7xl mx-auto mt-2.5 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center justify-between">
+              <span>{headerAlert}</span>
+              <button 
+                onClick={() => setHeaderAlert(null)}
+                className="text-amber-600 hover:text-amber-900 font-bold ml-2 text-xs cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+          )}
         </section>
       )}
     </>

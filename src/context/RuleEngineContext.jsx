@@ -281,6 +281,19 @@ export const computePackBaseline = (pack, isAutoFix = true) => {
   };
 };
 
+// Helper: Strict Credential Verification
+export const isCredentialConfigured = (cfg) => {
+  if (!cfg) return false;
+  if (typeof cfg.connectionUri === 'string' && cfg.connectionUri.trim().length > 6) {
+    return true;
+  }
+  const hasHost = Boolean(cfg.host && String(cfg.host).trim().length > 0);
+  const hasDb = Boolean(cfg.database && String(cfg.database).trim().length > 0);
+  const hasUser = Boolean((cfg.user || cfg.username) && String(cfg.user || cfg.username).trim().length > 0);
+  const hasPass = Boolean(cfg.password && String(cfg.password).trim().length > 0);
+  return hasHost && hasDb && hasUser && hasPass;
+};
+
 // Preconfigured Enterprise Domain Packs
 export const PREBUILT_DOMAIN_PACKS = {
   sap_bw_s4hana: computePackBaseline({
@@ -290,23 +303,26 @@ export const PREBUILT_DOMAIN_PACKS = {
     domain: 'ERP modernisation',
     desc: 'Extract InfoCube purchasing lines, fix legacy plant codes and stage clean orders.',
     pipeline: 'SAP BW → AI rules → S/4HANA',
-    runs: '24 runs',
+    runs: '0 runs',
     source: {
       engine: 'sap_bw',
       connectionUri: '',
       host: '',
-      port: '443',
-      database: 'SAP_BW',
-      table: '0PUR_C01',
-      availableTables: ['0PUR_C01', '0IC_C03', 'BAPI_PO_CREATE1', 'MARA', 'EKKO', 'EKPO'],
-      discoveredColumns: ['PO_NUMBER', 'ITEM_NO', 'MATERIAL_ID', 'QUANTITY', 'UNIT_PRICE', 'DELIVERY_PLANT', 'VENDOR_ID', 'TOTAL_AMOUNT']
+      port: '',
+      database: '',
+      table: '',
+      availableTables: [],
+      discoveredColumns: []
     },
     target: {
       engine: 's4_hana',
-      database: 'S4_HANA',
-      table: 'staged_purchase_orders',
+      connectionUri: '',
+      host: '',
+      port: '',
+      database: '',
+      table: '',
       targetNamingMode: 'suffix',
-      customTableName: 'bapi_po_staged'
+      customTableName: ''
     },
     rules: [
       {
@@ -367,24 +383,27 @@ export const PREBUILT_DOMAIN_PACKS = {
     name: 'Customer Master & Identity',
     domain: 'Master data',
     desc: 'Merge duplicate customers from CRM and ERP into one golden record.',
-    pipeline: 'MongoDB → AI rules → PostgreSQL',
-    runs: '18 runs',
+    pipeline: 'PostgreSQL → AI rules → PostgreSQL',
+    runs: '0 runs',
     source: {
       engine: 'postgres',
       connectionUri: '',
       host: '',
-      port: '5432',
-      database: 'PostgreSQL',
-      table: 'raw_source_users',
-      availableTables: ['raw_source_users', 'validated_users', 'quarantined_records', 'analytics_customer_gold'],
-      discoveredColumns: ['id', 'full_name', 'email', 'role', 'status', 'account_balance', 'created_at']
+      port: '',
+      database: '',
+      table: '',
+      availableTables: [],
+      discoveredColumns: []
     },
     target: {
       engine: 'postgres',
-      database: 'PostgreSQL',
-      table: 'raw_source_users_clean',
+      connectionUri: '',
+      host: '',
+      port: '',
+      database: '',
+      table: '',
       targetNamingMode: 'suffix',
-      customTableName: 'users_reconciled_v1'
+      customTableName: ''
     },
     rules: [
       {
@@ -460,20 +479,26 @@ export const PREBUILT_DOMAIN_PACKS = {
     statusLabel: 'Live',
     successRate: 95.0,
     healthScore: 95.0,
-    runs: '12 runs',
+    runs: '0 runs',
     source: {
       engine: 'postgres',
-      database: 'GL_DB',
-      table: 'ledger_entries',
-      availableTables: ['ledger_entries', 'ap_invoices', 'chart_of_accounts'],
-      discoveredColumns: ['ENTRY_ID', 'ACCOUNT_CODE', 'DEBIT', 'CREDIT', 'CURRENCY', 'FISCAL_PERIOD']
+      connectionUri: '',
+      host: '',
+      port: '',
+      database: '',
+      table: '',
+      availableTables: [],
+      discoveredColumns: []
     },
     target: {
       engine: 'postgres',
-      database: 'ERP_FINANCE',
-      table: 'reconciled_gl_entries',
+      connectionUri: '',
+      host: '',
+      port: '',
+      database: '',
+      table: '',
       targetNamingMode: 'suffix',
-      customTableName: 'gl_audit_archive'
+      customTableName: ''
     },
     rules: [
       { id: 'r_gl_1', name: 'Debits Equal Credits', field: 'DEBIT', severity: 'Critical', code: 'DEBIT == CREDIT', selected: true, desc: 'Zero balance equation' },
@@ -493,20 +518,26 @@ export const PREBUILT_DOMAIN_PACKS = {
     statusLabel: 'Below threshold',
     successRate: 85.0,
     healthScore: 85.0,
-    runs: '9 runs',
+    runs: '0 runs',
     source: {
       engine: 'postgres',
-      database: 'EHR_DB',
-      table: 'patient_records',
-      availableTables: ['patient_records', 'clinical_encounters'],
-      discoveredColumns: ['PATIENT_ID', 'FULL_NAME', 'DOB', 'MRN', 'GENDER', 'INSURANCE_ID']
+      connectionUri: '',
+      host: '',
+      port: '',
+      database: '',
+      table: '',
+      availableTables: [],
+      discoveredColumns: []
     },
     target: {
       engine: 'postgres',
-      database: 'ANALYTICS_PHI',
-      table: 'anonymized_patients',
+      connectionUri: '',
+      host: '',
+      port: '',
+      database: '',
+      table: '',
       targetNamingMode: 'suffix',
-      customTableName: 'hipaa_gold_v1'
+      customTableName: ''
     },
     rules: [
       { id: 'r_hc_1', name: 'MRN Format Valid', field: 'MRN', severity: 'Critical', code: "REGEX_MATCH(MRN, 'MRN-[0-9]{6}')", selected: true, desc: 'Medical record number validity' },
@@ -591,20 +622,20 @@ export function RuleEngineProvider({ children }) {
   const [pipelineStatus, setPipelineStatus] = useState('IDLE');
   const [agentStepIndex, setAgentStepIndex] = useState(0);
   const [telemetryLogs, setTelemetryLogs] = useState([]);
-  const [s4hanaDocNumber, setS4HanaDocNumber] = useState('4500019284');
+  const [s4hanaDocNumber, setS4HanaDocNumber] = useState('');
 
   // Sample Rows & Live Evaluated Records
   const [previewRows, setPreviewRows] = useState([]);
   const [sampleData, setSampleData] = useState([]);
   const rawRecordsRef = useRef([]);
 
-  // Dry Run Results State
+  // Dry Run Results State (Zero dummy data)
   const [dryRunResult, setDryRunResult] = useState({
-    totalChecked: 50,
-    cleanCount: 38,
-    autoFixedCount: 9,
-    quarantinedCount: 3,
-    passRate: 94.0,
+    totalChecked: 0,
+    cleanCount: 0,
+    autoFixedCount: 0,
+    quarantinedCount: 0,
+    passRate: 0,
     ruleOutcomes: []
   });
 
@@ -615,47 +646,13 @@ export function RuleEngineProvider({ children }) {
         const stored = localStorage.getItem(`datax_run_history_${user.id}`);
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          if (Array.isArray(parsed)) return parsed;
         }
       }
     } catch (e) {
       console.warn('Could not read user run history:', e);
     }
-    return [
-      {
-        id: 'RUN-99284',
-        thread: 'SAP BW → S/4HANA Clean Core',
-        trigger: 'Agentic Dry Run',
-        time: 'Just now',
-        duration: '1.4s',
-        records: '50 rows',
-        docNo: '#4500019284',
-        status: 'Clean Core Staged',
-        variant: 'success'
-      },
-      {
-        id: 'RUN-99283',
-        thread: 'Customer Master & Identity',
-        trigger: 'Live Stream Ingestion',
-        time: '45 mins ago',
-        duration: '2.1s',
-        records: '50 rows',
-        docNo: 'CRM-SYNC-881',
-        status: 'Clean Core Posted',
-        variant: 'success'
-      },
-      {
-        id: 'RUN-99282',
-        thread: 'Healthcare Patient Master',
-        trigger: 'Cron Automated Trigger',
-        time: '2 hours ago',
-        duration: '3.6s',
-        records: '50 records',
-        docNo: 'HL7-FHIR-402',
-        status: 'Remediated & Posted',
-        variant: 'volt'
-      }
-    ];
+    return [];
   });
 
   // Sync run history on user switch
@@ -684,21 +681,13 @@ export function RuleEngineProvider({ children }) {
     }
   }, [runHistory, user?.id]);
 
-  // Load Dataset into State & Evaluate
-  const loadInitialSampleData = useCallback((pack, rulesToUse = null, autoFix = autoFixEnabled) => {
-    let rawList = [];
-    if (pack.id === 'sap_bw_s4hana' || pack.domainPackId === 'sap_bw_s4hana' || pack.source?.engine === 'sap_bw') {
-      rawList = SAP_BW_PROCUREMENT_DATA;
-    } else {
-      rawList = USER_MASTER_DATA;
-    }
-    rawRecordsRef.current = rawList;
-    setPreviewRows(rawList.slice(0, 5));
-
-    const effectiveRules = rulesToUse || pack.rules || activeRules;
-    const evaluated = rawList.map(r => evaluateRow(r, effectiveRules, autoFix, rawList));
-    setSampleData(evaluated);
-  }, [activeRules, autoFixEnabled]);
+  // Load Dataset into State & Evaluate (No hardcoded dummy data)
+  const loadInitialSampleData = useCallback(() => {
+    // Only real data fetched from database should populate state
+    rawRecordsRef.current = [];
+    setPreviewRows([]);
+    setSampleData([]);
+  }, []);
 
   // Re-evaluate sample records whenever activeRules or autoFixEnabled changes
   useEffect(() => {
@@ -838,7 +827,10 @@ export function RuleEngineProvider({ children }) {
     setSourceConfig(src);
     setTargetConfig(tgt);
     setActiveRules(rls);
-    loadInitialSampleData({ ...found, rules: rls }, rls);
+    // Zero dummy data: Keep preview and sample rows empty until user tests connection
+    rawRecordsRef.current = [];
+    setPreviewRows([]);
+    setSampleData([]);
   };
 
   // Action: Test Database Connection (calls live backend API with tenant headers)
@@ -879,9 +871,9 @@ export function RuleEngineProvider({ children }) {
         return {
           success: true,
           latencyMs: data.latencyMs || 42,
-          tables: data.tables || config.availableTables || ['0PUR_C01', '0IC_C03'],
-          tableCount: data.tableCount || (data.tables ? data.tables.length : 12),
-          message: data.message || `Successfully connected! Discovered ${data.tableCount || 12} tables.`
+          tables: data.tables || [],
+          tableCount: data.tableCount || (data.tables ? data.tables.length : 0),
+          message: data.message || `Successfully connected! Discovered ${data.tableCount || (data.tables ? data.tables.length : 0)} tables.`
         };
       } else {
         const errData = await res.json().catch(() => ({}));
@@ -940,21 +932,14 @@ export function RuleEngineProvider({ children }) {
         }
       }
     } catch (err) {
-      console.warn('API sampling failed, using preloaded enterprise dataset:', err.message);
+      console.warn('API sampling failed:', err.message);
     }
 
-    // Local dataset fallback
-    let fallbackRows = [];
-    if (tableName === '0PUR_C01' || sourceConfig.engine === 'sap_bw') {
-      fallbackRows = SAP_BW_PROCUREMENT_DATA.slice(0, limit);
-    } else {
-      fallbackRows = USER_MASTER_DATA.slice(0, limit);
-    }
-    rawRecordsRef.current = fallbackRows;
-    setPreviewRows(fallbackRows.slice(0, 5));
-    const evaluated = fallbackRows.map(r => evaluateRow(r, activeRules, autoFixEnabled, fallbackRows));
-    setSampleData(evaluated);
-    return { success: true, count: fallbackRows.length, rows: fallbackRows };
+    // Zero dummy data fallback: Do not substitute with mock arrays
+    rawRecordsRef.current = [];
+    setPreviewRows([]);
+    setSampleData([]);
+    return { success: false, count: 0, rows: [], message: 'No records available from database table.' };
   };
 
   // Action: Toggle Active Rule (Dynamically updates row evaluations & health score)
@@ -979,13 +964,69 @@ export function RuleEngineProvider({ children }) {
     setActiveRules(prev => prev.filter(r => r.id !== id));
   };
 
-  // Action: Execute Dry Run (Uses dynamic record evaluation with tenant context)
-  const executeDryRun = async () => {
+  // Dry run execution lock to prevent parallel execution loops
+  const isExecutingDryRunRef = useRef(false);
+
+  // Action: Execute Dry Run (Uses dynamic record evaluation with strict credential checks)
+  const executeDryRun = useCallback(async () => {
+    if (isExecutingDryRunRef.current) {
+      console.warn('Dry Run already running, ignoring duplicate request.');
+      return;
+    }
+
+    // 1. MANDATORY CREDENTIALS CHECK:
+    // Do not proceed without source and target credentials
+    if (!isCredentialConfigured(sourceConfig) || !isCredentialConfigured(targetConfig)) {
+      console.warn('Dry Run blocked: Source and target credentials must both be configured before proceeding.');
+      setPipelineStatus('IDLE');
+      return {
+        success: false,
+        error: 'Missing required credentials. Both source and target credentials must be configured before proceeding.',
+        message: 'Missing database credentials. Please configure and verify source and target databases.'
+      };
+    }
+
+    isExecutingDryRunRef.current = true;
     setPipelineStatus('RUNNING');
     const selectedActiveRules = (activeRules || []).filter(r => r.selected !== false && r.enabled !== false);
 
     // Call backend API if available
     try {
+      const payload = {
+        pipelineName: activeThread?.name || 'DataX CleanFlow Pipeline',
+        threadId: activeThread?.id || activeThread?.threadId || undefined,
+        dryRun: true,
+        autoFixEnabled,
+        source: {
+          engine: sourceConfig.engine || 'postgres',
+          connectionUri: sourceConfig.connectionUri || undefined,
+          host: sourceConfig.host || undefined,
+          port: sourceConfig.port ? String(sourceConfig.port) : undefined,
+          database: sourceConfig.database || undefined,
+          table: sourceConfig.table || 'source_data',
+          scopeMode: sourceConfig.scopeMode || 'specific',
+          selectedTables: sourceConfig.table ? [sourceConfig.table] : []
+        },
+        target1: {
+          engine: targetConfig.engine || 'postgres',
+          connectionUri: targetConfig.connectionUri || undefined,
+          host: targetConfig.host || undefined,
+          port: targetConfig.port ? String(targetConfig.port) : undefined,
+          database: targetConfig.database || 'reconciled_db',
+          table: targetConfig.table || (sourceConfig.table ? `${sourceConfig.table}_clean` : 'clean_records'),
+          quarantineTable: targetConfig.quarantineTable || 'quarantined_records',
+          writeMode: targetConfig.writeMode || 'append'
+        },
+        rules: selectedActiveRules.map(r => ({
+          column: r.field || r.column || 'GENERAL',
+          check_type: r.check_type || 'REGEX_FORMAT',
+          condition: r.condition || r.code || '',
+          severity: (r.severity || 'critical').toLowerCase(),
+          enabled: r.selected !== false,
+          description: r.desc || r.description || ''
+        }))
+      };
+
       const res = await fetch(`${API_BASE}/pipeline/execute`, {
         method: 'POST',
         headers: { 
@@ -994,15 +1035,7 @@ export function RuleEngineProvider({ children }) {
           'X-User-Email': userEmail,
           'X-Tenant-Id': tenantId
         },
-        body: JSON.stringify({
-          pipelineName: activeThread.name,
-          threadId: activeThread.id,
-          dryRun: true,
-          autoFixEnabled,
-          source: sourceConfig,
-          target1: targetConfig,
-          rules: selectedActiveRules
-        })
+        body: JSON.stringify(payload)
       });
 
       if (res.ok) {
@@ -1012,7 +1045,7 @@ export function RuleEngineProvider({ children }) {
           const valid = data.validCount ?? (data.summary ? data.summary.valid_records_count : sampleData.filter(r => r._status === 'clean').length);
           const fixed = data.autofixedCount ?? (data.summary ? data.summary.remediated_count : sampleData.filter(r => r._status === 'fixed').length);
           const quarantined = data.quarantinedCount ?? (data.summary ? data.summary.quarantined_records_count : sampleData.filter(r => r._status === 'quarantined').length);
-          const passRate = data.healthScore || Math.round(((valid + fixed) / totalCount) * 1000) / 10;
+          const passRate = data.healthScore || (totalCount > 0 ? Math.round(((valid + fixed) / totalCount) * 1000) / 10 : 100);
 
           const outcome = {
             totalChecked: totalCount,
@@ -1022,17 +1055,22 @@ export function RuleEngineProvider({ children }) {
             passRate,
             ruleOutcomes: dryRunResult.ruleOutcomes
           };
-          setDryRunResult(outcome);
+          setDryRunResult(prev => ({
+            ...outcome,
+            ruleOutcomes: prev.ruleOutcomes
+          }));
           setPipelineStatus('COMPLETED');
           return outcome;
         }
       }
     } catch (err) {
       console.warn('Pipeline execute API call failed, using live evaluated simulation:', err.message);
+    } finally {
+      isExecutingDryRunRef.current = false;
     }
 
     // Dynamic Record Evaluation
-    const totalCount = sampleData.length || 50;
+    const totalCount = sampleData.length;
     const cleanCount = sampleData.filter(r => r._status === 'clean').length;
     const autoFixedCount = sampleData.filter(r => r._status === 'fixed').length;
     const quarantinedCount = sampleData.filter(r => r._status === 'quarantined').length;
@@ -1043,14 +1081,16 @@ export function RuleEngineProvider({ children }) {
       cleanCount,
       autoFixedCount,
       quarantinedCount,
-      passRate,
-      ruleOutcomes: dryRunResult.ruleOutcomes
+      passRate
     };
 
-    setDryRunResult(result);
+    setDryRunResult(prev => ({
+      ...result,
+      ruleOutcomes: prev.ruleOutcomes
+    }));
     setPipelineStatus('COMPLETED');
     return result;
-  };
+  }, [sourceConfig, targetConfig, activeRules, autoFixEnabled, dynamicHealthScore, sampleData, userId, userEmail, tenantId, activeThread]);
 
   // Action: Execute Live Pipeline Run
   const executeLiveRun = async () => {
@@ -1095,6 +1135,7 @@ export function RuleEngineProvider({ children }) {
     setSourceConfig,
     targetConfig,
     setTargetConfig,
+    isCredentialConfigured,
 
     // Rules & Engine
     activeRules,
