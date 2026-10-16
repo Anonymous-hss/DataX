@@ -70,43 +70,59 @@ export default function LiveChart({ timeRange, setTimeRange, barData = defaultBa
         </div>
 
         {/* Bars Row */}
-        <div className="relative z-10 flex items-stretch gap-[2%] px-1 sm:px-2 h-[calc(100%-28px)]">
-          {barData.map((bar, idx) => (
-            <div key={idx} className="flex-1 flex flex-col items-center justify-end h-full group">
-              <div 
-                className="w-full rounded-t-sm flex flex-col overflow-hidden transition-all group-hover:brightness-95 cursor-pointer shadow-2xs"
-                style={{ height: `${Math.min(100, Math.max(15, bar.height * 0.78))}%`, maxWidth: '32px' }}
-              >
-                {/* Quarantined (Brown/Amber - Top segment) */}
+        {barData.length === 0 ? (
+          <div className="relative z-10 flex flex-col items-center justify-center h-[calc(100%-28px)] text-center text-xs text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+            <p className="font-semibold text-slate-600">Awaiting row telemetry</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Run a dry run or execute rules to stream real-time validation bars.</p>
+          </div>
+        ) : (
+          <div className="relative z-10 flex items-stretch gap-[2%] px-1 sm:px-2 h-[calc(100%-28px)]">
+            {barData.map((bar, idx) => (
+              <div key={idx} className="flex-1 flex flex-col items-center justify-end h-full group">
                 <div 
-                  className="w-full bg-[#92400e]" 
-                  style={{ height: `${(bar.quarantined / (bar.clean + bar.fixed + bar.quarantined)) * 100}%`, minHeight: '3px' }} 
-                  title={`Quarantined: ${bar.quarantined}`}
-                />
-                {/* Auto-fixed (Blue - Middle segment) */}
-                <div 
-                  className="w-full bg-[#2563eb]" 
-                  style={{ height: `${(bar.fixed / (bar.clean + bar.fixed + bar.quarantined)) * 100}%`, minHeight: '3px' }} 
-                  title={`Auto-fixed: ${bar.fixed}`}
-                />
-                {/* Clean (Light Blue - Base segment) */}
-                <div 
-                  className="w-full bg-[#93c5fd] flex-1" 
-                  style={{ minHeight: '6px' }}
-                  title={`Clean: ${bar.clean}`}
-                />
+                  className="w-full rounded-t-sm flex flex-col overflow-hidden transition-all group-hover:brightness-95 cursor-pointer shadow-2xs"
+                  style={{ height: `${Math.min(100, Math.max(15, bar.height * 0.78))}%`, maxWidth: '32px' }}
+                >
+                  {/* Quarantined (Brown/Amber - Top segment) */}
+                  <div 
+                    className="w-full bg-[#92400e]" 
+                    style={{ height: `${(bar.quarantined / Math.max(1, bar.clean + bar.fixed + bar.quarantined)) * 100}%`, minHeight: bar.quarantined > 0 ? '3px' : '0px' }} 
+                    title={`Quarantined: ${bar.quarantined}`}
+                  />
+                  {/* Auto-fixed (Blue - Middle segment) */}
+                  <div 
+                    className="w-full bg-[#2563eb]" 
+                    style={{ height: `${(bar.fixed / Math.max(1, bar.clean + bar.fixed + bar.quarantined)) * 100}%`, minHeight: bar.fixed > 0 ? '3px' : '0px' }} 
+                    title={`Auto-fixed: ${bar.fixed}`}
+                  />
+                  {/* Clean (Light Blue - Base segment) */}
+                  <div 
+                    className="w-full bg-[#93c5fd] flex-1" 
+                    style={{ minHeight: bar.clean > 0 ? '6px' : '0px' }}
+                    title={`Clean: ${bar.clean}`}
+                  />
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
-        {/* Time Label */}
-        <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[10px] sm:text-[11px] text-slate-400 font-mono pt-2 px-1 border-t border-slate-200">
-          <span>12:26</span>
-          <span>12:33</span>
-          <span className="hidden sm:inline">12:41 (current)</span>
-          <span className="sm:hidden">12:41</span>
-        </div>
+        {/* Dynamic Time Label */}
+        {(() => {
+          const now = new Date();
+          const formatT = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+          const tCurrent = formatT(now);
+          const tMid = formatT(new Date(now.getTime() - 8 * 60000));
+          const tStart = formatT(new Date(now.getTime() - 15 * 60000));
+          return (
+            <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[10px] sm:text-[11px] text-slate-400 font-mono pt-2 px-1 border-t border-slate-200">
+              <span>{tStart}</span>
+              <span>{tMid}</span>
+              <span className="hidden sm:inline">{tCurrent} (current)</span>
+              <span className="sm:hidden">{tCurrent}</span>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

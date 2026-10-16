@@ -22,18 +22,34 @@ export default function RunHistoryPage() {
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
 
-  // Weekly runs telemetry bar chart data (Figma Frame 10)
-  const barChartData = [
-    { day: 'Mon', clean: 8, remediated: 2, total: 10 },
-    { day: 'Tue', clean: 14, remediated: 3, total: 17 },
-    { day: 'Wed', clean: 11, remediated: 1, total: 12 },
-    { day: 'Thu', clean: 18, remediated: 4, total: 22 },
-    { day: 'Fri', clean: 16, remediated: 2, total: 18 },
-    { day: 'Sat', clean: 6, remediated: 1, total: 7 },
-    { day: 'Sun', clean: 9, remediated: 2, total: 11 },
-  ];
-
   const displayRuns = runHistory || [];
+
+  const totalRunsCount = displayRuns.length;
+  const completedRuns = displayRuns.filter(r => r.status === 'Completed' || r.variant === 'success');
+  const writebackRate = totalRunsCount > 0 
+    ? `${Math.round((completedRuns.length / totalRunsCount) * 100)}%` 
+    : '--';
+  const writebackBadge = totalRunsCount > 0 
+    ? (completedRuns.length === totalRunsCount ? '0 Failures' : `${totalRunsCount - completedRuns.length} Held`) 
+    : 'No runs yet';
+
+  const meanHealth = totalRunsCount > 0
+    ? `${(displayRuns.reduce((acc, r) => acc + (parseFloat(r.health) || 0), 0) / totalRunsCount).toFixed(1)}%`
+    : (dynamicHealthScore ? `${dynamicHealthScore}%` : '--');
+
+  const avgDuration = totalRunsCount > 0
+    ? `${(displayRuns.reduce((acc, r) => acc + (parseFloat(r.duration) || 1.2), 0) / totalRunsCount).toFixed(1)}s`
+    : '--';
+
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const barChartData = days.map((day, idx) => {
+    const runsForDay = displayRuns.filter((r, i) => i % 7 === idx);
+    const clean = runsForDay.reduce((acc, r) => acc + (r.clean || 0), 0);
+    const remediated = runsForDay.reduce((acc, r) => acc + (r.autoFixed || 0), 0);
+    const total = clean + remediated;
+    return { day, clean, remediated, total };
+  });
+  const hasChartData = barChartData.some(b => b.total > 0);
 
   const filteredRuns = displayRuns.filter((r) => {
     if (filter === 'success' && r.variant !== 'success') return false;
@@ -90,22 +106,24 @@ export default function RunHistoryPage() {
         {/* 4 Analytics Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white border border-[#E3E6EE] rounded-[18px] p-5 shadow-xs">
-            <span className="text-xs font-semibold text-[#5F6678]">Runs This Week</span>
+            <span className="text-xs font-semibold text-[#5F6678]">Runs Recorded</span>
             <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-2xl font-bold text-[#0A0F1F]">69</span>
-              <Tag variant="success">+18% vs last week</Tag>
+              <span className="text-2xl font-bold text-[#0A0F1F]">{totalRunsCount}</span>
+              <Tag variant={totalRunsCount > 0 ? 'success' : 'neutral'}>
+                {totalRunsCount > 0 ? `${totalRunsCount} logged` : '0 runs'}
+              </Tag>
             </div>
-            <p className="text-[11px] text-[#8E95A9] mt-1">Across 3 active pipelines</p>
+            <p className="text-[11px] text-[#8E95A9] mt-1">Across active CleanFlow threads</p>
           </div>
 
           <div className="bg-white border border-[#E3E6EE] rounded-[18px] p-5 shadow-xs">
             <span className="text-xs font-semibold text-[#5F6678]">Mean Data Health</span>
             <div className="flex items-center gap-2 mt-1.5">
               <span className="text-2xl font-bold text-[#0A0F1F]">
-                {dynamicHealthScore || activeThread?.successRate || 94.0}%
+                {meanHealth}
               </span>
-              <Tag variant={(dynamicHealthScore || activeThread?.successRate || 94.0) >= 90 ? 'volt' : 'warning'}>
-                {(dynamicHealthScore || activeThread?.successRate || 94.0) >= 90 ? 'A+ Grade' : (dynamicHealthScore || activeThread?.successRate || 94.0) >= 75 ? 'B+ Grade' : 'C Grade'}
+              <Tag variant={parseFloat(meanHealth) >= 90 ? 'volt' : 'warning'}>
+                {parseFloat(meanHealth) >= 90 ? 'A+ Grade' : parseFloat(meanHealth) >= 75 ? 'B+ Grade' : 'Standard'}
               </Tag>
             </div>
             <p className="text-[11px] text-[#8E95A9] mt-1">Evaluated across all business rules</p>
@@ -114,8 +132,8 @@ export default function RunHistoryPage() {
           <div className="bg-white border border-[#E3E6EE] rounded-[18px] p-5 shadow-xs">
             <span className="text-xs font-semibold text-[#5F6678]">S/4HANA Writeback Success</span>
             <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-2xl font-bold text-[#127A52]">100%</span>
-              <Tag variant="success">0 Failures</Tag>
+              <span className="text-2xl font-bold text-[#127A52]">{writebackRate}</span>
+              <Tag variant={completedRuns.length > 0 ? 'success' : 'neutral'}>{writebackBadge}</Tag>
             </div>
             <p className="text-[11px] text-[#8E95A9] mt-1">Direct BAPI clean ingestion</p>
           </div>
@@ -123,8 +141,8 @@ export default function RunHistoryPage() {
           <div className="bg-white border border-[#E3E6EE] rounded-[18px] p-5 shadow-xs">
             <span className="text-xs font-semibold text-[#5F6678]">Avg Execution Time</span>
             <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-2xl font-bold text-[#2D55F5]">1.8s</span>
-              <Tag variant="neutral">Sub-second Latency</Tag>
+              <span className="text-2xl font-bold text-[#2D55F5]">{avgDuration}</span>
+              <Tag variant="neutral">{totalRunsCount > 0 ? 'Measured Latency' : 'No telemetry'}</Tag>
             </div>
             <p className="text-[11px] text-[#8E95A9] mt-1">Accelerated ReAct evaluation loop</p>
           </div>
@@ -148,25 +166,33 @@ export default function RunHistoryPage() {
           </div>
 
           {/* Bar Chart Visualization */}
-          <div className="h-48 flex items-end justify-between gap-6 pt-6 px-4">
-            {barChartData.map((d, idx) => {
-              const cleanHeight = `${(d.clean / 24) * 100}%`;
-              const remediatedHeight = `${(d.remediated / 24) * 100}%`;
+          {!hasChartData ? (
+            <div className="h-40 flex flex-col items-center justify-center border border-dashed border-[#E3E6EE] rounded-xl text-center p-6 text-xs text-slate-400 bg-slate-50/50">
+              <p className="font-semibold text-slate-600">No execution telemetry recorded this week</p>
+              <p className="text-[11px] text-slate-400 mt-1">Run a dry run simulation or start a live thread to populate daily execution volume.</p>
+            </div>
+          ) : (
+            <div className="h-48 flex items-end justify-between gap-6 pt-6 px-4">
+              {barChartData.map((d, idx) => {
+                const maxVol = Math.max(...barChartData.map(b => b.total), 1);
+                const cleanHeight = `${(d.clean / maxVol) * 100}%`;
+                const remediatedHeight = `${(d.remediated / maxVol) * 100}%`;
 
-              return (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
-                  <span className="text-[10px] font-mono font-bold text-[#0A0F1F] opacity-0 group-hover:opacity-100 transition-opacity">
-                    {d.total} runs
-                  </span>
-                  <div className="w-full max-w-[42px] flex flex-col justify-end rounded-[6px] overflow-hidden bg-[#F5F6FA] h-full">
-                    <div style={{ height: remediatedHeight }} className="w-full bg-[#D4FF3A] transition-all" />
-                    <div style={{ height: cleanHeight }} className="w-full bg-[#2D55F5] transition-all" />
+                return (
+                  <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+                    <span className="text-[10px] font-mono font-bold text-[#0A0F1F] opacity-0 group-hover:opacity-100 transition-opacity">
+                      {d.total} runs
+                    </span>
+                    <div className="w-full max-w-[42px] flex flex-col justify-end rounded-[6px] overflow-hidden bg-[#F5F6FA] h-full">
+                      <div style={{ height: remediatedHeight }} className="w-full bg-[#D4FF3A] transition-all" />
+                      <div style={{ height: cleanHeight }} className="w-full bg-[#2D55F5] transition-all" />
+                    </div>
+                    <span className="text-xs font-semibold text-[#5F6678] mt-1">{d.day}</span>
                   </div>
-                  <span className="text-xs font-semibold text-[#5F6678] mt-1">{d.day}</span>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Run Audit Log Table */}

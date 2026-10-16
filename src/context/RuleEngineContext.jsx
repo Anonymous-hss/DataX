@@ -896,8 +896,9 @@ export function RuleEngineProvider({ children }) {
   };
 
   // Action: Fetch Real Table Sample (calls live backend /vault/sample with tenant context)
-  const fetchTableSample = async (tableName, limit = 50) => {
+  const fetchTableSample = async (tableName, limit = 50, uriOverride = null) => {
     try {
+      const activeUri = uriOverride || sourceConfig.connectionUri || '';
       const res = await fetch(`${API_BASE}/vault/sample`, {
         method: 'POST',
         headers: { 
@@ -907,8 +908,13 @@ export function RuleEngineProvider({ children }) {
           'X-Tenant-Id': tenantId
         },
         body: JSON.stringify({
-          engine: sourceConfig.engine || 'postgres',
-          connectionUri: sourceConfig.connectionUri || '',
+          engine: sourceConfig.engine || 'sap_bw',
+          connectionUri: activeUri,
+          host: sourceConfig.host,
+          port: sourceConfig.port,
+          database: sourceConfig.database,
+          user: sourceConfig.user,
+          password: sourceConfig.password,
           table: tableName || sourceConfig.table,
           limit
         })
@@ -923,6 +929,7 @@ export function RuleEngineProvider({ children }) {
             setSourceConfig(prev => ({
               ...prev,
               table: tableName,
+              connectionUri: activeUri || prev.connectionUri,
               discoveredColumns: data.columns
             }));
           }
@@ -998,14 +1005,14 @@ export function RuleEngineProvider({ children }) {
         dryRun: true,
         autoFixEnabled,
         source: {
-          engine: sourceConfig.engine || 'postgres',
+          engine: sourceConfig.engine || 'sap_bw',
           connectionUri: sourceConfig.connectionUri || undefined,
           host: sourceConfig.host || undefined,
           port: sourceConfig.port ? String(sourceConfig.port) : undefined,
           database: sourceConfig.database || undefined,
-          table: sourceConfig.table || 'source_data',
+          table: sourceConfig.table || '0PUR_C01',
           scopeMode: sourceConfig.scopeMode || 'specific',
-          selectedTables: sourceConfig.table ? [sourceConfig.table] : []
+          selectedTables: sourceConfig.selectedTables || (sourceConfig.table ? [sourceConfig.table] : ['0PUR_C01'])
         },
         target1: {
           engine: targetConfig.engine || 'postgres',
@@ -1017,7 +1024,9 @@ export function RuleEngineProvider({ children }) {
           quarantineTable: targetConfig.quarantineTable || 'quarantined_records',
           writeMode: targetConfig.writeMode || 'append'
         },
-        rules: selectedActiveRules.map(r => ({
+        rules: selectedActiveRules.map((r, idx) => ({
+          id: String(r.id || `rule_${idx + 1}`),
+          name: String(r.name || r.title || r.id || `Rule ${idx + 1}`),
           column: r.field || r.column || 'GENERAL',
           check_type: r.check_type || 'REGEX_FORMAT',
           condition: r.condition || r.code || '',
@@ -1040,12 +1049,12 @@ export function RuleEngineProvider({ children }) {
 
       if (res.ok) {
         const data = await res.json();
-        if (data.validCount !== undefined || data.summary !== undefined) {
-          const totalCount = data.totalChecked || (data.summary ? data.summary.total_records : sampleData.length);
-          const valid = data.validCount ?? (data.summary ? data.summary.valid_records_count : sampleData.filter(r => r._status === 'clean').length);
-          const fixed = data.autofixedCount ?? (data.summary ? data.summary.remediated_count : sampleData.filter(r => r._status === 'fixed').length);
-          const quarantined = data.quarantinedCount ?? (data.summary ? data.summary.quarantined_records_count : sampleData.filter(r => r._status === 'quarantined').length);
-          const passRate = data.healthScore || (totalCount > 0 ? Math.round(((valid + fixed) / totalCount) * 1000) / 10 : 100);
+        if (data.counts !== undefined || data.validCount !== undefined || data.summary !== undefined) {
+          const totalCount = data.counts?.totalChecked ?? data.totalChecked ?? (data.summary ? data.summary.total_records : sampleData.length);
+          const valid = data.counts?.valid ?? data.validCount ?? (data.summary ? data.summary.valid_records_count : sampleData.filter(r => r._status === 'clean').length);
+          const fixed = data.counts?.autofixed ?? data.autofixedCount ?? (data.summary ? data.summary.remediated_count : sampleData.filter(r => r._status === 'fixed').length);
+          const quarantined = data.counts?.quarantined ?? data.quarantinedCount ?? (data.summary ? data.summary.quarantined_records_count : sampleData.filter(r => r._status === 'quarantined').length);
+          const passRate = data.healthMetrics?.score ?? data.healthScore ?? (totalCount > 0 ? Math.round(((valid + fixed) / totalCount) * 1000) / 10 : 100);
 
           const outcome = {
             totalChecked: totalCount,
@@ -1060,6 +1069,24 @@ export function RuleEngineProvider({ children }) {
             ruleOutcomes: prev.ruleOutcomes
           }));
           setPipelineStatus('COMPLETED');
+
+          // Dynamically append run to runHistory so History page has live telemetry
+          const newRun = {
+            id: `RUN-${Date.now().toString().slice(-5)}`,
+            thread: activeThread?.name || 'SAP Clean Core Modernizer',
+            dataset: sourceConfig.table || '0PUR_C01',
+            rows: totalCount,
+            clean: valid,
+            autoFixed: fixed,
+            quarantined,
+            duration: `${((data.elapsedMs || 800) / 1000).toFixed(1)}s`,
+            health: passRate,
+            status: 'Completed',
+            variant: passRate >= 90 ? 'success' : 'volt',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
+          setRunHistory(prev => [newRun, ...(prev || [])]);
+
           return outcome;
         }
       }

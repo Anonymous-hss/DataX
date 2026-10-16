@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { 
   ArrowLeft, 
@@ -59,19 +59,82 @@ export default function LiveWithAutoFixPage({ onBack }) {
     return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   };
 
-  const initialActivities = isSap ? [
-    { id: 1, type: 'chart', title: '500 purchasing lines verified', subtitle: '440 clean · 48 auto-fixed via ontology', time: getFormattedTime() },
-    { id: 2, type: 'zap', title: 'Plant codes normalized', subtitle: 'Plant-Dallas ➔ P1000 & p3000 ➔ P3000', time: getFormattedTime() },
-    { id: 3, type: 'quarantine', title: '12 orders held in quarantine', subtitle: 'Negative quantity or formula mismatch', time: getFormattedTime() },
-    { id: 4, type: 'live', title: 'SAP Clean Core live', subtitle: `${rulesCount} rules · BAPI writeback active`, time: getFormattedTime() }
-  ] : [
-    { id: 1, type: 'chart', title: '64 rows checked', subtitle: '61 clean · 3 auto-fixed', time: getFormattedTime() },
-    { id: 2, type: 'zap', title: 'Quarantine re-checked', subtitle: '4 rows fixed and written to target', time: getFormattedTime() },
-    { id: 3, type: 'quarantine', title: '2 rows quarantined', subtitle: 'Failed "Email RFC syntax"', time: getFormattedTime() },
-    { id: 4, type: 'live', title: 'Thread went live', subtitle: `${rulesCount} rules · auto-fix on`, time: getFormattedTime() }
-  ];
+  const totalVerified = dryRunResult?.totalChecked || 0;
+  const cleanCount = dryRunResult?.cleanCount || 0;
+  const fixedCount = dryRunResult?.autoFixedCount || 0;
+  const quarantinedCount = dryRunResult?.quarantinedCount || 0;
 
-  const [activities, setActivities] = useState(initialActivities);
+  const dynamicActivities = useMemo(() => {
+    const time = getFormattedTime();
+    if (totalVerified === 0) {
+      return [
+        {
+          id: 'live-standby',
+          type: 'live',
+          title: 'CleanFlow pipeline listener live',
+          subtitle: `${rulesCount} rules active · awaiting live rows from ${tableName}`,
+          time
+        }
+      ];
+    }
+
+    const items = [
+      {
+        id: 'metric-verified',
+        type: 'chart',
+        title: `${totalVerified.toLocaleString()} rows verified from ${tableName}`,
+        subtitle: `${cleanCount.toLocaleString()} clean · ${fixedCount.toLocaleString()} auto-fixed via rules`,
+        time
+      }
+    ];
+
+    if (fixedCount > 0) {
+      items.push({
+        id: 'metric-autofix',
+        type: 'zap',
+        title: `${fixedCount.toLocaleString()} values auto-remediated`,
+        subtitle: 'Normalized formatting, plant code mapping & casing',
+        time
+      });
+    }
+
+    if (quarantinedCount > 0) {
+      items.push({
+        id: 'metric-quarantine',
+        type: 'quarantine',
+        title: `${quarantinedCount.toLocaleString()} records held in quarantine`,
+        subtitle: 'Flagged for negative quantity, missing keys, or validation failure',
+        time
+      });
+    }
+
+    items.push({
+      id: 'metric-live',
+      type: 'live',
+      title: `${targetTableName} ingestion stream active`,
+      subtitle: `${rulesCount} rules · writeback connected`,
+      time
+    });
+
+    return items;
+  }, [totalVerified, cleanCount, fixedCount, quarantinedCount, tableName, targetTableName, rulesCount]);
+
+  const [activities, setActivities] = useState([]);
+  useEffect(() => {
+    setActivities(dynamicActivities);
+  }, [dynamicActivities]);
+
+  const dynamicBarData = useMemo(() => {
+    if (totalVerified === 0) return [];
+    const multipliers = [0.35, 0.48, 0.28, 0.72, 0.45, 0.60, 0.85, 0.68, 0.55, 0.92, 0.75, 1.0];
+    return multipliers.map(m => {
+      const bClean = Math.round((cleanCount / 12) * m);
+      const bFixed = Math.round((fixedCount / 12) * m);
+      const bQuar = Math.round((quarantinedCount / 12) * m);
+      const height = Math.min(100, Math.max(15, Math.round(m * 90)));
+      return { clean: bClean, fixed: bFixed, quarantined: bQuar, height };
+    });
+  }, [totalVerified, cleanCount, fixedCount, quarantinedCount]);
 
   // Clean timer reference
   const timerRef = useRef(null);
@@ -324,6 +387,7 @@ export default function LiveWithAutoFixPage({ onBack }) {
             <LiveChart 
               timeRange={timeRange} 
               setTimeRange={setTimeRange} 
+              barData={dynamicBarData}
             />
 
             {/* Right Column: Live Activity Feed */}

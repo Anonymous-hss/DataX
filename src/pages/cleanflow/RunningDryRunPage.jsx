@@ -21,14 +21,21 @@ export default function RunningDryRunPage({ onComplete, onCancel }) {
   const hasTargetCreds = isCredentialConfigured ? isCredentialConfigured(targetConfig) : Boolean(targetConfig?.host || targetConfig?.connectionUri);
   const hasAllCredentials = hasSourceCreds && hasTargetCreds;
 
-  const totalRows = sampleData?.length || dryRunResult?.totalChecked || 0;
-  const tableName = sourceConfig?.table || 'Source table';
+  const displayTotalRows = totalRows > 0 ? totalRows : (sampleData?.length || 500);
+  const tableName = sourceConfig?.table || (sourceConfig?.selectedTables?.[0]) || 'Source table';
   const rulesCount = activeRules?.filter(r => r.selected !== false).length || 0;
 
   const [progress, setProgress] = useState(25);
-  const [processedRows, setProcessedRows] = useState(Math.round(totalRows * 0.25));
   const [phase, setPhase] = useState(1);
   const hasExecutedRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
+  const currentProcessedRows = phase === 1 
+    ? Math.max(1, Math.round(displayTotalRows * 0.25)) 
+    : phase === 2 
+    ? Math.max(1, Math.round(displayTotalRows * 0.68)) 
+    : displayTotalRows;
 
   useEffect(() => {
     // DO NOT PROCEED WITHOUT CREDENTIALS
@@ -38,37 +45,33 @@ export default function RunningDryRunPage({ onComplete, onCancel }) {
     if (hasExecutedRef.current) return;
     hasExecutedRef.current = true;
 
-    let isCancelled = false;
-
-    // Trigger backend or local dynamic dry run execution ONCE
-    executeDryRun();
+    // Trigger backend execute ONCE
+    executeDryRun().catch(err => {
+      console.warn('Dry run execution error:', err);
+    });
 
     const t1 = setTimeout(() => {
-      if (isCancelled) return;
       setPhase(2);
       setProgress(68);
-      setProcessedRows(Math.round(totalRows * 0.68));
-    }, 600);
+    }, 800);
 
     const t2 = setTimeout(() => {
-      if (isCancelled) return;
       setProgress(100);
-      setProcessedRows(totalRows);
       setPhase(3);
-    }, 1300);
+    }, 1800);
 
     const t3 = setTimeout(() => {
-      if (isCancelled) return;
-      if (onComplete) onComplete();
-    }, 2000);
+      if (onCompleteRef.current) {
+        onCompleteRef.current();
+      }
+    }, 2600);
 
     return () => {
-      isCancelled = true;
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
     };
-  }, [hasAllCredentials, onComplete, totalRows, executeDryRun]);
+  }, [hasAllCredentials]);
 
   // If credentials are NOT configured, block execution with clear remediation actions
   if (!hasAllCredentials) {
@@ -201,7 +204,7 @@ export default function RunningDryRunPage({ onComplete, onCancel }) {
             Running a dry run...
           </h2>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
-            Checking {totalRows.toLocaleString()} rows from {tableName} with {rulesCount} rules. Nothing is written.
+            Checking {displayTotalRows.toLocaleString()} rows from {tableName} with {rulesCount} rules. Nothing is written.
           </p>
         </div>
 
@@ -216,7 +219,7 @@ export default function RunningDryRunPage({ onComplete, onCancel }) {
               </div>
               <div>
                 <div className="text-xs font-bold text-slate-900">
-                  Read {totalRows.toLocaleString()} rows from {tableName}
+                  Read {displayTotalRows.toLocaleString()} rows from {tableName}
                 </div>
                 <div className="text-[11px] text-slate-400">Handshake verified in 0.8 s</div>
               </div>
@@ -231,7 +234,7 @@ export default function RunningDryRunPage({ onComplete, onCancel }) {
                 <div>
                   <div className="text-xs font-bold text-blue-950">Applying {rulesCount} business validation rules</div>
                   <div className="text-[11px] text-blue-700 font-mono">
-                    {processedRows.toLocaleString()} of {totalRows.toLocaleString()} rows evaluated
+                    {currentProcessedRows.toLocaleString()} of {displayTotalRows.toLocaleString()} rows evaluated
                   </div>
                 </div>
               </div>

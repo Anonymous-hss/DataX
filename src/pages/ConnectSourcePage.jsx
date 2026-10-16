@@ -46,6 +46,7 @@ export default function ConnectSourcePage() {
   const [showPassword, setShowPassword] = useState(false);
   const [readScope, setReadScope] = useState('selected');
   const [selectedTables, setSelectedTables] = useState(sourceConfig?.table ? [sourceConfig.table] : []);
+  const [previewTable, setPreviewTable] = useState(sourceConfig?.table || '');
   const [tableSearch, setTableSearch] = useState('');
   const [isTesting, setIsTesting] = useState(false);
   const [testSuccess, setTestSuccess] = useState(false);
@@ -126,17 +127,39 @@ export default function ConnectSourcePage() {
         tableCount: result.tableCount || (result.tables ? result.tables.length : 0)
       });
 
+      // Save credentials immediately to context so subsequent sampling works
+      setSourceConfig(prev => ({
+        ...prev,
+        engine: engineKey,
+        connectionUri: effectiveUri,
+        host,
+        port,
+        database: databaseName,
+        user: username,
+        password,
+        table: result.tables?.[0] || '0PUR_C01'
+      }));
+
       if (result.tables && result.tables.length > 0) {
-        setAvailableTables(
-          result.tables.map(name => ({
-            name,
-            rows: 'Live table'
-          }))
-        );
+        const mappedTables = result.tableDetails && result.tableDetails.length > 0
+          ? result.tableDetails
+          : result.tables.map(name => ({
+              name,
+              rows: '500 rows'
+            }));
+        setAvailableTables(mappedTables);
+
         // Automatically select the first table if none selected yet
+        const firstTable = result.tables[0];
         if (selectedTables.length === 0) {
-          handleSelectTable(result.tables[0]);
+          setSelectedTables([firstTable]);
         }
+        setPreviewTable(firstTable);
+        fetchTableSample(firstTable, 5, effectiveUri).then(sampleRes => {
+          if (sampleRes && sampleRes.rows && sampleRes.rows.length > 0) {
+            setPreviewRows(sampleRes.rows);
+          }
+        });
       }
     } else {
       setTestSuccess(false);
@@ -144,10 +167,34 @@ export default function ConnectSourcePage() {
     }
   };
 
+  const handleToggleTable = async (tableName) => {
+    setSelectedTables(prev => {
+      const exists = prev.includes(tableName);
+      return exists ? prev.filter(t => t !== tableName) : [...prev, tableName];
+    });
+    setPreviewTable(tableName);
+    const effectiveUri = connectMethod === 'string' && connString.trim()
+      ? connString.trim()
+      : (dbType === 'SAP BW' && host.trim())
+      ? `jdbc:sap://${host.trim()}:${port || '443'}?encrypt=true&validateCertificate=false&user=${username || ''}&password=${password || ''}`
+      : connString;
+    const sampleRes = await fetchTableSample(tableName, 5, effectiveUri);
+    if (sampleRes && sampleRes.rows && sampleRes.rows.length > 0) {
+      setPreviewRows(sampleRes.rows);
+    }
+  };
+
   const handleSelectTable = async (tableName) => {
-    setSelectedTables([tableName]);
-    const sampleRes = await fetchTableSample(tableName, 5);
-    if (sampleRes && sampleRes.rows) {
+    // When clicking a table row: ensure it is in selectedTables and preview its live rows
+    setSelectedTables(prev => prev.includes(tableName) ? prev : [...prev, tableName]);
+    setPreviewTable(tableName);
+    const effectiveUri = connectMethod === 'string' && connString.trim()
+      ? connString.trim()
+      : (dbType === 'SAP BW' && host.trim())
+      ? `jdbc:sap://${host.trim()}:${port || '443'}?encrypt=true&validateCertificate=false&user=${username || ''}&password=${password || ''}`
+      : connString;
+    const sampleRes = await fetchTableSample(tableName, 5, effectiveUri);
+    if (sampleRes && sampleRes.rows && sampleRes.rows.length > 0) {
       setPreviewRows(sampleRes.rows);
     }
   };
@@ -641,7 +688,7 @@ export default function ConnectSourcePage() {
                           onClick={(e) => e.stopPropagation()}
                           onChange={(e) => {
                             e.stopPropagation();
-                            handleSelectTable(table.name);
+                            handleToggleTable(table.name);
                           }}
                           className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                         />
@@ -658,7 +705,7 @@ export default function ConnectSourcePage() {
             <div className="pt-2 space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-semibold text-slate-700 font-mono">
-                  Preview <span className="text-blue-600 underline">{selectedTables[0] || 'table'}</span>
+                  Preview <span className="text-blue-600 underline">{previewTable || selectedTables[0] || 'table'}</span>
                 </span>
                 <span className="text-slate-400 font-mono text-[11px]">
                   {previewRows.length} sample rows
