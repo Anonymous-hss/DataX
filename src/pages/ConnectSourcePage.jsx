@@ -115,6 +115,28 @@ export default function ConnectSourcePage() {
     }
   }, [contextPreviewRows]);
 
+  const getResolvedUri = () => {
+    if (connectMethod === 'host' && host && username && password) {
+      const p = port || (dbType === 'SAP BW' ? '443' : dbType === 'MongoDB' ? '27017' : '5432');
+      if (dbType === 'SAP BW') {
+        return `jdbc:sap://${host}:${p}?encrypt=true&validateCertificate=false` +
+          `&user=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}` +
+          (databaseName ? `&databaseName=${encodeURIComponent(databaseName)}` : '');
+      } else if (dbType === 'MongoDB') {
+        const isAtlas = host.includes('.mongodb.net');
+        if (isAtlas) {
+          return `mongodb+srv://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}/${databaseName || ''}?retryWrites=true&w=majority`;
+        }
+        return `mongodb://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}:${p}/${databaseName || ''}`;
+      } else {
+        const isCloudPg = host.includes('neon.tech') || host.includes('rds.amazonaws.com') || host.includes('supabase.co');
+        const sslQuery = isCloudPg ? '?sslmode=require' : '';
+        return `postgresql://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}:${p}/${databaseName || ''}${sslQuery}`;
+      }
+    }
+    return connString;
+  };
+
   const handleTest = async () => {
     setIsTesting(true);
     setTestError(null);
@@ -122,14 +144,7 @@ export default function ConnectSourcePage() {
     setTestSuccess(false);
 
     const engineKey = dbType === 'SAP BW' ? 'sap_bw' : dbType === 'MongoDB' ? 'mongodb' : dbType === 'Snowflake' ? 'snowflake' : dbType === 'Databricks' ? 'databricks' : 'postgres';
-
-    const effectiveUri = connectMethod === 'string' && connString.trim()
-      ? connString.trim()
-      : (engineKey === 'sap_bw' && host.trim())
-      ? `jdbc:sap://${host.trim()}:${port || '443'}?encrypt=true&validateCertificate=false&user=${username || ''}&password=${password || ''}`
-      : (engineKey === 'mongodb' && host.trim())
-      ? `mongodb://${username || ''}:${password || ''}@${host.trim()}:${port || '27017'}/${databaseName || ''}`
-      : (host.trim() ? `postgresql://${username || ''}:${password || ''}@${host.trim()}:${port || '5432'}/${databaseName || ''}` : connString);
+    const effectiveUri = getResolvedUri();
 
     const result = await testConnection({
       engine: engineKey,
@@ -145,6 +160,19 @@ export default function ConnectSourcePage() {
     setIsTesting(false);
     if (result.success) {
       setTestSuccess(true);
+      if (resolvedUri) {
+        setConnString(resolvedUri);
+      }
+      setSourceConfig(prev => ({
+        ...prev,
+        engine: engineKey,
+        connectionUri: resolvedUri,
+        host,
+        port,
+        database: databaseName,
+        user: username,
+        password
+      }));
       setTestMeta({
         latencyMs: result.latencyMs || 42,
         tableCount: result.tableCount || (result.tables ? result.tables.length : 0)
@@ -274,14 +302,7 @@ export default function ConnectSourcePage() {
   const handleSaveSource = () => {
     setValidationError(null);
     const engineKey = dbType === 'SAP BW' ? 'sap_bw' : dbType === 'MongoDB' ? 'mongodb' : dbType === 'Snowflake' ? 'snowflake' : dbType === 'Databricks' ? 'databricks' : 'postgres';
-
-    const effectiveUri = connectMethod === 'string' && connString.trim()
-      ? connString.trim()
-      : (engineKey === 'sap_bw' && host.trim())
-      ? `jdbc:sap://${host.trim()}:${port || '443'}?encrypt=true&validateCertificate=false&user=${username || ''}&password=${password || ''}`
-      : (engineKey === 'mongodb' && host.trim())
-      ? `mongodb://${username || ''}:${password || ''}@${host.trim()}:${port || '27017'}/${databaseName || ''}`
-      : (host.trim() ? `postgresql://${username || ''}:${password || ''}@${host.trim()}:${port || '5432'}/${databaseName || ''}` : connString);
+    const effectiveUri = getResolvedUri();
     
     // Check credentials before proceeding
     const candidateCreds = {

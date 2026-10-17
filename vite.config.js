@@ -6,7 +6,14 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    open: false
+    open: false,
+    proxy: {
+      '/datax-api': {
+        target: 'https://dataglow.ai',
+        changeOrigin: true,
+        secure: true
+      }
+    }
   },
   build: {
     chunkSizeWarningLimit: 600,

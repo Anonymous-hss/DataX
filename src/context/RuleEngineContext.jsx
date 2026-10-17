@@ -4,7 +4,9 @@ import * as XLSX from 'xlsx';
 import { SAP_BW_PROCUREMENT_DATA, SAP_BW_INVENTORY_DATA, USER_MASTER_DATA } from '../data/sampleDatasets';
 import { ONTOLOGY_GRAPH } from '../data/ontologyGraph';
 
-const API_BASE = 'https://dataglow.ai/datax-api';
+const API_BASE = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? '/datax-api'
+  : 'https://dataglow.ai/datax-api';
 
 // Helper: Live Row Evaluation & Auto-Fix Transformation with Strict Rule Checking
 export const evaluateRow = (row, rules = [], isAutoFix = true, allRows = []) => {
@@ -944,7 +946,28 @@ export function RuleEngineProvider({ children }) {
   // Action: Fetch Real Table Sample (calls live backend /vault/sample with tenant context)
   const fetchTableSample = async (tableName, limit = 50, uriOverride = null) => {
     try {
-      const activeUri = uriOverride || sourceConfig.connectionUri || '';
+      let resolvedUri = uriOverride || sourceConfig.connectionUri || '';
+      if (!resolvedUri && sourceConfig.host && (sourceConfig.user || sourceConfig.username) && sourceConfig.password) {
+        const p = sourceConfig.port || (sourceConfig.engine === 'sap_bw' ? '443' : '5432');
+        const u = sourceConfig.user || sourceConfig.username;
+        const pass = sourceConfig.password;
+        const db = sourceConfig.database;
+        if (sourceConfig.engine === 'sap_bw') {
+          resolvedUri = `jdbc:sap://${sourceConfig.host}:${p}?encrypt=true&validateCertificate=false&user=${encodeURIComponent(u)}&password=${encodeURIComponent(pass)}${db ? `&databaseName=${encodeURIComponent(db)}` : ''}`;
+        } else if (sourceConfig.engine === 'mongodb') {
+          const isAtlas = sourceConfig.host && sourceConfig.host.includes('.mongodb.net');
+          if (isAtlas) {
+            resolvedUri = `mongodb+srv://${encodeURIComponent(u)}:${encodeURIComponent(pass)}@${sourceConfig.host}/${db || ''}?retryWrites=true&w=majority`;
+          } else {
+            resolvedUri = `mongodb://${encodeURIComponent(u)}:${encodeURIComponent(pass)}@${sourceConfig.host}:${p}/${db || ''}`;
+          }
+        } else {
+          const isCloudPg = sourceConfig.host && (sourceConfig.host.includes('neon.tech') || sourceConfig.host.includes('rds.amazonaws.com') || sourceConfig.host.includes('supabase.co'));
+          const sslQuery = isCloudPg ? '?sslmode=require' : '';
+          resolvedUri = `postgresql://${encodeURIComponent(u)}:${encodeURIComponent(pass)}@${sourceConfig.host}:${p}/${db || ''}${sslQuery}`;
+        }
+      }
+
       const res = await fetch(`${API_BASE}/vault/sample`, {
         method: 'POST',
         headers: { 
@@ -955,12 +978,12 @@ export function RuleEngineProvider({ children }) {
         },
         body: JSON.stringify({
           engine: sourceConfig.engine || 'sap_bw',
-          connectionUri: activeUri,
-          host: sourceConfig.host,
-          port: sourceConfig.port,
-          database: sourceConfig.database,
-          user: sourceConfig.user,
-          password: sourceConfig.password,
+          connectionUri: resolvedUri,
+          host: sourceConfig.host || undefined,
+          port: sourceConfig.port ? String(sourceConfig.port) : undefined,
+          database: sourceConfig.database || undefined,
+          user: sourceConfig.user || sourceConfig.username || undefined,
+          password: sourceConfig.password || undefined,
           table: tableName || sourceConfig.table,
           limit
         })
@@ -1061,11 +1084,11 @@ export function RuleEngineProvider({ children }) {
           selectedTables: sourceConfig.selectedTables || (sourceConfig.table ? [sourceConfig.table] : ['0PUR_C01'])
         },
         target1: {
-          engine: targetConfig.engine || 'postgres',
-          connectionUri: targetConfig.connectionUri || undefined,
-          host: targetConfig.host || undefined,
-          port: targetConfig.port ? String(targetConfig.port) : undefined,
-          database: targetConfig.database || 'reconciled_db',
+          engine: targetConfig.engine || sourceConfig.engine || 'postgres',
+          connectionUri: targetConfig.connectionUri || sourceConfig.connectionUri || undefined,
+          host: targetConfig.host || sourceConfig.host || undefined,
+          port: (targetConfig.port || sourceConfig.port) ? String(targetConfig.port || sourceConfig.port) : undefined,
+          database: targetConfig.database || sourceConfig.database || 'reconciled_db',
           table: targetConfig.table || (sourceConfig.table ? `${sourceConfig.table}_clean` : 'clean_records'),
           quarantineTable: targetConfig.quarantineTable || 'quarantined_records',
           writeMode: targetConfig.writeMode || 'append'
@@ -1095,12 +1118,13 @@ export function RuleEngineProvider({ children }) {
 
       if (res.ok) {
         const data = await res.json();
-        if (data.counts !== undefined || data.validCount !== undefined || data.summary !== undefined) {
-          const totalCount = data.summary?.sourceExtracted ?? data.summary?.totalChecked ?? data.summary?.total_records ?? data.counts?.totalChecked ?? sampleData.length;
-          const valid = data.summary?.compliantValid ?? data.summary?.cleanCount ?? data.summary?.valid_records_count ?? data.counts?.valid ?? 0;
-          const fixed = data.summary?.autoFixedCount ?? data.summary?.remediated_count ?? data.counts?.autofixed ?? 0;
-          const quarantined = data.summary?.quarantined ?? data.summary?.quarantinedCount ?? data.summary?.quarantined_records_count ?? data.counts?.quarantined ?? 0;
-          const passRate = data.healthMetrics?.score ?? (totalCount > 0 ? Math.round(((valid + fixed) / totalCount) * 1000) / 10 : 0);
+        if (data.counts !== undefined || data.validCount !== undefined || data.summary !== undefined || data.totalChecked !== undefined) {
+          const sum = data.summary || {};
+          const totalCount = sum.sourceExtracted ?? sum.totalChecked ?? sum.total_records ?? data.totalChecked ?? data.counts?.totalChecked ?? sampleData.length;
+          const valid = sum.compliantValid ?? sum.cleanCount ?? sum.valid_records_count ?? data.validCount ?? data.counts?.valid ?? 0;
+          const fixed = sum.autoFixedCount ?? sum.remediated_count ?? data.autofixedCount ?? data.counts?.autofixed ?? 0;
+          const quarantined = sum.quarantined ?? sum.quarantinedCount ?? sum.quarantined_records_count ?? data.quarantinedCount ?? data.counts?.quarantined ?? 0;
+          const passRate = data.healthMetrics?.score ?? data.healthScore ?? (totalCount > 0 ? Math.round(((valid + fixed) / totalCount) * 1000) / 10 : 0);
 
           const outcome = {
             totalChecked: totalCount,
@@ -1122,6 +1146,9 @@ export function RuleEngineProvider({ children }) {
 
           return outcome;
         }
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        console.warn('Pipeline execute API returned non-OK status:', res.status, errJson);
       }
     } catch (err) {
       console.warn('Pipeline execute API call failed, using live evaluated simulation:', err.message);
@@ -1129,7 +1156,7 @@ export function RuleEngineProvider({ children }) {
       isExecutingDryRunRef.current = false;
     }
 
-    // Dynamic Record Evaluation
+    // Dynamic Record Evaluation Fallback
     const totalCount = sampleData.length;
     const cleanCount = sampleData.filter(r => r._status === 'clean').length;
     const autoFixedCount = sampleData.filter(r => r._status === 'fixed').length;

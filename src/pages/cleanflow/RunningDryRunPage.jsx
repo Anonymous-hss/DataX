@@ -30,6 +30,8 @@ export default function RunningDryRunPage({ onComplete, onCancel }) {
   const hasExecutedRef = useRef(false);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
+  const executeDryRunRef = useRef(executeDryRun);
+  executeDryRunRef.current = executeDryRun;
 
   const currentProcessedRows = phase === 1 
     ? Math.max(1, Math.round(displayTotalRows * 0.25)) 
@@ -45,28 +47,38 @@ export default function RunningDryRunPage({ onComplete, onCancel }) {
     if (hasExecutedRef.current) return;
     hasExecutedRef.current = true;
 
+    let isMounted = true;
+
     // Trigger backend execute ONCE
-    executeDryRun().catch(err => {
+    executeDryRunRef.current().catch(err => {
       console.warn('Dry run execution error:', err);
     });
 
+    // Phase 2: Applying business validation rules
     const t1 = setTimeout(() => {
-      setPhase(2);
-      setProgress(68);
+      if (isMounted) {
+        setPhase(2);
+        setProgress(68);
+      }
     }, 800);
 
+    // Phase 3: Synthesizing compliance telemetry & 100%
     const t2 = setTimeout(() => {
-      setProgress(100);
-      setPhase(3);
+      if (isMounted) {
+        setPhase(3);
+        setProgress(100);
+      }
     }, 1800);
 
+    // Phase 4: Transition to results
     const t3 = setTimeout(() => {
-      if (onCompleteRef.current) {
+      if (isMounted && onCompleteRef.current) {
         onCompleteRef.current();
       }
     }, 2600);
 
     return () => {
+      isMounted = false;
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
