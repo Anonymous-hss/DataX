@@ -51,7 +51,7 @@ export default function DescribeRulesForm({
         <div className="flex items-center justify-between px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-mono font-medium text-slate-800 shadow-2xs hover:border-slate-300 transition-colors cursor-pointer">
           <div className="flex items-center gap-2.5">
             <Database className="w-4 h-4 text-slate-500" />
-            <span>{tableName} · {dbName}</span>
+            <span>{tableName} · {dbName && dbName !== 'No database configured' ? dbName : 'SAP HANA Cloud / S/4HANA'}</span>
           </div>
           <ChevronDown className="w-4 h-4 text-slate-400" />
         </div>

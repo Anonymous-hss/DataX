@@ -149,7 +149,10 @@ export default function ThreadsPage() {
     const runCount = typeof t.runCount === 'number' 
       ? t.runCount 
       : (t.runs ? parseInt(t.runs) || 0 : 0);
-    const hasExecuted = runCount > 0 && t.healthScore !== null && t.healthScore !== undefined;
+    const hasExecuted = runCount > 0 || t.status === 'live' || (t.healthScore !== null && t.healthScore !== undefined);
+    const isLive = t.status === 'live';
+    const isHealthy = isLive || (hasExecuted && (t.healthScore ?? 0) >= 80);
+    const isWarning = hasExecuted && !isHealthy && (t.healthScore ?? 0) >= 60;
 
     return {
       id: t.id || t.threadId || 'TH-001',
@@ -161,13 +164,13 @@ export default function ThreadsPage() {
       pipeline: t.pipeline || `${t.source?.database || 'source'} → AI rules → ${t.target?.table || 'target'}`,
       runCount,
       hasExecuted,
-      status: hasExecuted 
-        ? (t.healthScore >= 90 ? 'healthy' : t.healthScore >= 75 ? 'warning' : 'draft')
-        : 'draft',
-      statusLabel: hasExecuted
-        ? (t.healthScore >= 90 ? 'Live' : 'Below threshold')
-        : (runCount === 0 ? 'Draft' : 'Not evaluated'),
-      successRate: hasExecuted ? Number(t.healthScore || t.successRate) : null,
+      status: isHealthy ? 'healthy' : isWarning ? 'warning' : 'draft',
+      statusLabel: isLive 
+        ? 'Live' 
+        : hasExecuted 
+          ? (t.healthScore >= 80 ? 'Healthy' : t.healthScore >= 60 ? 'Needs Attention' : 'Below threshold')
+          : (runCount === 0 ? 'Draft' : 'Not evaluated'),
+      successRate: hasExecuted && t.healthScore !== null && t.healthScore !== undefined ? Number(t.healthScore) : (t.successRate ? Number(t.successRate) : null),
       runs: `${runCount} ${runCount === 1 ? 'run' : 'runs'}`,
       icon
     };

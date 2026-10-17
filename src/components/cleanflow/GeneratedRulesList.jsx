@@ -139,6 +139,11 @@ export default function GeneratedRulesList({
                 <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-mono text-[11px] font-medium shrink-0">
                   {rule.field}
                 </span>
+                {rule.badge && (
+                  <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-mono font-medium shrink-0">
+                    {rule.badge}
+                  </span>
+                )}
                 {rule.severity === 'Critical' ? (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 text-[10px] font-semibold shrink-0">
                     <span className="w-1.5 h-1.5 rounded-full bg-red-500" />

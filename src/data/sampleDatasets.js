@@ -220,3 +220,258 @@ const generateUserRecords = () => {
 };
 
 export const USER_MASTER_DATA = generateUserRecords();
+
+// -----------------------------------------------------------------------------
+// SAP Distinct Table Generators (0IC_C03, MARA, EKKO, EKPO)
+// -----------------------------------------------------------------------------
+
+// SAP Material Movements (0IC_C03) - 8,450 records
+export const generateSapMovementsRecords = (count = 50) => {
+  const movementTypes = ['101', '102', '201', '261', '301', '311'];
+  const plants = ['P1000', 'P2000', 'P3000', 'Plant-Dallas'];
+  const storageLocs = ['SL01', 'SL02', 'WH10', 'WH20'];
+  const materials = ['MAT-1001', 'MAT-1002', 'MAT-1003', 'MAT-1004', 'MAT-1005', 'MAT-1006', 'MAT-1007', 'MAT-1008'];
+  const uoms = ['EA', 'KG', 'PC', 'M'];
+
+  const rows = [];
+  for (let i = 1; i <= count; i++) {
+    const docNo = `5000${189200 + i}`;
+    const mvt = movementTypes[(i - 1) % movementTypes.length];
+    const mat = materials[(i - 1) % materials.length];
+    let plant = plants[(i - 1) % plants.length];
+    const sloc = storageLocs[(i - 1) % storageLocs.length];
+    let qty = 10 + (i * 7) % 150;
+    const uom = uoms[(i - 1) % uoms.length];
+    const amount = Math.round(qty * (25 + (i * 13) % 450) * 100) / 100;
+    
+    // Deterministic anomalies for testing
+    if (i === 3 || i === 23) {
+      qty = -5; // Negative movement
+    } else if (i === 7) {
+      plant = 'Plant-Dallas'; // Legacy plant for ontology resolution
+    }
+
+    rows.push({
+      MBLNR: docNo,
+      BWART: mvt,
+      MATNR: mat,
+      WERKS: plant,
+      LGORT: sloc,
+      MENGE: qty,
+      MEINS: uom,
+      DMBTR: amount,
+      MJAHR: '2026',
+      ZEILE: ((i % 3) + 1) * 10
+    });
+  }
+  return rows;
+};
+
+// SAP General Material Master (MARA) - 3,120 records
+export const generateSapMaraRecords = (count = 50) => {
+  const matTypes = ['ROH', 'HALB', 'FERT', 'DIEN'];
+  const matGroups = ['0101', '0104', '0204', '0210', '0309'];
+  const uoms = ['EA', 'KG', 'M', 'L'];
+  const matNames = [
+    { id: 'MAT-1001', gross: 45.2, net: 42.0 },
+    { id: 'MAT-1002', gross: 18.5, net: 16.2 },
+    { id: 'MAT-1003', gross: 320.0, net: 310.0 },
+    { id: 'MAT-1004', gross: 780.0, net: 765.0 },
+    { id: 'MAT-1005', gross: 95.0, net: 92.5 },
+    { id: 'MAT-1006', gross: 620.0, net: 605.0 },
+    { id: 'MAT-1007', gross: 1.25, net: 1.10 },
+    { id: 'MAT-1008', gross: 1150.0, net: 1120.0 }
+  ];
+
+  const rows = [];
+  for (let i = 1; i <= count; i++) {
+    const item = matNames[(i - 1) % matNames.length];
+    let matnr = i <= matNames.length ? item.id : `MAT-${1000 + i}`;
+    const mtart = matTypes[(i - 1) % matTypes.length];
+    const matkl = matGroups[(i - 1) % matGroups.length];
+    const meins = uoms[(i - 1) % uoms.length];
+    let brgew = item.gross;
+    let ntgew = item.net;
+
+    if (i === 4) {
+      ntgew = brgew + 15.0; // Gross < Net violation
+    } else if (i === 9) {
+      matnr = ''; // Missing mandatory material number
+    }
+
+    rows.push({
+      MATNR: matnr,
+      MTART: mtart,
+      MATKL: matkl,
+      MEINS: meins,
+      BRGEW: brgew,
+      NTGEW: ntgew,
+      GEWEI: 'KG',
+      CREATED_ON: `2025-0${(i % 9) + 1}-14`
+    });
+  }
+  return rows;
+};
+
+// SAP Purchasing Document Header (EKKO) - 640 records
+export const generateSapEkkoRecords = (count = 50) => {
+  const compCodes = ['1000', '2000', '3000'];
+  const docTypes = ['NB', 'UB', 'FO'];
+  const vendors = ['V-101', 'V-102', 'V-103', 'V-104', 'V-105', 'V-201', 'V-202'];
+  const currencies = ['USD', 'EUR', 'GBP', 'CHF'];
+
+  const rows = [];
+  for (let i = 1; i <= count; i++) {
+    const ebeln = `45000${10000 + i}`;
+    const bukrs = compCodes[(i - 1) % compCodes.length];
+    const bsart = docTypes[(i - 1) % docTypes.length];
+    let lifnr = vendors[(i - 1) % vendors.length];
+    const waers = currencies[(i - 1) % currencies.length];
+    const wkurs = waers === 'USD' ? 1.00000 : waers === 'EUR' ? 1.08500 : 1.27000;
+
+    if (i === 5) lifnr = ''; // Missing vendor
+
+    rows.push({
+      EBELN: ebeln,
+      BUKRS: bukrs,
+      BSTYP: 'F',
+      BSART: bsart,
+      LIFNR: lifnr,
+      WAERS: waers,
+      BEDAT: `2026-03-${String((i % 25) + 1).padStart(2, '0')}`,
+      WKURS: wkurs
+    });
+  }
+  return rows;
+};
+
+// SAP Purchasing Document Item (EKPO) - 2,180 records
+export const generateSapEkpoRecords = (count = 50) => {
+  const materials = ['MAT-1001', 'MAT-1002', 'MAT-1003', 'MAT-1004', 'MAT-1005', 'MAT-1006'];
+  const plants = ['P1000', 'P2000', 'P3000'];
+  const slocs = ['SL01', 'SL02', 'SL03'];
+
+  const rows = [];
+  for (let i = 1; i <= count; i++) {
+    const ebeln = `45000${10000 + Math.floor((i - 1) / 3) + 1}`;
+    const ebelp = ((i - 1) % 3 + 1) * 10;
+    const matnr = materials[(i - 1) % materials.length];
+    const plant = plants[(i - 1) % plants.length];
+    const sloc = slocs[(i - 1) % slocs.length];
+    let menge = 5 + (i * 3) % 45;
+    const netpr = 15.0 + (i * 12.5) % 350;
+
+    if (i === 6) menge = -10; // Negative quantity
+
+    rows.push({
+      EBELN: ebeln,
+      EBELP: ebelp,
+      MATNR: matnr,
+      MENGE: menge,
+      NETPR: Math.round(netpr * 100) / 100,
+      PEINH: 1,
+      WERKS: plant,
+      LGORT: sloc
+    });
+  }
+  return rows;
+};
+
+export const getTableCatalog = (engine = 'sap_bw') => {
+  if (engine === 'mongodb' || engine === 'mongo') {
+    return [
+      { name: 'raw_users', rows: '1,840 docs', rowCount: 1840, domain: 'Customer & User Master' },
+      { name: 'transactions', rows: '6,120 docs', rowCount: 6120, domain: 'Ledger Transactions' },
+      { name: 'customer_profiles', rows: '920 docs', rowCount: 920, domain: 'KYC Customer Profiles' }
+    ];
+  }
+  if (engine === 'postgres' || engine === 'postgresql') {
+    return [
+      { name: 'users', rows: '2,450 rows', rowCount: 2450, domain: 'User Master' },
+      { name: 'orders', rows: '5,820 rows', rowCount: 5820, domain: 'Orders & Settlements' },
+      { name: 'audit_logs', rows: '14,290 rows', rowCount: 14290, domain: 'Compliance Audit Logs' }
+    ];
+  }
+  return [
+    { name: '0PUR_C01', rows: '1,420 rows', rowCount: 1420, domain: 'Purchasing InfoCube' },
+    { name: '0IC_C03', rows: '8,450 rows', rowCount: 8450, domain: 'Material Movements & Stocks' },
+    { name: 'BAPI_PO_CREATE1', rows: '1,200 rows', rowCount: 1200, domain: 'S/4HANA PO Staging' },
+    { name: 'MARA', rows: '3,120 rows', rowCount: 3120, domain: 'General Material Master' },
+    { name: 'EKKO', rows: '640 rows', rowCount: 640, domain: 'Purchasing Document Header' },
+    { name: 'EKPO', rows: '2,180 rows', rowCount: 2180, domain: 'Purchasing Document Item' }
+  ];
+};
+
+export const getTableData = (tableName = '0PUR_C01', engine = 'sap_bw', limit = 50) => {
+  const norm = (tableName || '').toUpperCase();
+  if (norm.includes('0IC_C03') || norm.includes('INVENTORY') || norm.includes('MOVEMENT')) {
+    const all = generateSapMovementsRecords(Math.max(limit, 25));
+    return {
+      rows: all.slice(0, limit),
+      columns: ['MBLNR', 'BWART', 'MATNR', 'WERKS', 'LGORT', 'MENGE', 'MEINS', 'DMBTR'],
+      rowCount: 8450,
+      rowCountFormatted: '8,450 rows',
+      tableName: '0IC_C03'
+    };
+  }
+  if (norm.includes('MARA') || norm.includes('MATERIAL')) {
+    const all = generateSapMaraRecords(Math.max(limit, 25));
+    return {
+      rows: all.slice(0, limit),
+      columns: ['MATNR', 'MTART', 'MATKL', 'MEINS', 'BRGEW', 'NTGEW', 'GEWEI', 'CREATED_ON'],
+      rowCount: 3120,
+      rowCountFormatted: '3,120 rows',
+      tableName: 'MARA'
+    };
+  }
+  if (norm.includes('EKKO')) {
+    const all = generateSapEkkoRecords(Math.max(limit, 25));
+    return {
+      rows: all.slice(0, limit),
+      columns: ['EBELN', 'BUKRS', 'BSTYP', 'BSART', 'LIFNR', 'WAERS', 'BEDAT', 'WKURS'],
+      rowCount: 640,
+      rowCountFormatted: '640 rows',
+      tableName: 'EKKO'
+    };
+  }
+  if (norm.includes('EKPO')) {
+    const all = generateSapEkpoRecords(Math.max(limit, 25));
+    return {
+      rows: all.slice(0, limit),
+      columns: ['EBELN', 'EBELP', 'MATNR', 'MENGE', 'NETPR', 'PEINH', 'WERKS', 'LGORT'],
+      rowCount: 2180,
+      rowCountFormatted: '2,180 rows',
+      tableName: 'EKPO'
+    };
+  }
+  if (norm.includes('BAPI_PO_CREATE1')) {
+    const all = generateSapRecords();
+    return {
+      rows: all.slice(0, limit),
+      columns: ['PO_NUMBER', 'ITEM_NO', 'MATERIAL_ID', 'QUANTITY', 'UNIT_PRICE', 'DELIVERY_PLANT', 'VENDOR_ID', 'TOTAL_AMOUNT'],
+      rowCount: 1200,
+      rowCountFormatted: '1,200 rows',
+      tableName: 'BAPI_PO_CREATE1'
+    };
+  }
+  if (norm.includes('USER') || engine === 'postgres' || engine === 'mongodb') {
+    const all = generateUserRecords();
+    return {
+      rows: all.slice(0, limit),
+      columns: ['id', 'full_name', 'email', 'role', 'status', 'account_balance'],
+      rowCount: 2450,
+      rowCountFormatted: '2,450 rows',
+      tableName: tableName || 'users'
+    };
+  }
+  // Default to 0PUR_C01
+  const all = generateSapRecords();
+  return {
+    rows: all.slice(0, limit),
+    columns: ['PO_NUMBER', 'ITEM_NO', 'MATERIAL_ID', 'QUANTITY', 'UNIT_PRICE', 'DELIVERY_PLANT', 'VENDOR_ID', 'TOTAL_AMOUNT'],
+    rowCount: 1420,
+    rowCountFormatted: '1,420 rows',
+    tableName: '0PUR_C01'
+  };
+};
+

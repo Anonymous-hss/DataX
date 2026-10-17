@@ -25,30 +25,50 @@ export default function RunHistoryPage() {
   const displayRuns = runHistory || [];
 
   const totalRunsCount = displayRuns.length;
-  const completedRuns = displayRuns.filter(r => r.status === 'Completed' || r.variant === 'success');
+  const completedRuns = displayRuns.filter(r => r.status === 'Completed' || r.status === 'Clean Core Posted' || r.variant === 'success');
   const writebackRate = totalRunsCount > 0 
     ? `${Math.round((completedRuns.length / totalRunsCount) * 100)}%` 
-    : '--';
+    : '—';
   const writebackBadge = totalRunsCount > 0 
     ? (completedRuns.length === totalRunsCount ? '0 Failures' : `${totalRunsCount - completedRuns.length} Held`) 
     : 'No runs yet';
 
-  const meanHealth = totalRunsCount > 0
-    ? `${(displayRuns.reduce((acc, r) => acc + (parseFloat(r.health) || 0), 0) / totalRunsCount).toFixed(1)}%`
-    : (dynamicHealthScore ? `${dynamicHealthScore}%` : '--');
+  const runsWithHealth = displayRuns.filter(r => r.health !== undefined && r.health !== null && !isNaN(parseFloat(r.health)));
+  const meanHealth = runsWithHealth.length > 0
+    ? `${(runsWithHealth.reduce((acc, r) => acc + parseFloat(r.health), 0) / runsWithHealth.length).toFixed(1)}%`
+    : '—';
 
-  const avgDuration = totalRunsCount > 0
-    ? `${(displayRuns.reduce((acc, r) => acc + (parseFloat(r.duration) || 1.2), 0) / totalRunsCount).toFixed(1)}s`
-    : '--';
+  const runsWithDuration = displayRuns.filter(r => r.duration && !isNaN(parseFloat(r.duration)));
+  const avgDuration = runsWithDuration.length > 0
+    ? `${(runsWithDuration.reduce((acc, r) => acc + parseFloat(r.duration), 0) / runsWithDuration.length).toFixed(1)}s`
+    : '—';
 
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const barChartData = days.map((day, idx) => {
-    const runsForDay = displayRuns.filter((r, i) => i % 7 === idx);
-    const clean = runsForDay.reduce((acc, r) => acc + (r.clean || 0), 0);
-    const remediated = runsForDay.reduce((acc, r) => acc + (r.autoFixed || 0), 0);
-    const total = clean + remediated;
-    return { day, clean, remediated, total };
+  // Honest date grouping: map real runs to days
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const today = new Date();
+  const past7Days = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(today.getDate() - (6 - i));
+    const dayName = dayNames[d.getDay()];
+    const dateStr = d.toISOString().split('T')[0];
+    return { day: dayName, dateStr, clean: 0, remediated: 0, total: 0 };
   });
+
+  displayRuns.forEach(r => {
+    const runDate = r.timestampIso ? r.timestampIso.split('T')[0] : (r.date || null);
+    if (runDate) {
+      const match = past7Days.find(d => d.dateStr === runDate);
+      if (match) {
+        const clean = Number(r.clean || 0);
+        const autoFixed = Number(r.autoFixed || 0);
+        match.clean += clean;
+        match.remediated += autoFixed;
+        match.total += (clean + autoFixed);
+      }
+    }
+  });
+
+  const barChartData = past7Days;
   const hasChartData = barChartData.some(b => b.total > 0);
 
   const filteredRuns = displayRuns.filter((r) => {

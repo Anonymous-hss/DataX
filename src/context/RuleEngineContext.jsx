@@ -663,15 +663,59 @@ export function RuleEngineProvider({ children }) {
     }
   }, [user?.id]);
 
-  // Persist run history per user
-  useEffect(() => {
-    if (!user?.id) return;
+  // Sync with Server Threads and Runs APIs
+  const fetchServerThreads = useCallback(async () => {
     try {
-      localStorage.setItem(`datax_run_history_${user.id}`, JSON.stringify(runHistory));
-    } catch (e) {
-      console.warn('Failed storing run history for user:', user.id, e);
+      const res = await fetch(`${API_BASE}/threads`);
+      if (res.ok) {
+        const data = await res.json();
+        const serverThreads = data.threads || data || [];
+        if (Array.isArray(serverThreads) && serverThreads.length > 0) {
+          setThreads(prev => {
+            return prev.map(pt => {
+              const match = serverThreads.find(st => 
+                st.id === pt.id || st.domainPackId === pt.id || st.domainPackId === pt.domainPackId || st.id === `thread_${pt.id}` || st.id?.replace('thread_', '') === pt.id?.replace('thread_', '')
+              );
+              if (match) {
+                return {
+                  ...pt,
+                  runCount: match.runCount ?? pt.runCount,
+                  lastRun: match.lastRun ?? pt.lastRun,
+                  healthScore: match.healthScore ?? pt.healthScore,
+                  healthGrade: match.healthGrade ?? pt.healthGrade,
+                  driftScore: match.driftScore ?? pt.driftScore,
+                  driftStatus: match.driftStatus ?? pt.driftStatus,
+                  status: match.status ?? pt.status
+                };
+              }
+              return pt;
+            });
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch server threads:', err);
     }
-  }, [runHistory, user?.id]);
+  }, []);
+
+  const fetchServerRuns = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/runs`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.runs)) {
+          setRunHistory(data.runs);
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch server runs:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchServerThreads();
+    fetchServerRuns();
+  }, [fetchServerThreads, fetchServerRuns]);
 
   // Load Dataset into State & Evaluate (No hardcoded dummy data)
   const loadInitialSampleData = useCallback(() => {
@@ -1052,11 +1096,11 @@ export function RuleEngineProvider({ children }) {
       if (res.ok) {
         const data = await res.json();
         if (data.counts !== undefined || data.validCount !== undefined || data.summary !== undefined) {
-          const totalCount = data.counts?.totalChecked ?? data.totalChecked ?? (data.summary ? data.summary.total_records : sampleData.length);
-          const valid = data.counts?.valid ?? data.validCount ?? (data.summary ? data.summary.valid_records_count : sampleData.filter(r => r._status === 'clean').length);
-          const fixed = data.counts?.autofixed ?? data.autofixedCount ?? (data.summary ? data.summary.remediated_count : sampleData.filter(r => r._status === 'fixed').length);
-          const quarantined = data.counts?.quarantined ?? data.quarantinedCount ?? (data.summary ? data.summary.quarantined_records_count : sampleData.filter(r => r._status === 'quarantined').length);
-          const passRate = data.healthMetrics?.score ?? data.healthScore ?? (totalCount > 0 ? Math.round(((valid + fixed) / totalCount) * 1000) / 10 : 100);
+          const totalCount = data.summary?.sourceExtracted ?? data.summary?.totalChecked ?? data.summary?.total_records ?? data.counts?.totalChecked ?? sampleData.length;
+          const valid = data.summary?.compliantValid ?? data.summary?.cleanCount ?? data.summary?.valid_records_count ?? data.counts?.valid ?? 0;
+          const fixed = data.summary?.autoFixedCount ?? data.summary?.remediated_count ?? data.counts?.autofixed ?? 0;
+          const quarantined = data.summary?.quarantined ?? data.summary?.quarantinedCount ?? data.summary?.quarantined_records_count ?? data.counts?.quarantined ?? 0;
+          const passRate = data.healthMetrics?.score ?? (totalCount > 0 ? Math.round(((valid + fixed) / totalCount) * 1000) / 10 : 0);
 
           const outcome = {
             totalChecked: totalCount,
@@ -1072,22 +1116,9 @@ export function RuleEngineProvider({ children }) {
           }));
           setPipelineStatus('COMPLETED');
 
-          // Dynamically append run to runHistory so History page has live telemetry
-          const newRun = {
-            id: `RUN-${Date.now().toString().slice(-5)}`,
-            thread: activeThread?.name || 'SAP Clean Core Modernizer',
-            dataset: sourceConfig.table || '0PUR_C01',
-            rows: totalCount,
-            clean: valid,
-            autoFixed: fixed,
-            quarantined,
-            duration: `${((data.elapsedMs || 800) / 1000).toFixed(1)}s`,
-            health: passRate,
-            status: 'Completed',
-            variant: passRate >= 90 ? 'success' : 'volt',
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          };
-          setRunHistory(prev => [newRun, ...(prev || [])]);
+          // Sync runs and thread state with server
+          fetchServerRuns();
+          fetchServerThreads();
 
           return outcome;
         }
@@ -1119,28 +1150,112 @@ export function RuleEngineProvider({ children }) {
     }));
     setPipelineStatus('COMPLETED');
     return result;
-  }, [sourceConfig, targetConfig, activeRules, autoFixEnabled, dynamicHealthScore, sampleData, userId, userEmail, tenantId, activeThread]);
+  }, [sourceConfig, targetConfig, activeRules, autoFixEnabled, dynamicHealthScore, sampleData, userId, userEmail, tenantId, activeThread, fetchServerRuns, fetchServerThreads]);
 
-  // Action: Execute Live Pipeline Run
+  // Action: Execute Real Live Pipeline Run
   const executeLiveRun = async () => {
-    const isSap = sourceConfig.engine === 'sap_bw';
-    const newDoc = isSap ? '45000' + Math.floor(10000 + Math.random() * 90000) : 'CRM-SYNC-' + Math.floor(100 + Math.random() * 900);
-    setS4HanaDocNumber(newDoc);
+    isExecutingDryRunRef.current = true;
+    setPipelineStatus('RUNNING');
+    const selectedActiveRules = (activeRules || []).filter(r => r.selected !== false && r.enabled !== false);
 
-    const newRun = {
-      id: `RUN-${Math.floor(99285 + Math.random() * 500)}`,
-      thread: activeThread.name,
-      trigger: 'Live Stream Ingestion',
-      time: 'Just now',
-      duration: '1.2s',
-      records: `${dryRunResult.totalChecked || 50} rows`,
-      docNo: `#${newDoc}`,
-      status: 'Clean Core Posted',
-      variant: 'success'
-    };
+    try {
+      const payload = {
+        pipelineName: activeThread?.name || 'DataX Live Pipeline',
+        threadId: activeThread?.id || activeThread?.threadId || (activeThread?.domainPackId ? `thread_${activeThread.domainPackId}` : 'thread_sap_s4hana'),
+        dryRun: false,
+        autoFixEnabled,
+        source: {
+          engine: sourceConfig.engine || 'sap_bw',
+          connectionUri: sourceConfig.connectionUri || undefined,
+          host: sourceConfig.host || undefined,
+          port: sourceConfig.port ? String(sourceConfig.port) : undefined,
+          database: sourceConfig.database || undefined,
+          table: sourceConfig.table || '0PUR_C01',
+          scopeMode: sourceConfig.scopeMode || 'specific',
+          selectedTables: sourceConfig.selectedTables || (sourceConfig.table ? [sourceConfig.table] : ['0PUR_C01'])
+        },
+        target1: {
+          engine: targetConfig.engine || 'postgres',
+          connectionUri: targetConfig.connectionUri || undefined,
+          host: targetConfig.host || undefined,
+          port: targetConfig.port ? String(targetConfig.port) : undefined,
+          database: targetConfig.database || 'reconciled_db',
+          table: targetConfig.table || (sourceConfig.table ? `${sourceConfig.table}_clean` : 'clean_records'),
+          quarantineTable: targetConfig.quarantineTable || 'quarantined_records',
+          writeMode: targetConfig.writeMode || 'append'
+        },
+        rules: selectedActiveRules.map((r, idx) => ({
+          id: String(r.id || `rule_${idx + 1}`),
+          name: String(r.name || r.title || r.id || `Rule ${idx + 1}`),
+          column: r.field || r.column || 'GENERAL',
+          check_type: r.check_type || 'REGEX_FORMAT',
+          condition: r.condition || r.code || '',
+          severity: (r.severity || 'critical').toLowerCase(),
+          enabled: r.selected !== false,
+          description: r.desc || r.description || ''
+        }))
+      };
 
-    setRunHistory(prev => [newRun, ...prev]);
+      const res = await fetch(`${API_BASE}/pipeline/execute`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-User-Id': userId,
+          'X-User-Email': userEmail,
+          'X-Tenant-Id': tenantId
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const totalCount = data.summary?.sourceExtracted ?? data.summary?.totalChecked ?? data.summary?.total_records ?? data.counts?.totalChecked ?? 0;
+        const valid = data.summary?.compliantValid ?? data.summary?.cleanCount ?? data.summary?.valid_records_count ?? data.counts?.valid ?? 0;
+        const fixed = data.summary?.autoFixedCount ?? data.summary?.remediated_count ?? data.counts?.autofixed ?? 0;
+        const quarantined = data.summary?.quarantined ?? data.summary?.quarantinedCount ?? data.summary?.quarantined_records_count ?? data.counts?.quarantined ?? 0;
+        const passRate = data.healthMetrics?.score ?? (totalCount > 0 ? Math.round(((valid + fixed) / totalCount) * 1000) / 10 : 0);
+        const docNo = data.docNumber || (data.summary?.target1Committed ? `#COMMIT-${data.summary.target1Committed}` : '#CLEAN-CORE');
+        
+        setS4HanaDocNumber(docNo);
+
+        const realRun = {
+          id: data.runId || `RUN-${Date.now().toString().slice(-5)}`,
+          thread: activeThread?.name || 'SAP Clean Core Modernizer',
+          dataset: sourceConfig.table || '0PUR_C01',
+          rows: totalCount,
+          clean: valid,
+          autoFixed: fixed,
+          quarantined,
+          docNo,
+          duration: `${((data.elapsedMs || 800) / 1000).toFixed(1)}s`,
+          health: passRate,
+          status: 'Clean Core Posted',
+          variant: passRate >= 90 ? 'success' : 'volt',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          timestampIso: new Date().toISOString()
+        };
+
+        setRunHistory(prev => [realRun, ...(prev || [])]);
+        setPipelineStatus('COMPLETED');
+
+        // Refresh threads and runs from backend so dashboard updates immediately
+        fetchServerRuns();
+        fetchServerThreads();
+
+        return realRun;
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.detail || errJson.message || `Live execution failed with status ${res.status}`);
+      }
+    } catch (err) {
+      console.error('Live run execution failed:', err);
+      setPipelineStatus('ERROR');
+      throw err;
+    } finally {
+      isExecutingDryRunRef.current = false;
+    }
   };
+
 
   // Action: Export Excel
   const handleExportExcel = () => {

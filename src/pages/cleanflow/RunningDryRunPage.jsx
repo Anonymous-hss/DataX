@@ -21,7 +21,7 @@ export default function RunningDryRunPage({ onComplete, onCancel }) {
   const hasTargetCreds = isCredentialConfigured ? isCredentialConfigured(targetConfig) : Boolean(targetConfig?.host || targetConfig?.connectionUri);
   const hasAllCredentials = hasSourceCreds && hasTargetCreds;
 
-  const displayTotalRows = totalRows > 0 ? totalRows : (sampleData?.length || 500);
+  const displayTotalRows = sourceConfig?.totalRows || dryRunResult?.totalChecked || (sampleData && sampleData.length > 0 ? sampleData.length : 500);
   const tableName = sourceConfig?.table || (sourceConfig?.selectedTables?.[0]) || 'Source table';
   const rulesCount = activeRules?.filter(r => r.selected !== false).length || 0;
 

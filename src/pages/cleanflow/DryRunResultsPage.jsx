@@ -12,15 +12,19 @@ export default function DryRunResultsPage({ onBack, onRunLive }) {
     activeRules, 
     autoFixEnabled, 
     setAutoFixEnabled,
-    executeLiveRun 
+    executeLiveRun,
+    sampleData 
   } = useRuleEngine();
 
-  const totalRows = dryRunResult?.totalChecked ?? 50;
-  const cleanCount = dryRunResult?.cleanCount ?? 0;
+  const totalRows = dryRunResult?.totalChecked ?? dryRunResult?.sourceExtracted ?? (sampleData?.length || 0);
+  const cleanCount = dryRunResult?.cleanCount ?? dryRunResult?.compliantValid ?? 0;
   const fixedCount = dryRunResult?.autoFixedCount ?? 0;
-  const heldCount = dryRunResult?.quarantinedCount ?? 0;
-  const passRate = dryRunResult?.passRate ?? (totalRows > 0 ? Math.round(((cleanCount + fixedCount) / totalRows) * 1000) / 10 : 94.0);
+  const heldCount = dryRunResult?.quarantinedCount ?? dryRunResult?.quarantined ?? 0;
+  const passRate = totalRows > 0 ? Math.round(((cleanCount + fixedCount) / totalRows) * 1000) / 10 : 0;
   const outcomes = dryRunResult?.ruleOutcomes || [];
+
+  const isFailing = totalRows === 0 || (heldCount > 0 && passRate < 80);
+  const isZeroState = totalRows === 0;
 
   const handleRunLiveClick = async () => {
     await executeLiveRun();
@@ -37,26 +41,55 @@ export default function DryRunResultsPage({ onBack, onRunLive }) {
       {/* Main White Card Container */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 sm:p-8 space-y-6">
         
-        {/* Green Tick Animation & Hero Announcement */}
+        {/* Outcome Announcement */}
         <div className="flex flex-col sm:flex-row items-center sm:items-center gap-6 pt-1 pb-2">
           
-          {/* Lottie / Motion Tick Animation on the left */}
           <div className="shrink-0">
-            <GreenTickAnimation size={120} />
+            {isZeroState ? (
+              <div className="w-[100px] h-[100px] rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                <AlertCircle className="w-12 h-12 text-slate-400" />
+              </div>
+            ) : isFailing ? (
+              <div className="w-[100px] h-[100px] rounded-full bg-amber-50 border-2 border-amber-300 flex items-center justify-center">
+                <AlertCircle className="w-12 h-12 text-amber-600" />
+              </div>
+            ) : (
+              <GreenTickAnimation size={120} />
+            )}
           </div>
 
           <div className="space-y-1.5 text-center sm:text-left">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-semibold border border-emerald-200 shadow-2xs">
-              <Check className="w-3.5 h-3.5 stroke-[3] text-emerald-600" />
-              Dry run passed · nothing written
-            </span>
+            {isZeroState ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200 shadow-2xs">
+                <AlertCircle className="w-3.5 h-3.5 text-slate-500" />
+                No rows checked · Verify connection
+              </span>
+            ) : isFailing ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-800 text-xs font-semibold border border-amber-200 shadow-2xs">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                Needs attention · {heldCount} quarantined
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-semibold border border-emerald-200 shadow-2xs">
+                <Check className="w-3.5 h-3.5 stroke-[3] text-emerald-600" />
+                Dry run passed · nothing written
+              </span>
+            )}
 
             <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight font-display">
-              Your rules are ready to run live
+              {isZeroState
+                ? 'No data returned for dry run'
+                : isFailing
+                ? `${heldCount} rows violated quality rules`
+                : 'Your rules are ready to run live'}
             </h2>
 
             <p className="text-xs text-slate-500 max-w-xl">
-              {activeRules?.filter(r => r.selected !== false).length || 5} rules checked {totalRows.toLocaleString()} rows from <span className="font-mono text-slate-700">{sourceConfig?.table || 'source_table'}</span>. No data was written to <span className="font-mono text-slate-700">{targetConfig?.table || 'target_table'}</span>.
+              {isZeroState ? (
+                <>Source table <span className="font-mono text-slate-700">{sourceConfig?.table || 'source_table'}</span> returned 0 rows. Please check table data before executing live.</>
+              ) : (
+                <>{activeRules?.filter(r => r.selected !== false).length || 0} rules checked {totalRows.toLocaleString()} rows from <span className="font-mono text-slate-700">{sourceConfig?.table || 'source_table'}</span>. {cleanCount} clean, {fixedCount} auto-fixed, {heldCount} held. No data was written to <span className="font-mono text-slate-700">{targetConfig?.table || 'target_table'}</span>.</>
+              )}
             </p>
           </div>
 

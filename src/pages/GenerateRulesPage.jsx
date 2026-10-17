@@ -12,6 +12,7 @@ import DataXHeader from '../components/cleanflow/DataXHeader';
 import PipelineFlowNodes from '../components/cleanflow/PipelineFlowNodes';
 import DescribeRulesForm from '../components/cleanflow/DescribeRulesForm';
 import GeneratedRulesList from '../components/cleanflow/GeneratedRulesList';
+import { callAiRuleEngine, getDefaultPromptForTable } from '../utils/aiRuleSynthesizer';
 
 export default function GenerateRulesPage() {
   const { navigateTo } = useNavigation();
@@ -22,26 +23,57 @@ export default function GenerateRulesPage() {
     activeThread 
   } = useRuleEngine();
 
-  const isSap = sourceConfig?.engine === 'sap_bw' || sourceConfig?.table === '0PUR_C01';
-
+  const currentTable = sourceConfig?.table || (sourceConfig?.selectedTables?.[0]) || '0PUR_C01';
   const defaultCols = sourceConfig?.discoveredColumns?.length 
     ? sourceConfig.discoveredColumns 
     : [];
 
-  const defaultPrompt = isSap
-    ? 'Line items must have positive quantities. Total amount must equal quantity times unit price. Delivery plant must be recognized. Vendor ID is mandatory.'
-    : 'Every record needs valid format and required fields. Status must be active or inactive. Unique identifiers required.';
+  const defaultPrompt = getDefaultPromptForTable(currentTable, sourceConfig?.engine, defaultCols);
 
   const [columns, setColumns] = useState(defaultCols);
   const [prompt, setPrompt] = useState(defaultPrompt);
   const [isGenerating, setIsGenerating] = useState(false);
   const [rules, setRules] = useState(activeRules || []);
+  const [aiEngineLabel, setAiEngineLabel] = useState('Azure OpenAI (gpt-5-mini)');
 
   useEffect(() => {
     if (sourceConfig?.discoveredColumns?.length) {
       setColumns(sourceConfig.discoveredColumns);
     }
-  }, [sourceConfig]);
+  }, [sourceConfig?.discoveredColumns]);
+
+  useEffect(() => {
+    if (sourceConfig?.table) {
+      const generatedPrompt = getDefaultPromptForTable(sourceConfig.table, sourceConfig.engine, sourceConfig.discoveredColumns);
+      setPrompt(generatedPrompt);
+
+      // Check if current activeRules actually match the selected table columns
+      const cols = (sourceConfig.discoveredColumns || []).map(c => String(c).toUpperCase());
+      const currentRuleFields = (activeRules || []).map(r => String(r.field || '').toUpperCase());
+      const isMismatched = cols.length > 0 && currentRuleFields.some(f => f && !cols.includes(f) && !f.includes('/'));
+
+      if (isMismatched || !activeRules || activeRules.length === 0) {
+        // Auto-generate fresh rules for the new table!
+        setIsGenerating(true);
+        callAiRuleEngine({
+          prompt: generatedPrompt,
+          columns: sourceConfig.discoveredColumns || defaultCols,
+          tableName: sourceConfig.table,
+          engine: sourceConfig.engine || 'sap_bw'
+        }).then(newRules => {
+          if (newRules && newRules.length > 0) {
+            setRules(newRules);
+            setActiveRules(newRules);
+            if (newRules[0]?.badge) setAiEngineLabel(newRules[0].badge);
+          }
+        }).catch(err => {
+          console.warn('Auto rule generation error:', err);
+        }).finally(() => {
+          setIsGenerating(false);
+        });
+      }
+    }
+  }, [sourceConfig?.table]);
 
   useEffect(() => {
     if (activeRules?.length) {
@@ -84,14 +116,28 @@ export default function GenerateRulesPage() {
     }
   };
 
-  const handleRegenerate = () => {
+  const handleRegenerate = async () => {
     setIsGenerating(true);
-    setTimeout(() => {
+    try {
+      const generated = await callAiRuleEngine({
+        prompt,
+        columns,
+        tableName: sourceConfig?.table || currentTable,
+        engine: sourceConfig?.engine || 'sap_bw'
+      });
+
+      if (generated && generated.length > 0) {
+        setRules(generated);
+        setActiveRules(generated);
+        if (generated[0]?.badge) {
+          setAiEngineLabel(generated[0].badge);
+        }
+      }
+    } catch (e) {
+      console.warn('AI generation error:', e);
+    } finally {
       setIsGenerating(false);
-      setRules((prev) =>
-        prev.map((r) => ({ ...r, selected: true }))
-      );
-    }, 600);
+    }
   };
 
   const handleSaveRules = () => {
