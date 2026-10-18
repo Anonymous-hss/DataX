@@ -36,7 +36,9 @@ import {
   Eye,
   EyeOff,
   Table,
-  Filter
+  Filter,
+  Maximize2,
+  Hand
 } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
 import { useRuleEngine } from '../../context/RuleEngineContext';
@@ -632,29 +634,64 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
     }
   }, []);
 
-  // Hash synchronization: Open relevant node properties directly on canvas without leaving canvas
+  // Hash synchronization: Select relevant node without auto-popping modal (popup only on settings icon click)
   useEffect(() => {
     const hash = (window.location.hash || '').toLowerCase();
     if (hash.includes('source') || hash.includes('connect-source')) {
       const srcNode = nodes.find(n => n.type === 'source');
       if (srcNode) {
         setSelectedNodeId(srcNode.id);
-        setIsPropertyModalOpen(true);
       }
     } else if (hash.includes('rule')) {
       const ruleNode = nodes.find(n => n.type === 'rules');
       if (ruleNode) {
         setSelectedNodeId(ruleNode.id);
-        setIsPropertyModalOpen(true);
       }
     } else if (hash.includes('target') || hash.includes('connect-target')) {
       const tgtNode = nodes.find(n => n.type === 'target');
       if (tgtNode) {
         setSelectedNodeId(tgtNode.id);
-        setIsPropertyModalOpen(true);
       }
     }
   }, [nodes]);
+
+  // Fit Canvas and all nodes within window viewport
+  const handleFitToWindow = useCallback(() => {
+    if (!canvasRef.current || nodes.length === 0) {
+      setZoom(1);
+      setPan({ x: 0, y: 0 });
+      return;
+    }
+    const rect = canvasRef.current.getBoundingClientRect();
+    const padding = 70;
+    const minX = Math.min(...nodes.map(n => n.x));
+    const maxX = Math.max(...nodes.map(n => n.x + (n.width || 260)));
+    const minY = Math.min(...nodes.map(n => n.y));
+    const maxY = Math.max(...nodes.map(n => n.y + (n.height || 135)));
+
+    const contentWidth = maxX - minX;
+    const contentHeight = maxY - minY;
+
+    if (rect.width > 0 && rect.height > 0 && contentWidth > 0 && contentHeight > 0) {
+      const scaleX = (rect.width - padding * 2) / contentWidth;
+      const scaleY = (rect.height - padding * 2) / contentHeight;
+      const newZoom = Math.min(Math.max(Math.min(scaleX, scaleY), 0.55), 1.05);
+
+      const centeredX = (rect.width - contentWidth * newZoom) / 2 - minX * newZoom;
+      const centeredY = (rect.height - contentHeight * newZoom) / 2 - minY * newZoom;
+
+      setZoom(Number(newZoom.toFixed(2)));
+      setPan({ x: Math.round(centeredX), y: Math.round(centeredY) });
+    }
+  }, [nodes]);
+
+  // Initial Auto-fit to window when canvas mounts
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleFitToWindow();
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [handleFitToWindow]);
 
   // Autofill Template Action
   const handleAutofillTemplate = (templateKey) => {
@@ -780,34 +817,46 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
 
   // =========================================================================
   // MOUSE CONTROLS: WHEEL PANNING & CTRL-WHEEL ZOOM (No auto-zoom on scroll)
+  // Native non-passive wheel listener guarantees prevention of browser window scroll/zoom
   // =========================================================================
-  const handleWheel = (e) => {
-    // Only zoom when Ctrl or Cmd key is held (standard trackpad pinch or Ctrl+wheel)
-    if (e.ctrlKey || e.metaKey) {
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+
+    const onWheelNative = (e) => {
       e.preventDefault();
-      const zoomFactor = -e.deltaY * 0.002;
-      setZoom(prev => Math.min(Math.max(prev + zoomFactor, 0.4), 2.0));
-    } else {
-      // Normal wheel or trackpad scroll pans the canvas smoothly — NO auto-zooming!
-      e.preventDefault();
-      setPan(prev => ({
-        x: prev.x - e.deltaX,
-        y: prev.y - e.deltaY
-      }));
-    }
-  };
+      if (e.ctrlKey || e.metaKey) {
+        // Zooming only with Ctrl / Cmd (or trackpad pinch)
+        const zoomFactor = -e.deltaY * 0.002;
+        setZoom(prev => Math.min(Math.max(prev + zoomFactor, 0.4), 2.0));
+      } else {
+        // Smooth panning on normal mouse wheel / trackpad scroll — NO AUTO-ZOOMING!
+        setPan(prev => ({
+          x: prev.x - e.deltaX,
+          y: prev.y - e.deltaY
+        }));
+      }
+    };
+
+    el.addEventListener('wheel', onWheelNative, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', onWheelNative);
+    };
+  }, []);
 
   const handleCanvasMouseDown = (e) => {
-    // If clicking on an input, button, port, or node card, do not pan canvas
+    // If clicking on an input, button, port, do not pan canvas
     if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select') || e.target.closest('textarea')) {
       return;
     }
-    if (e.target.closest('.workflow-node-card')) {
+    if (e.target.closest('.workflow-node-card') && activeTool !== 'pan') {
       return;
     }
 
-    setSelectedNodeId(null);
-    setSelectedEdgeId(null);
+    if (activeTool !== 'pan') {
+      setSelectedNodeId(null);
+      setSelectedEdgeId(null);
+    }
     setIsPanning(true);
     panStartRef.current = {
       x: e.clientX - pan.x,
@@ -851,9 +900,13 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   }, [handleMouseMove, handleMouseUp]);
 
   // =========================================================================
-  // NODE DRAGGING & SELECTION
+  // NODE DRAGGING & SELECTION (Popup opens ONLY when settings icon is clicked)
   // =========================================================================
   const handleNodeMouseDown = (e, nodeId) => {
+    if (activeTool === 'pan') {
+      // In pan mode, let canvas pan instead of dragging node
+      return;
+    }
     e.stopPropagation();
     setSelectedNodeId(nodeId);
     setSelectedEdgeId(null);
@@ -871,7 +924,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const handleNodeClick = (e, node) => {
     e.stopPropagation();
     setSelectedNodeId(node.id);
-    setIsPropertyModalOpen(true);
+    // Popup appears ONLY when settings icon is clicked, NOT on node click!
   };
 
   // =========================================================================
@@ -944,7 +997,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
     setNodes(prev => [...prev, newNode]);
     setSelectedNodeId(newId);
     setIsAddNodeModalOpen(false);
-    setIsPropertyModalOpen(true);
+    // Popup appears ONLY when settings icon is clicked!
   };
 
   const handleDeleteNode = (nodeId) => {
@@ -1103,7 +1156,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const getNode = (id) => nodes.find(n => n.id === id);
 
   return (
-    <div className="relative w-full h-full min-h-[750px] bg-[#F8FAFC] rounded-2xl overflow-hidden select-none flex flex-col shadow-xs">
+    <div className="relative w-full h-full min-h-0 bg-[#F8FAFC] rounded-2xl overflow-hidden select-none flex flex-col shadow-xs">
       
       {/* Top Template Autofill & Reset Bar */}
       <div className="absolute top-3.5 inset-x-5 flex items-center justify-between z-30 pointer-events-none">
@@ -1193,12 +1246,11 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
         </div>
       </div>
 
-      {/* Main Canvas Viewport (Mouse Wheel Zoom & Pan) */}
+      {/* Main Canvas Viewport (Smooth Wheel Panning & Ctrl-Zoom) */}
       <div 
         ref={canvasRef}
-        onWheel={handleWheel}
         onMouseDown={handleCanvasMouseDown}
-        className="relative flex-1 w-full h-full overflow-hidden cursor-grab active:cursor-grabbing"
+        className="relative flex-1 w-full h-full min-h-0 overflow-hidden cursor-grab active:cursor-grabbing"
         style={{
           backgroundImage: 'radial-gradient(#CBD5E1 1.25px, transparent 1.25px)',
           backgroundSize: '24px 24px',
@@ -1395,7 +1447,9 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                   position: 'absolute',
                   zIndex: isSelected ? 30 : 20
                 }}
-                className={`workflow-node-card relative group bg-white rounded-2xl border-2 shadow-md p-4 space-y-2.5 transition-all cursor-pointer select-none hover:shadow-lg ${
+                className={`workflow-node-card relative group bg-white rounded-2xl border-2 shadow-md p-4 space-y-2.5 transition-all select-none hover:shadow-lg ${
+                  activeTool === 'pan' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
+                } ${
                   isSelected
                     ? 'border-blue-500 ring-4 ring-blue-500/20 shadow-xl'
                     : node.variant === 'green'
@@ -1459,15 +1513,15 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                       {node.status}
                     </span>
 
-                    {/* Dedicated Settings Button on Every Node */}
+                    {/* Dedicated Settings Button on Every Node - ONLY place where property modal opens */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedNodeId(node.id);
                         setIsPropertyModalOpen(true);
                       }}
-                      className="w-6 h-6 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
-                      title="Open node properties & configuration"
+                      className="w-7 h-7 rounded-lg text-slate-500 hover:text-blue-600 bg-slate-100/90 hover:bg-blue-50 border border-slate-200/80 flex items-center justify-center transition-all cursor-pointer shadow-2xs group-hover:border-slate-300"
+                      title="Configure node properties & settings"
                     >
                       <Settings className="w-3.5 h-3.5" />
                     </button>
@@ -1485,7 +1539,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                     {node.table || node.split || (node.ruleCount ? `${node.ruleCount} Active Rules` : 'Configured')}
                   </span>
                   <span className="text-slate-400 text-[10px] font-mono shrink-0">
-                    {node.rowCount || node.aiModel || 'Click to edit'}
+                    {node.rowCount || node.aiModel || 'Click ⚙ to edit'}
                   </span>
                 </div>
               </div>
@@ -1494,24 +1548,25 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
         </div>
       </div>
 
-      {/* Floating Bottom Toolbar Dock */}
-      <div className="absolute bottom-4 inset-x-6 flex items-center justify-between pointer-events-none z-30">
+      {/* Floating Bottom Toolbar Dock - ALWAYS fits within window viewport */}
+      <div className="absolute bottom-3 inset-x-3 sm:inset-x-5 flex flex-wrap md:flex-nowrap items-center justify-between gap-2 pointer-events-none z-30">
         
         {/* Left Action: Run Simulation / Dry Run directly on canvas */}
-        <div className="pointer-events-auto flex items-center gap-2">
+        <div className="pointer-events-auto shrink-0 flex items-center gap-2">
           <button
             onClick={handleDryRun}
             disabled={isExecutingDryRun || nodes.length === 0}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200/90 text-xs font-bold text-slate-800 shadow-md hover:bg-slate-50 transition-all cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-slate-200/90 text-xs font-bold text-slate-800 shadow-md hover:bg-slate-50 transition-all cursor-pointer disabled:opacity-50"
             title="Execute test dry run directly on canvas"
           >
             <FlaskConical className={`w-3.5 h-3.5 text-blue-600 ${isExecutingDryRun ? 'animate-bounce' : ''}`} />
-            <span>{isExecutingDryRun ? 'Evaluating...' : 'Test in Sandbox / Dry Run'}</span>
+            <span className="hidden sm:inline">{isExecutingDryRun ? 'Evaluating...' : 'Test in Sandbox / Dry Run'}</span>
+            <span className="sm:hidden">{isExecutingDryRun ? '...' : 'Dry Run'}</span>
           </button>
           <button
             onClick={handleRunLive}
             disabled={isExecutingLiveRun || nodes.length === 0}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white shadow-md transition-all cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white shadow-md transition-all cursor-pointer disabled:opacity-50"
             title="Commit compliant records live to Target Database"
           >
             <Play className={`w-3.5 h-3.5 fill-white ${isExecutingLiveRun ? 'animate-spin' : ''}`} />
@@ -1519,16 +1574,37 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           </button>
         </div>
 
-        {/* Center Floating Dock: Move | Add Node | Ask AI */}
-        <div className="pointer-events-auto bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200 shadow-lg p-1.5 flex items-center gap-1">
+        {/* Center Floating Dock: Move | Pan | Fit | Add Node | Ask AI */}
+        <div className="pointer-events-auto shrink-0 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200 shadow-lg p-1.5 flex items-center gap-1">
           <button
             onClick={() => setActiveTool('move')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTool === 'move' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
             }`}
+            title="Select & move nodes"
           >
             <Move className="w-3.5 h-3.5" />
             Move
+          </button>
+
+          <button
+            onClick={() => setActiveTool('pan')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeTool === 'pan' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+            title="Pan canvas tool"
+          >
+            <Hand className="w-3.5 h-3.5" />
+            Pan
+          </button>
+
+          <button
+            onClick={handleFitToWindow}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+            title="Fit canvas and nodes to window"
+          >
+            <Maximize2 className="w-3.5 h-3.5 text-blue-600" />
+            Fit
           </button>
 
           <button
@@ -1548,8 +1624,8 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           </button>
         </div>
 
-        {/* Right Zoom Controls (- 100% +) */}
-        <div className="pointer-events-auto bg-white rounded-xl border border-slate-200 shadow-md px-2 py-1.5 flex items-center gap-2 text-xs font-semibold text-slate-700">
+        {/* Right Zoom Controls (- 100% + Fit/Recenter) */}
+        <div className="pointer-events-auto shrink-0 bg-white rounded-xl border border-slate-200 shadow-md px-2 py-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
           <button 
             onClick={() => setZoom(prev => Math.max(prev - 0.1, 0.4))}
             className="w-5 h-5 flex items-center justify-center hover:bg-slate-100 rounded text-slate-500 font-bold cursor-pointer"
@@ -1559,8 +1635,8 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           </button>
           <span 
             onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
-            className="font-mono text-[11px] cursor-pointer hover:text-blue-600"
-            title="Reset view to 100%"
+            className="font-mono text-[11px] cursor-pointer hover:text-blue-600 px-1"
+            title="Reset zoom to 100%"
           >
             {Math.round(zoom * 100)}%
           </span>
@@ -1570,6 +1646,14 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
             title="Zoom in"
           >
             +
+          </button>
+          <span className="h-3.5 w-px bg-slate-200 mx-0.5" />
+          <button
+            onClick={handleFitToWindow}
+            className="w-5 h-5 flex items-center justify-center hover:bg-slate-100 rounded text-slate-500 hover:text-blue-600 cursor-pointer"
+            title="Center and fit to window"
+          >
+            <RotateCcw className="w-3 h-3" />
           </button>
         </div>
 
@@ -1747,10 +1831,13 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           MODAL 2: NODE PROPERTIES MODAL (With Edge Connectors Configuration)
          ========================================================================= */}
       {isPropertyModalOpen && selectedNode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150">
+        <div 
+          onClick={() => setIsPropertyModalOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150 cursor-pointer"
+        >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[88vh]"
+            className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[88vh] cursor-default"
           >
             {/* Header */}
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">

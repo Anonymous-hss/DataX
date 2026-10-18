@@ -9,17 +9,19 @@ export default function WorkflowCanvasPage() {
   const { activeThread, sourceConfig, targetConfig } = useRuleEngine();
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col antialiased">
+    <div className="fixed inset-0 h-screen w-screen max-h-screen max-w-full overflow-hidden bg-[#F8FAFC] text-slate-800 font-sans flex flex-col antialiased">
       {/* Top Global Header (No PipelineFlowNodes step bar — the entire workflow IS the canvas!) */}
-      <DataXHeader
-        currentPage="03"
-        onBack={() => navigateTo('workflows')}
-        hideSubheader={true}
-      />
+      <div className="shrink-0">
+        <DataXHeader
+          currentPage="03"
+          onBack={() => navigateTo('workflows')}
+          hideSubheader={true}
+        />
+      </div>
 
-      {/* Main Full-Height Workflow Canvas Workspace */}
-      <main className="flex-1 w-full px-4 sm:px-6 py-4 flex flex-col max-w-[1560px] mx-auto">
-        <div className="flex-1 w-full h-[780px] rounded-2xl overflow-hidden shadow-xs border border-slate-200">
+      {/* Main Full-Height Workflow Canvas Workspace - Always fits window exactly */}
+      <main className="flex-1 w-full min-h-0 p-2 sm:p-3 flex flex-col overflow-hidden">
+        <div className="flex-1 w-full h-full min-h-0 rounded-2xl overflow-hidden shadow-xs border border-slate-200 relative bg-[#F8FAFC]">
           <WorkflowCanvasBuilder 
             onMoveToNext={() => navigateTo('running-dry-run')}
           />
@@ -28,3 +30,4 @@ export default function WorkflowCanvasPage() {
     </div>
   );
 }
+
