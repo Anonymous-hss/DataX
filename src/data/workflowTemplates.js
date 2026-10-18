@@ -30,7 +30,7 @@ export const TEMPLATE_AUTOFILLS = {
         y: 160,
         width: 260,
         height: 135,
-        title: 'AI Rules Engine',
+        title: 'Intelligence Engine',
         system: 'Clean Core Ontologies',
         ruleCount: 5,
         aiModel: 'gpt-5-mini',

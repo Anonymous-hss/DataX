@@ -426,7 +426,7 @@ export default function SapBwPocDashboard({ onBackToWebsite, onBackToThreads, on
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           {[
             { key: 'sap_bw', label: '1. SAP BW Extractor', icon: Database, badge: `${currentData.length} Rows` },
-            { key: 'agent', label: '2. Agentic Rule Engine', icon: Cpu, badge: pipelineStatus === 'COMPLETED' ? 'Validated' : 'Tool Calling' },
+            { key: 'agent', label: '2. Intelligence Engine', icon: Cpu, badge: pipelineStatus === 'COMPLETED' ? 'Validated' : 'Tool Calling' },
             { key: 's4hana', label: '3. SAP S/4HANA', icon: ShieldCheck, badge: passedRecords.length > 0 ? `${passedRecords.length} Staged` : 'Pending' },
             { key: 'databricks', label: '4. Databricks Lakehouse', icon: Layers, badge: pipelineStatus === 'COMPLETED' ? 'Gold Sync' : 'Unity Catalog' },
             { key: 'lineage', label: '5. End-to-End Lineage', icon: Workflow, badge: 'Full Graph' },

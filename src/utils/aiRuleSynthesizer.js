@@ -1,5 +1,5 @@
 // =============================================================================
-// DataX Autonomous AI Rule Engine Client
+// DataX Autonomous Intelligence Engine Client
 // Connected to Live Azure OpenAI (gpt-5-mini / GPT-4o) on https://dataglow.ai/datax-api/rules/generate
 // Performs genuine generative synthesis of executable data quality rules.
 // =============================================================================
@@ -7,7 +7,7 @@
 const API_BASE = 'https://dataglow.ai/datax-api';
 
 /**
- * Generate rules dynamically using the live Azure OpenAI Rule Engine.
+ * Generate rules dynamically using the live Azure OpenAI Intelligence Engine.
  * @param {Object} params
  * @param {string} params.prompt - User natural language prompt describing rules
  * @param {Array<string>} params.columns - Schema column names discovered from table
@@ -52,7 +52,7 @@ export async function callAiRuleEngine({
       }
     }
   } catch (err) {
-    console.warn('Live AI Rule Engine call failed, utilizing local semantic synthesizer:', err);
+    console.warn('Live Intelligence Engine call failed, utilizing local semantic synthesizer:', err);
   }
 
   // Fallback dynamic synthesis: extracts semantic constraints directly from prompt & columns

@@ -60,7 +60,7 @@ const DOMAIN_PACK_CATALOG = [
     category: 'ERP Modernization',
     badge: 'SAP Certified Ontology',
     desc: 'Extract InfoCube purchasing lines, resolve legacy plant codes with enterprise ontology knowledge graph, enforce budget bounds, and stage BAPI_PO_CREATE1 orders with Gold Lakehouse replication.',
-    pipeline: 'SAP BW / HANA Cloud → AI Rules Engine → S/4HANA Core',
+    pipeline: 'SAP BW / HANA Cloud → Intelligence Engine → S/4HANA Core',
     icon: <SapIcon />,
     rulesCount: 6,
     rules: [
@@ -80,7 +80,7 @@ const DOMAIN_PACK_CATALOG = [
     category: 'Customer 360',
     badge: 'MongoDB ➔ Neon DB',
     desc: 'Harmonize raw customer and user documents from MongoDB Atlas into PostgreSQL Neon DB, enforce RFC-5322 email syntax and non-negative balances, and replicate clean gold records.',
-    pipeline: 'MongoDB Atlas → AI Rules Engine → PostgreSQL Neon DB',
+    pipeline: 'MongoDB Atlas → Intelligence Engine → PostgreSQL Neon DB',
     icon: <UserIcon />,
     rulesCount: 5,
     rules: [
@@ -99,7 +99,7 @@ const DOMAIN_PACK_CATALOG = [
     category: 'Finance & Audit',
     badge: 'SOX & GAAP Compliant',
     desc: 'Audit general ledger and AP entries across disparate legacy systems, guarantee zero imbalance, verify ISO currency standards, and dual-dispatch approved entries to Financial ERP and audit warehouse.',
-    pipeline: 'ERP GL → AI Rules Engine → Reconciled Core',
+    pipeline: 'ERP GL → Intelligence Engine → Reconciled Core',
     icon: <FinanceIcon />,
     rulesCount: 4,
     rules: [
@@ -117,7 +117,7 @@ const DOMAIN_PACK_CATALOG = [
     category: 'Healthcare & Life Sciences',
     badge: 'HIPAA & HL7 Compliant',
     desc: 'Ingest HL7 and EHR patient records, scrub PII anomalies, cross-verify National Provider Identifiers (NPI), and stage HIPAA-compliant clinical data to analytics warehouse.',
-    pipeline: 'HL7 & EHR Records → AI Rules Engine → HIPAA Vault',
+    pipeline: 'HL7 & EHR Records → Intelligence Engine → HIPAA Vault',
     icon: <HealthIcon />,
     rulesCount: 4,
     rules: [
@@ -135,7 +135,7 @@ const DOMAIN_PACK_CATALOG = [
     category: 'Supply Chain & Logistics',
     badge: 'Multi-Echelon Balancer',
     desc: 'Reconcile logistics warehouse counts with distribution center purchase orders, resolve SKU naming discrepancies, and feed real-time supply chain telemetry.',
-    pipeline: 'Warehouse WMS → AI Rules Engine → ERP Inventory',
+    pipeline: 'Warehouse WMS → Intelligence Engine → ERP Inventory',
     icon: <SupplyIcon />,
     rulesCount: 4,
     rules: [

@@ -126,7 +126,7 @@ export default function Navbar({ activeView, setActiveView, onOpenDemo }) {
                           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono">Live POC</span>
                         </div>
                         <p className="text-xs text-slate-400 mt-0.5">
-                          Decision Intelligence: SAP BW → Agentic Rule Engine → S/4HANA → Databricks.
+                          Decision Intelligence: SAP BW → Intelligence Engine → S/4HANA → Databricks.
                         </p>
                       </div>
                     </div>

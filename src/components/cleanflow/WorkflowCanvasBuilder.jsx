@@ -59,9 +59,9 @@ const OPERATIONAL_CATALOG = [
     ]
   },
   {
-    category: '2. AI Rules & Transformations',
+    category: '2. Intelligence Engine & Transformations',
     items: [
-      { type: 'rules', name: 'AI Rule Engine (Azure OpenAI)', desc: 'Natural language business rule synthesizer', system: 'gpt-5-mini', icon: FileCode2, variant: 'indigo' },
+      { type: 'rules', name: 'Intelligence Engine (Azure OpenAI)', desc: 'Natural language business rule synthesizer', system: 'gpt-5-mini', icon: FileCode2, variant: 'indigo' },
       { type: 'rules', name: 'RFC-5322 Email Normalizer', desc: 'Auto-repairs syntax, trims whitespace, lowercases domains', system: 'Rule Pack', icon: ShieldCheck, variant: 'green' },
       { type: 'rules', name: 'SAP Plant Ontology Resolver', desc: 'Maps Plant-Dallas string into S/4HANA code P1000', system: 'Ontology Graph', icon: Zap, variant: 'blue' },
       { type: 'rules', name: 'SOX 404 Financial Balancer', desc: 'Strict Debits = Credits balance validation', system: 'SOX Pack', icon: Sliders, variant: 'orange' }
@@ -128,10 +128,10 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const initialSetup = isScratchInitial ? { nodes: [], edges: [] } : tmpl;
   
   const [nodes, setNodesState] = useState(() => {
-    if (Array.isArray(workflowNodes) && workflowNodes.length >= 2) {
-      return workflowNodes;
-    }
-    return initialSetup.nodes;
+    const rawNodes = (Array.isArray(workflowNodes) && workflowNodes.length >= 2)
+      ? workflowNodes
+      : initialSetup.nodes;
+    return rawNodes.map(n => (n.title === 'AI Rules Engine' || n.title === 'AI Rule Engine') ? { ...n, title: 'Intelligence Engine' } : n);
   });
 
   const [edges, setEdgesState] = useState(() => {
@@ -171,9 +171,10 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
     if (activeThread?.id && activeThread.id !== lastActiveThreadIdRef.current) {
       lastActiveThreadIdRef.current = activeThread.id;
       const matchingTmpl = getWorkflowTemplate(activeThread);
-      const resolvedNodes = (Array.isArray(activeThread.nodes) && activeThread.nodes.length >= 2)
+      const rawThreadNodes = (Array.isArray(activeThread.nodes) && activeThread.nodes.length >= 2)
         ? activeThread.nodes
         : matchingTmpl.nodes;
+      const resolvedNodes = rawThreadNodes.map(n => (n.title === 'AI Rules Engine' || n.title === 'AI Rule Engine') ? { ...n, title: 'Intelligence Engine' } : n);
       const resolvedEdges = (Array.isArray(activeThread.edges) && activeThread.edges.length >= 1)
         ? activeThread.edges
         : matchingTmpl.edges;
@@ -402,11 +403,11 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
     setExecutionStageText('Stage 1/4: Ingesting raw stream (1,420 rows) from SAP BW InfoCube 0PUR_C01...');
     await new Promise(r => setTimeout(r, 900));
 
-    // Stage 2: AI Rules Engine & DuckDB AST
+    // Stage 2: Intelligence Engine & DuckDB AST
     setExecutionPhase('compiling');
     setActiveStageNodeId('node-rules');
     setExecutionProgress(50);
-    setExecutionStageText('Stage 2/4: Compiling AI Clean Core ontologies & evaluating rules in-process via DuckDB AST...');
+    setExecutionStageText('Stage 2/4: Compiling AI Clean Core ontologies & evaluating rules in-process via Intelligence Engine (DuckDB AST)...');
     await new Promise(r => setTimeout(r, 1000));
 
     // Stage 3: CleanFlow Router
@@ -1092,7 +1093,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
             {/* Stage Indicators */}
             <div className="grid grid-cols-4 gap-1 text-[10px] font-medium text-slate-400 pt-0.5">
               <span className={executionProgress >= 25 ? 'text-blue-300 font-bold' : ''}>1. Ingest Raw Stream</span>
-              <span className={executionProgress >= 50 ? 'text-indigo-300 font-bold' : ''}>2. AI Rules Engine</span>
+              <span className={executionProgress >= 50 ? 'text-indigo-300 font-bold' : ''}>2. Intelligence Engine</span>
               <span className={executionProgress >= 75 ? 'text-purple-300 font-bold' : ''}>3. Stream Router</span>
               <span className={executionProgress >= 90 ? 'text-emerald-300 font-bold' : ''}>4. Target Commit</span>
             </div>
@@ -1644,7 +1645,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900">Add Operational Node</h3>
-                  <p className="text-xs text-slate-500">Select a verified source, rules engine, or target destination</p>
+                  <p className="text-xs text-slate-500">Select a verified source, intelligence engine, or target destination</p>
                 </div>
               </div>
               <button
@@ -1661,7 +1662,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Search operational nodes, SAP, Postgres, AI rules..."
+                  placeholder="Search operational nodes, SAP, Postgres, intelligence engine..."
                   value={addNodeSearch}
                   onChange={(e) => setAddNodeSearch(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
@@ -1767,7 +1768,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
                     {selectedNode.type === 'source' ? 'Source Database & Table Selection' :
-                     selectedNode.type === 'rules' ? 'AI Rules Engine & Prompt Settings' :
+                     selectedNode.type === 'rules' ? 'Intelligence Engine & Prompt Settings' :
                      selectedNode.type === 'router' ? 'CleanFlow In-Flight Routing Criteria' :
                      selectedNode.type === 'target' ? 'Target S/4HANA & Lakehouse Writeback' :
                      'Quarantine Workbench Settings'}
@@ -2055,7 +2056,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
               )}
 
               {/* =========================================================================
-                  2. AI RULES ENGINE CONFIGURATION PANEL
+                  2. INTELLIGENCE ENGINE CONFIGURATION PANEL
                  ========================================================================= */}
               {selectedNode.type === 'rules' && (
                 <div className="space-y-4">

@@ -32,7 +32,7 @@ export default function ArchitecturePipeline({ setActiveView }) {
     },
     {
       id: 2,
-      title: "Agentic Validation & Rule Engine",
+      title: "Intelligence Engine & Validation",
       badge: "TOOL CALLING HARNESS",
       color: "border-purple-500/40 text-purple-400 bg-purple-500/10",
       icon: Cpu,

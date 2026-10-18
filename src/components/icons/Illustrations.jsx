@@ -34,7 +34,7 @@ export const HeroIllustration = ({ className = '' }) => (
       <rect x="-24" y="-6" width="36" height="8" rx="4" fill="#D4FF3A" />
       <rect x="-24" y="6" width="48" height="8" rx="4" fill="#FFFFFF" fillOpacity="0.8" />
       <circle cx="28" cy="-22" r="3.5" fill="#D4FF3A" />
-      <text x="0" y="52" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="600">AI RULE ENGINE</text>
+      <text x="0" y="52" textAnchor="middle" fill="#FFFFFF" fontSize="10" fontWeight="600">INTELLIGENCE ENGINE</text>
     </g>
 
     <g transform="translate(400, 120)">

@@ -165,7 +165,7 @@ export default function ProductsSection({ setActiveView, onOpenDemo }) {
               <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-700/80 font-mono text-xs text-slate-300 flex flex-wrap items-center gap-2">
                 <span className="px-2.5 py-1 rounded bg-blue-500/20 text-blue-300 font-bold border border-blue-500/30">SAP BW</span>
                 <span className="text-slate-500">→</span>
-                <span className="px-2.5 py-1 rounded bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">Agentic Rule Engine (Tool Calling)</span>
+                <span className="px-2.5 py-1 rounded bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">Intelligence Engine (Tool Calling)</span>
                 <span className="text-slate-500">→</span>
                 <span className="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">SAP S/4HANA</span>
                 <span className="text-slate-500">→</span>

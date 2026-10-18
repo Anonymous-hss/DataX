@@ -383,7 +383,7 @@ export default function RulesPage() {
             </div>
 
             <button
-              onClick={() => showToast('AI Rule Engine: Describe your validation rules in plain English.')}
+              onClick={() => showToast('Intelligence Engine: Describe your validation rules in plain English.')}
               className="w-8 h-8 rounded-full flex items-center justify-center text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] transition-colors cursor-pointer"
               title="Help"
             >
