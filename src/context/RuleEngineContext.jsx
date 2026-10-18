@@ -3,6 +3,7 @@ import { useUser } from '@clerk/clerk-react';
 import * as XLSX from 'xlsx';
 import { SAP_BW_PROCUREMENT_DATA, SAP_BW_INVENTORY_DATA, USER_MASTER_DATA } from '../data/sampleDatasets';
 import { ONTOLOGY_GRAPH } from '../data/ontologyGraph';
+import { TEMPLATE_AUTOFILLS, getWorkflowTemplate } from '../data/workflowTemplates';
 
 const API_BASE = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? '/datax-api'
@@ -575,83 +576,8 @@ export const PREBUILT_DOMAIN_PACKS = {
   }
 };
 
-export const DEFAULT_CANVAS_NODES = [
-  {
-    id: 'node-source',
-    type: 'source',
-    x: 80,
-    y: 160,
-    width: 260,
-    height: 135,
-    title: 'Source Ingestion',
-    system: 'SAP BW InfoCube / HANA',
-    table: '0PUR_C01',
-    rowCount: '1,420 rows',
-    status: 'Ready',
-    variant: 'blue'
-  },
-  {
-    id: 'node-rules',
-    type: 'rules',
-    x: 410,
-    y: 160,
-    width: 260,
-    height: 135,
-    title: 'AI Rules Engine',
-    system: 'Clean Core Ontologies',
-    ruleCount: 5,
-    aiModel: 'gpt-5-mini',
-    status: 'Auto-Fix Armed',
-    variant: 'indigo'
-  },
-  {
-    id: 'node-router',
-    type: 'router',
-    x: 740,
-    y: 160,
-    width: 240,
-    height: 135,
-    title: 'CleanFlow Router',
-    system: '3-Way Stream Splitter',
-    split: 'Clean · Fixed · Quarantined',
-    status: 'Active',
-    variant: 'purple'
-  },
-  {
-    id: 'node-target',
-    type: 'target',
-    x: 1060,
-    y: 80,
-    width: 260,
-    height: 135,
-    title: 'Target ERP',
-    system: 'SAP S/4HANA Clean Core',
-    table: '0PUR_C01_clean',
-    bapi: 'BAPI_PO_CREATE1',
-    status: 'Ready to Commit',
-    variant: 'green'
-  },
-  {
-    id: 'node-quarantine',
-    type: 'quarantine',
-    x: 1060,
-    y: 270,
-    width: 260,
-    height: 135,
-    title: 'Quarantine Store',
-    system: 'Dead-Letter Isolation',
-    table: '0PUR_C01_quarantine',
-    status: 'Audit Locked',
-    variant: 'orange'
-  }
-];
-
-export const DEFAULT_CANVAS_EDGES = [
-  { id: 'e-1', from: 'node-source', to: 'node-rules', label: 'Raw Stream', variant: 'blue' },
-  { id: 'e-2', from: 'node-rules', to: 'node-router', label: 'Evaluated', variant: 'blue' },
-  { id: 'e-3', from: 'node-router', to: 'node-target', label: 'Compliant & Auto-Fixed', variant: 'green' },
-  { id: 'e-4', from: 'node-router', to: 'node-quarantine', label: 'Critical Violations', variant: 'orange' }
-];
+export const DEFAULT_CANVAS_NODES = TEMPLATE_AUTOFILLS.sap_bw_s4hana.nodes;
+export const DEFAULT_CANVAS_EDGES = TEMPLATE_AUTOFILLS.sap_bw_s4hana.edges;
 
 const RuleEngineContext = createContext(null);
 
@@ -716,7 +642,7 @@ export function RuleEngineProvider({ children }) {
         const stored = localStorage.getItem('datax_canvas_nodes');
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          if (Array.isArray(parsed) && parsed.length >= 2) return parsed;
         }
       }
     } catch (e) {
@@ -731,7 +657,7 @@ export function RuleEngineProvider({ children }) {
         const stored = localStorage.getItem('datax_canvas_edges');
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) return parsed;
+          if (Array.isArray(parsed) && parsed.length >= 1) return parsed;
         }
       }
     } catch (e) {
@@ -814,7 +740,20 @@ export function RuleEngineProvider({ children }) {
             setThreads(prev => {
               const map = new Map();
               prev.forEach(t => map.set(t.id, t));
-              data.threads.forEach(t => map.set(t.id, { ...(map.get(t.id) || {}), ...t }));
+              data.threads.forEach(t => {
+                const tmpl = getWorkflowTemplate(t);
+                const hasFullNodes = Array.isArray(t.nodes) && t.nodes.length >= 2;
+                const existing = map.get(t.id) || {};
+                map.set(t.id, {
+                  ...existing,
+                  ...t,
+                  nodes: hasFullNodes ? t.nodes : (existing.nodes && existing.nodes.length >= 2 ? existing.nodes : tmpl.nodes),
+                  edges: (Array.isArray(t.edges) && t.edges.length >= 1) ? t.edges : (existing.edges && existing.edges.length >= 1 ? existing.edges : tmpl.edges),
+                  sourceConfig: t.sourceConfig || existing.sourceConfig || tmpl.sourceConfig,
+                  targetConfig: t.targetConfig || existing.targetConfig || tmpl.targetConfig,
+                  rules: t.rules || existing.rules || tmpl.rules
+                });
+              });
               return Array.from(map.values());
             });
           }
@@ -1098,17 +1037,24 @@ export function RuleEngineProvider({ children }) {
     setActiveThread(found);
     setActiveWorkflowMeta(found);
 
-    // If the thread has custom saved nodes and edges, load them into canvas state!
-    if (found.nodes && Array.isArray(found.nodes) && found.nodes.length > 0) {
-      setWorkflowNodes(found.nodes);
-    }
-    if (found.edges && Array.isArray(found.edges) && found.edges.length > 0) {
-      setWorkflowEdges(found.edges);
-    }
+    const tmpl = getWorkflowTemplate(found);
 
-    const src = found.source || found.sourceConfig || (found.domainPackId === 'sap_bw_s4hana' ? PREBUILT_DOMAIN_PACKS.sap_bw_s4hana.source : PREBUILT_DOMAIN_PACKS.customer_master_reconciliation.source);
-    const tgt = found.target || found.targetConfig || (found.domainPackId === 'sap_bw_s4hana' ? PREBUILT_DOMAIN_PACKS.sap_bw_s4hana.target : PREBUILT_DOMAIN_PACKS.customer_master_reconciliation.target);
-    const rls = found.rules || (found.domainPackId === 'sap_bw_s4hana' ? PREBUILT_DOMAIN_PACKS.sap_bw_s4hana.rules : PREBUILT_DOMAIN_PACKS.customer_master_reconciliation.rules);
+    // If the thread has valid custom saved nodes (at least 2 nodes), use them;
+    // otherwise load the complete 5-node pipeline from the matching domain template!
+    const resolvedNodes = (Array.isArray(found.nodes) && found.nodes.length >= 2)
+      ? found.nodes
+      : tmpl.nodes;
+
+    const resolvedEdges = (Array.isArray(found.edges) && found.edges.length >= 1)
+      ? found.edges
+      : tmpl.edges;
+
+    setWorkflowNodes(resolvedNodes);
+    setWorkflowEdges(resolvedEdges);
+
+    const src = found.source || found.sourceConfig || tmpl.sourceConfig || PREBUILT_DOMAIN_PACKS.sap_bw_s4hana.source;
+    const tgt = found.target || found.targetConfig || tmpl.targetConfig || PREBUILT_DOMAIN_PACKS.sap_bw_s4hana.target;
+    const rls = found.rules || tmpl.rules || PREBUILT_DOMAIN_PACKS.sap_bw_s4hana.rules;
 
     setSourceConfig(src);
     setTargetConfig(tgt);
