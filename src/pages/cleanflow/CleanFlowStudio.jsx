@@ -27,20 +27,20 @@ export default function CleanFlowStudio({ initialPage = '05', onSwitchToMarketin
   const changePage = (pageId) => {
     setWarningMessage(null);
 
-    // Require credentials before running dry run or live
-    if (pageId === '06_07' || pageId === '07' || pageId === '08') {
+    // Require credentials before committing live writeback
+    if (pageId === '08') {
       const hasSrc = isCredentialConfigured ? isCredentialConfigured(sourceConfig) : Boolean(sourceConfig?.host || sourceConfig?.connectionUri);
       const hasTgt = (isCredentialConfigured && isCredentialConfigured(targetConfig)) ||
         Boolean(targetConfig?.host || targetConfig?.connectionUri) ||
         Boolean(sourceConfig?.host || sourceConfig?.connectionUri);
 
       if (!hasSrc) {
-        setWarningMessage('Source database credentials required before proceeding.');
+        setWarningMessage('Source database credentials required before live commit.');
         navigateTo('connect-source');
         return;
       }
-      if (!hasTgt && pageId !== '06_07') {
-        setWarningMessage('Target database credentials required before proceeding.');
+      if (!hasTgt) {
+        setWarningMessage('Target database credentials required before live commit.');
         navigateTo('connect-target');
         return;
       }

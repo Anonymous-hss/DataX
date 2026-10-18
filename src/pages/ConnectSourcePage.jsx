@@ -47,7 +47,7 @@ export default function ConnectSourcePage() {
   const [port, setPort] = useState(sourceConfig?.port || (sourceConfig?.engine === 'sap_bw' ? '443' : '5432'));
   const [databaseName, setDatabaseName] = useState(sourceConfig?.database || '');
   const [username, setUsername] = useState(sourceConfig?.user || sourceConfig?.username || '');
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState(sourceConfig?.password || '');
   const [showPassword, setShowPassword] = useState(false);
   const [readScope, setReadScope] = useState('selected');
   const [selectedTables, setSelectedTables] = useState(sourceConfig?.table ? [sourceConfig.table] : []);
@@ -92,6 +92,8 @@ export default function ConnectSourcePage() {
       if (sourceConfig.host) setHost(sourceConfig.host);
       if (sourceConfig.port) setPort(sourceConfig.port);
       if (sourceConfig.database) setDatabaseName(sourceConfig.database);
+      if (sourceConfig.user || sourceConfig.username) setUsername(sourceConfig.user || sourceConfig.username);
+      if (sourceConfig.password) setPassword(sourceConfig.password);
       if (sourceConfig.table) {
         setSelectedTables([sourceConfig.table]);
         setPreviewTable(sourceConfig.table);
@@ -164,13 +166,13 @@ export default function ConnectSourcePage() {
     setIsTesting(false);
     if (result.success) {
       setTestSuccess(true);
-      if (resolvedUri) {
-        setConnString(resolvedUri);
+      if (effectiveUri) {
+        setConnString(effectiveUri);
       }
       setSourceConfig(prev => ({
         ...prev,
         engine: engineKey,
-        connectionUri: resolvedUri,
+        connectionUri: effectiveUri,
         host,
         port,
         database: databaseName,
