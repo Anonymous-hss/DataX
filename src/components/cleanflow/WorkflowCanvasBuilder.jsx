@@ -632,6 +632,30 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
     }
   }, []);
 
+  // Hash synchronization: Open relevant node properties directly on canvas without leaving canvas
+  useEffect(() => {
+    const hash = (window.location.hash || '').toLowerCase();
+    if (hash.includes('source') || hash.includes('connect-source')) {
+      const srcNode = nodes.find(n => n.type === 'source');
+      if (srcNode) {
+        setSelectedNodeId(srcNode.id);
+        setIsPropertyModalOpen(true);
+      }
+    } else if (hash.includes('rule')) {
+      const ruleNode = nodes.find(n => n.type === 'rules');
+      if (ruleNode) {
+        setSelectedNodeId(ruleNode.id);
+        setIsPropertyModalOpen(true);
+      }
+    } else if (hash.includes('target') || hash.includes('connect-target')) {
+      const tgtNode = nodes.find(n => n.type === 'target');
+      if (tgtNode) {
+        setSelectedNodeId(tgtNode.id);
+        setIsPropertyModalOpen(true);
+      }
+    }
+  }, [nodes]);
+
   // Autofill Template Action
   const handleAutofillTemplate = (templateKey) => {
     const template = TEMPLATE_AUTOFILLS[templateKey];
@@ -755,12 +779,22 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   };
 
   // =========================================================================
-  // MOUSE CONTROLS: WHEEL ZOOM & PANNING
+  // MOUSE CONTROLS: WHEEL PANNING & CTRL-WHEEL ZOOM (No auto-zoom on scroll)
   // =========================================================================
   const handleWheel = (e) => {
-    e.preventDefault();
-    const zoomFactor = -e.deltaY * 0.0015;
-    setZoom(prev => Math.min(Math.max(prev + zoomFactor, 0.4), 2.0));
+    // Only zoom when Ctrl or Cmd key is held (standard trackpad pinch or Ctrl+wheel)
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const zoomFactor = -e.deltaY * 0.002;
+      setZoom(prev => Math.min(Math.max(prev + zoomFactor, 0.4), 2.0));
+    } else {
+      // Normal wheel or trackpad scroll pans the canvas smoothly — NO auto-zooming!
+      e.preventDefault();
+      setPan(prev => ({
+        x: prev.x - e.deltaX,
+        y: prev.y - e.deltaY
+      }));
+    }
   };
 
   const handleCanvasMouseDown = (e) => {
@@ -1463,15 +1497,25 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       {/* Floating Bottom Toolbar Dock */}
       <div className="absolute bottom-4 inset-x-6 flex items-center justify-between pointer-events-none z-30">
         
-        {/* Left Action: Run Simulation / Dry Run */}
-        <div className="pointer-events-auto">
+        {/* Left Action: Run Simulation / Dry Run directly on canvas */}
+        <div className="pointer-events-auto flex items-center gap-2">
           <button
-            onClick={() => navigateTo('running-dry-run')}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200/90 text-xs font-bold text-slate-800 shadow-md hover:bg-slate-50 transition-all cursor-pointer"
+            onClick={handleDryRun}
+            disabled={isExecutingDryRun || nodes.length === 0}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200/90 text-xs font-bold text-slate-800 shadow-md hover:bg-slate-50 transition-all cursor-pointer disabled:opacity-50"
+            title="Execute test dry run directly on canvas"
           >
-            <Play className="w-3.5 h-3.5 text-blue-600 fill-blue-600" />
-            <span>Test in Sandbox / Dry Run</span>
-            <ChevronRight className="w-4 h-4 text-slate-400" />
+            <FlaskConical className={`w-3.5 h-3.5 text-blue-600 ${isExecutingDryRun ? 'animate-bounce' : ''}`} />
+            <span>{isExecutingDryRun ? 'Evaluating...' : 'Test in Sandbox / Dry Run'}</span>
+          </button>
+          <button
+            onClick={handleRunLive}
+            disabled={isExecutingLiveRun || nodes.length === 0}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white shadow-md transition-all cursor-pointer disabled:opacity-50"
+            title="Commit compliant records live to Target Database"
+          >
+            <Play className={`w-3.5 h-3.5 fill-white ${isExecutingLiveRun ? 'animate-spin' : ''}`} />
+            <span>{isExecutingLiveRun ? 'Posting...' : 'Run Live'}</span>
           </button>
         </div>
 

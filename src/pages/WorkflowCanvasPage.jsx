@@ -10,12 +10,11 @@ export default function WorkflowCanvasPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col antialiased">
-      {/* Top Global Header (No PipelineFlowNodes 3-box step bar — the entire workflow IS the canvas!) */}
+      {/* Top Global Header (No PipelineFlowNodes step bar — the entire workflow IS the canvas!) */}
       <DataXHeader
         currentPage="03"
         onBack={() => navigateTo('workflows')}
-        onDryRun={() => navigateTo('running-dry-run')}
-        onRunLive={() => navigateTo('dry-run-results')}
+        hideSubheader={true}
       />
 
       {/* Main Full-Height Workflow Canvas Workspace */}

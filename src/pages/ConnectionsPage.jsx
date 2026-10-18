@@ -168,7 +168,7 @@ export default function ConnectionsPage() {
       database: conn.database,
       user: conn.username
     }));
-    navigateTo('connect-source');
+    navigateTo('canvas');
   };
 
   const handleCreateConnection = (e) => {

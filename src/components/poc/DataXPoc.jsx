@@ -83,36 +83,16 @@ function ScreenRenderer({ onBackToWebsite }) {
     case 'canvas':
     case 'workflow-builder':
     case 'builder':
-      return (
-        <WorkflowCanvasPage 
-          onSwitchToMarketing={onBackToWebsite}
-        />
-      );
-
     case 'connect-source':
     case 'source':
-      return (
-        <ConnectSourcePage 
-          onSwitchToMarketing={onBackToWebsite}
-        />
-      );
-
     case 'generate-rules':
     case 'rules':
     case 'ai-rules':
-      return (
-        <GenerateRulesPage 
-          onSwitchToMarketing={onBackToWebsite}
-        />
-      );
-
     case 'connect-target':
     case 'target':
       return (
-        <CleanFlowStudio 
-          initialPage="06" 
-          onSwitchToMarketing={onBackToWebsite} 
-          onBackToRules={() => navigateTo('generate-rules')}
+        <WorkflowCanvasPage 
+          onSwitchToMarketing={onBackToWebsite}
         />
       );
 

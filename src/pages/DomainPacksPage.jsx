@@ -189,13 +189,13 @@ export default function DomainPacksPage() {
 
   const handleDeployPack = (pack) => {
     if (pack.id === 'custom_builder') {
-      navigateTo('new-thread');
+      navigateTo('canvas');
       return;
     }
     if (pack.packKey) {
       selectThread(pack.packKey);
     }
-    navigateTo('connect-source');
+    navigateTo('canvas');
   };
 
   return (

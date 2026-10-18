@@ -102,8 +102,8 @@ export default function StartAThreadPage() {
       desc: description
     }));
 
-    // Navigates directly to Frame 03 (Connect source)
-    navigateTo('connect-source');
+    // Navigates directly to Interactive Node Canvas
+    navigateTo('canvas');
   };
 
   return (

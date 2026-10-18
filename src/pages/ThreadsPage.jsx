@@ -543,29 +543,29 @@ export default function ThreadsPage() {
                   <button 
                     onClick={() => {
                       selectThread(thread.id);
-                      navigateTo('connect-source');
+                      navigateTo('canvas');
                     }}
                     className="px-4 py-1 rounded-full border border-[#CDD2DE] bg-white hover:bg-[#EEF2FF] hover:border-[#2D55F5] hover:text-[#2D55F5] text-xs font-semibold text-[#0A0F1F] transition-all cursor-pointer shadow-2xs"
                   >
-                    Open
+                    Open Canvas
                   </button>
                 </div>
               </div>
             </div>
           ))}
 
-          {/* Card 4: Start a New Thread (Dashed Border Card) */}
+          {/* Card 4: Start a New Flow (Dashed Border Card) */}
           <Link
-            to="new-thread"
+            to="canvas"
             className="border-2 border-dashed border-[#CDD2DE] hover:border-[#2D55F5] rounded-[22px] bg-white/40 hover:bg-white/80 p-5 lg:p-6 flex flex-col items-center justify-center text-center group cursor-pointer transition-all min-h-[300px]"
           >
             <div className="w-14 h-14 rounded-2xl bg-[#EEF2FF] group-hover:bg-[#E0E7FF] flex items-center justify-center transition-colors">
               <StartThreadDocIcon />
             </div>
-            <h3 className="text-[15px] font-bold text-[#0A0F1F] mt-4">Start a new thread</h3>
-            <p className="text-[12px] text-[#5F6678] mt-1">Empty canvas or a domain pack</p>
+            <h3 className="text-[15px] font-bold text-[#0A0F1F] mt-4">Start a new flow</h3>
+            <p className="text-[12px] text-[#5F6678] mt-1">Interactive node canvas studio</p>
             <button className="mt-5 px-4 py-1.5 rounded-full border border-[#CDD2DE] group-hover:border-[#2D55F5] group-hover:text-[#2D55F5] bg-white text-[#2D55F5] text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all pointer-events-none">
-              <span className="font-bold text-sm leading-none">+</span> New thread
+              <span className="font-bold text-sm leading-none">+</span> Open Canvas
             </button>
           </Link>
         </section>
