@@ -28,6 +28,9 @@ export default function App() {
         hash.includes('register') ||
         hash === '#poc' ||
         hash === '#datax' ||
+        hash === '#workflows' ||
+        hash === '#new-workflow' ||
+        hash === '#templates' ||
         hash === '#threads' ||
         hash === '#new-thread' ||
         hash === '#connect-source' ||

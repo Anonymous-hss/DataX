@@ -14,12 +14,15 @@ import {
   ArrowLeft,
   FileCheck,
   FlaskConical,
-  Play
+  Play,
+  Layers,
+  Sparkles
 } from 'lucide-react';
 import { useNavigation } from '../context/NavigationContext';
 import { useRuleEngine, isCredentialConfigured } from '../context/RuleEngineContext';
 import PipelineFlowNodes from '../components/cleanflow/PipelineFlowNodes';
 import DataXHeader from '../components/cleanflow/DataXHeader';
+import WorkflowCanvasBuilder from '../components/cleanflow/WorkflowCanvasBuilder';
 import { getTableCatalog, getTableData } from '../data/sampleDatasets';
 
 export default function ConnectSourcePage() {
@@ -32,6 +35,7 @@ export default function ConnectSourcePage() {
     previewRows: contextPreviewRows 
   } = useRuleEngine();
 
+  const [viewMode, setViewMode] = useState('canvas'); // 'canvas' | 'form'
   const [dbType, setDbType] = useState(
     sourceConfig?.engine === 'sap_bw' ? 'SAP BW' : 
     sourceConfig?.engine === 'mongodb' ? 'MongoDB' : 'PostgreSQL'
@@ -367,7 +371,7 @@ export default function ConnectSourcePage() {
       {/* Top Header & Subheader */}
       <DataXHeader
         currentPage="03"
-        onBack={() => navigateTo('start-thread')}
+        onBack={() => navigateTo('start-workflow')}
         onDryRun={() => navigateTo('running-dry-run')}
         onRunLive={() => navigateTo('dry-run-results')}
       />
@@ -375,9 +379,63 @@ export default function ConnectSourcePage() {
       {/* 3 Pipeline Flow Nodes */}
       <PipelineFlowNodes currentStep="03" />
 
-      {/* Main 2-Column Content */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+      {/* View Mode Toggle Bar */}
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-3 pb-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Mode:</span>
+          <div className="p-1 bg-slate-200/70 rounded-xl inline-flex items-center gap-1 shadow-2xs">
+            <button
+              onClick={() => setViewMode('canvas')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                viewMode === 'canvas'
+                  ? 'bg-white text-blue-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Workflow Canvas Builder</span>
+              <span className="px-1.5 py-0.2 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-full">Interactive</span>
+            </button>
+            <button
+              onClick={() => setViewMode('form')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                viewMode === 'form'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Database className="w-3.5 h-3.5" />
+              <span>Database Form View</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="text-xs text-slate-500 flex items-center gap-1.5 font-medium">
+          {viewMode === 'canvas' ? (
+            <span>💡 Click any <strong className="text-blue-600">+</strong> to add nodes, or select a node to configure properties modal</span>
+          ) : (
+            <button
+              onClick={() => setViewMode('canvas')}
+              className="text-blue-600 hover:text-blue-800 font-semibold underline cursor-pointer"
+            >
+              ← Back to Workflow Canvas Builder
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Canvas View */}
+      {viewMode === 'canvas' ? (
+        <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-3">
+          <WorkflowCanvasBuilder 
+            onSwitchToForm={() => setViewMode('form')}
+            onMoveToNext={handleSaveSource}
+          />
+        </main>
+      ) : (
+        /* Main 2-Column Content (Database Form View) */
+        <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           
           {/* Left Column: Connect Source Database */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-5">
@@ -879,31 +937,32 @@ export default function ConnectSourcePage() {
           </div>
         )}
 
-        {/* Bottom Bar: Next AI Rules */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-6 mt-4 border-t border-slate-200">
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <AlertCircle className="w-3.5 h-3.5 text-blue-500" />
-            Next: AI rules synthesis
+          {/* Bottom Bar: Next AI Rules */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-6 mt-4 border-t border-slate-200">
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <AlertCircle className="w-3.5 h-3.5 text-blue-500" />
+              Next: AI rules synthesis
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={() => setViewMode('canvas')}
+                className="px-4 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-xs font-medium transition-colors cursor-pointer"
+              >
+                Canvas Builder
+              </button>
+              <button
+                onClick={handleSaveSource}
+                className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all shadow-blue-500/20 flex items-center gap-1.5 cursor-pointer"
+              >
+                <Check className="w-3.5 h-3.5 stroke-[3]" />
+                Save source
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => navigateTo('start-thread')}
-              className="px-4 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-xs font-medium transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSaveSource}
-              className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all shadow-blue-500/20 flex items-center gap-1.5 cursor-pointer"
-            >
-              <Check className="w-3.5 h-3.5 stroke-[3]" />
-              Save source
-            </button>
-          </div>
-        </div>
-
-      </main>
+        </main>
+      )}
     </div>
   );
 }

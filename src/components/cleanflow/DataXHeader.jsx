@@ -92,26 +92,26 @@ export default function DataXHeader({
             {/* Navigation Pills */}
             <nav className="hidden md:flex items-center gap-1">
               <button 
-                onClick={() => navigateTo('threads')}
+                onClick={() => navigateTo('workflows')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                  currentScreen === 'threads'
+                  currentScreen === 'workflows' || currentScreen === 'threads'
                     ? 'bg-blue-50 text-blue-700 border border-blue-200/60'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
                 }`}
               >
-                <Activity className={`w-3.5 h-3.5 ${currentScreen === 'threads' ? 'text-blue-600' : 'text-slate-400'}`} />
-                Threads
+                <Activity className={`w-3.5 h-3.5 ${currentScreen === 'workflows' || currentScreen === 'threads' ? 'text-blue-600' : 'text-slate-400'}`} />
+                Workflows
               </button>
               <button 
-                onClick={() => navigateTo('domain-packs')}
+                onClick={() => navigateTo('templates')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                  currentScreen === 'domain-packs'
+                  currentScreen === 'templates' || currentScreen === 'domain-packs'
                     ? 'bg-blue-50 text-blue-700 border border-blue-200/60'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
                 }`}
               >
-                <Layers className={`w-3.5 h-3.5 ${currentScreen === 'domain-packs' ? 'text-blue-600' : 'text-slate-400'}`} />
-                Domain packs
+                <Layers className={`w-3.5 h-3.5 ${currentScreen === 'templates' || currentScreen === 'domain-packs' ? 'text-blue-600' : 'text-slate-400'}`} />
+                Templates
               </button>
               <button 
                 onClick={() => navigateTo('connections')}
@@ -144,7 +144,7 @@ export default function DataXHeader({
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search threads, tables..."
+                placeholder="Search workflows, tables..."
                 className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
               />
             </div>

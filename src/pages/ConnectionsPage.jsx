@@ -221,16 +221,16 @@ export default function ConnectionsPage() {
             {/* Navigation Pills */}
             <nav className="hidden md:flex items-center gap-1.5">
               <Link
-                to="threads"
+                to="workflows"
                 className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                 </svg>
-                Threads
+                Workflows
               </Link>
               <Link
-                to="domain-packs"
+                to="templates"
                 className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
@@ -238,7 +238,7 @@ export default function ConnectionsPage() {
                   <polyline points="2 17 12 22 22 17" />
                   <polyline points="2 12 12 17 22 12" />
                 </svg>
-                Domain packs
+                Templates
               </Link>
               <Link
                 to="connections"
@@ -377,10 +377,10 @@ export default function ConnectionsPage() {
                   </div>
                 </div>
 
-                {/* Active Threads utilizing connection */}
+                {/* Active Workflows utilizing connection */}
                 {conn.activeThreads && conn.activeThreads.length > 0 && (
                   <div className="mt-4">
-                    <span className="text-[11px] font-medium text-[#5F6678]">Active in Threads:</span>
+                    <span className="text-[11px] font-medium text-[#5F6678]">Active in Workflows:</span>
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
                       {conn.activeThreads.map((t, idx) => (
                         <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#F5F6FA] text-[#474E61] text-[10px] border border-[#E3E6EE]">
@@ -421,7 +421,7 @@ export default function ConnectionsPage() {
                   onClick={() => handleUseConnection(conn)}
                   className="px-4 py-1.5 rounded-xl bg-[#2D55F5] hover:bg-[#1E3EB8] text-white text-xs font-semibold shadow-xs hover:shadow-md transition-all cursor-pointer flex items-center gap-1.5"
                 >
-                  <span>Use in Thread</span>
+                  <span>Use in Workflow</span>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <polyline points="9 18 15 12 9 6" />
                   </svg>

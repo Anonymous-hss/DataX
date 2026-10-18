@@ -212,16 +212,16 @@ export default function ThreadsPage() {
             {/* Navigation Pills */}
             <nav className="hidden md:flex items-center gap-1.5">
               <Link
-                to="threads"
+                to="workflows"
                 className="px-3.5 py-1.5 text-xs font-semibold rounded-full bg-[#EEF2FF] text-[#2D55F5] flex items-center gap-1.5 transition-all"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                 </svg>
-                Threads
+                Workflows
               </Link>
               <Link
-                to="domain-packs"
+                to="templates"
                 className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
@@ -229,7 +229,7 @@ export default function ThreadsPage() {
                   <polyline points="2 17 12 22 22 17" />
                   <polyline points="2 12 12 17 22 12" />
                 </svg>
-                Domain packs
+                Templates
               </Link>
               <Link
                 to="connections"
@@ -268,7 +268,7 @@ export default function ThreadsPage() {
               </span>
               <input
                 type="text"
-                placeholder="Search threads, tables..."
+                placeholder="Search workflows, tables..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-64 pl-9 pr-3.5 py-1.5 bg-[#F5F6FA] border border-[#E3E6EE] rounded-full text-xs text-[#0A0F1F] placeholder:text-[#8E95A9] focus:outline-none focus:border-[#2D55F5] focus:bg-white transition-all"
@@ -306,17 +306,17 @@ export default function ThreadsPage() {
 
       {/* Main Content Area */}
       <main className="max-w-[1360px] mx-auto px-6 py-8 space-y-7">
-        {/* Top Header Title & New Thread Action */}
+        {/* Top Header Title & New Workflow Action */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-[32px] font-bold text-[#0A0F1F] tracking-tight leading-none">Threads</h1>
+            <h1 className="text-[32px] font-bold text-[#0A0F1F] tracking-tight leading-none">Workflows</h1>
             <p className="text-[14px] text-[#5F6678] mt-2 font-normal">
-              Each thread reads from a source, checks every row with rules written by AI, and writes clean rows to a target.
+              Each workflow reads from a source, checks every row with rules written by AI, and writes clean rows to a target.
             </p>
           </div>
-          <Link to="new-thread">
+          <Link to="new-workflow">
             <button className="bg-[#2D55F5] hover:bg-[#2045DC] active:bg-[#1937B0] text-white px-5 py-2.5 rounded-full font-medium text-sm flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
-              <span className="text-base font-bold leading-none">+</span> New thread
+              <span className="text-base font-bold leading-none">+</span> New workflow
             </button>
           </Link>
         </div>
@@ -411,7 +411,7 @@ export default function ThreadsPage() {
             </span>
             <input
               type="text"
-              placeholder="Search threads by name, system or owner"
+              placeholder="Search workflows by name, system or owner"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-white border border-[#E3E6EE] rounded-xl text-xs sm:text-sm text-[#0A0F1F] placeholder:text-[#9CA3AF] shadow-2xs focus:outline-none focus:border-[#2D55F5] transition-all"
@@ -454,7 +454,7 @@ export default function ThreadsPage() {
             </div>
 
             <span className="text-xs text-[#9CA3AF] font-medium ml-2">
-              {filteredThreads.length} of {formattedThreads.length} threads
+              {filteredThreads.length} of {formattedThreads.length} workflows
             </span>
           </div>
         </div>

@@ -121,16 +121,16 @@ export default function StartAThreadPage() {
             {/* Navigation Pills */}
             <nav className="hidden md:flex items-center gap-1.5">
               <Link
-                to="threads"
+                to="workflows"
                 className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                 </svg>
-                Threads
+                Workflows
               </Link>
               <Link
-                to="domain-packs"
+                to="templates"
                 className="px-3.5 py-1.5 text-xs font-semibold rounded-full bg-[#EEF2FF] text-[#2D55F5] flex items-center gap-1.5 transition-all"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
@@ -138,7 +138,7 @@ export default function StartAThreadPage() {
                   <polyline points="2 17 12 22 22 17" />
                   <polyline points="2 12 12 17 22 12" />
                 </svg>
-                Domain packs
+                Templates
               </Link>
               <Link
                 to="connections"
@@ -177,7 +177,7 @@ export default function StartAThreadPage() {
       <div className="w-full bg-white border-b border-[#E3E6EE] px-6 h-12 flex items-center">
         <div className="max-w-[1360px] w-full mx-auto flex items-center gap-3">
           <Link
-            to="threads"
+            to="workflows"
             className="w-7 h-7 rounded-full flex items-center justify-center text-[#474E61] hover:bg-[#F5F6FA] transition-colors"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -185,7 +185,7 @@ export default function StartAThreadPage() {
               <polyline points="12 19 5 12 12 5" />
             </svg>
           </Link>
-          <span className="text-sm font-semibold text-[#0A0F1F]">New thread</span>
+          <span className="text-sm font-semibold text-[#0A0F1F]">New workflow</span>
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#EDEFF5] text-[#5F6678] text-[11px] font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-[#8E95A9]" /> Draft
           </span>
@@ -206,9 +206,9 @@ export default function StartAThreadPage() {
               </svg>
             </div>
             <div>
-              <span className="text-xs text-[#5F6678] font-medium">New thread</span>
+              <span className="text-xs text-[#5F6678] font-medium">New workflow</span>
               <h1 className="text-[24px] font-bold text-[#0A0F1F] tracking-tight leading-tight mt-0.5">
-                Start a thread
+                Start a workflow
               </h1>
             </div>
           </div>
@@ -216,11 +216,11 @@ export default function StartAThreadPage() {
           {/* Form Fields */}
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-[#0A0F1F] mb-1.5">Thread name</label>
+              <label className="block text-xs font-semibold text-[#0A0F1F] mb-1.5">Workflow name</label>
               <Input
                 value={threadName}
                 onChange={(e) => setThreadName(e.target.value)}
-                placeholder="Name your thread..."
+                placeholder="Name your workflow..."
                 className="w-full text-sm font-medium"
                 required
               />
@@ -301,13 +301,13 @@ export default function StartAThreadPage() {
 
           {/* Form Actions */}
           <div className="pt-2 flex items-center justify-end gap-3 border-t border-[#F0F2F6]">
-            <Link to="threads">
+            <Link to="workflows">
               <Button variant="ghost" size="md">
                 Cancel
               </Button>
             </Link>
             <Button variant="primary" size="md" type="submit">
-              Create thread →
+              Create workflow →
             </Button>
           </div>
         </form>
@@ -318,7 +318,7 @@ export default function StartAThreadPage() {
         <div className="max-w-[1360px] mx-auto flex items-center justify-between text-xs text-[#8E95A9]">
           <span>💡 You can change everything later.</span>
           <div className="flex items-center gap-4">
-            <Link to="threads" className="hover:text-[#0A0F1F] transition-colors">Threads</Link>
+            <Link to="workflows" className="hover:text-[#0A0F1F] transition-colors">Workflows</Link>
             <span>·</span>
             <Link to="history" className="hover:text-[#0A0F1F] transition-colors">Runs</Link>
           </div>

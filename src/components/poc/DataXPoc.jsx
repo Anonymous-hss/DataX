@@ -16,6 +16,7 @@ import LiveAutoFixPage from '../../pages/LiveAutoFixPage';
 import RunHistoryPage from '../../pages/RunHistoryPage';
 import SapBwPocDashboard from './SapBwPocDashboard';
 import DataXAuthPage from '../../pages/auth/DataXAuthPage';
+import WorkflowCanvasPage from '../../pages/WorkflowCanvasPage';
 
 function ScreenRenderer({ onBackToWebsite }) {
   const { currentScreen, navigateTo } = useNavigation();
@@ -41,6 +42,8 @@ function ScreenRenderer({ onBackToWebsite }) {
         />
       );
 
+    case 'new-workflow':
+    case 'start-workflow':
     case 'new-thread':
     case 'start-thread':
       return (
@@ -48,6 +51,7 @@ function ScreenRenderer({ onBackToWebsite }) {
           onSwitchToMarketing={onBackToWebsite}
         />
       );
+    case 'workflows':
     case 'threads':
       return (
         <ThreadsPage 
@@ -56,6 +60,8 @@ function ScreenRenderer({ onBackToWebsite }) {
         />
       );
 
+    case 'templates':
+    case 'template':
     case 'domain-packs':
     case 'domainpacks':
     case 'domains':
@@ -74,19 +80,18 @@ function ScreenRenderer({ onBackToWebsite }) {
         />
       );
 
+    case 'canvas':
+    case 'workflow-builder':
+    case 'builder':
     case 'connect-source':
     case 'source':
-      return (
-        <ConnectSourcePage 
-          onSwitchToMarketing={onBackToWebsite}
-        />
-      );
-
     case 'generate-rules':
     case 'rules':
     case 'ai-rules':
+    case 'connect-target':
+    case 'target':
       return (
-        <GenerateRulesPage 
+        <WorkflowCanvasPage 
           onSwitchToMarketing={onBackToWebsite}
         />
       );
@@ -105,17 +110,7 @@ function ScreenRenderer({ onBackToWebsite }) {
         <CleanFlowStudio 
           initialPage="05" 
           onSwitchToMarketing={onBackToWebsite} 
-          onBackToRules={() => navigateTo('generate-rules')}
-        />
-      );
-
-    case 'connect-target':
-    case 'target':
-      return (
-        <CleanFlowStudio 
-          initialPage="06" 
-          onSwitchToMarketing={onBackToWebsite} 
-          onBackToRules={() => navigateTo('generate-rules')}
+          onBackToRules={() => navigateTo('connect-source')}
         />
       );
 

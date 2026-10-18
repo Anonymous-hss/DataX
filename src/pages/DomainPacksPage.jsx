@@ -213,16 +213,16 @@ export default function DomainPacksPage() {
             {/* Navigation Pills */}
             <nav className="hidden md:flex items-center gap-1.5">
               <Link
-                to="threads"
+                to="workflows"
                 className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                 </svg>
-                Threads
+                Workflows
               </Link>
               <Link
-                to="domain-packs"
+                to="templates"
                 className="px-3.5 py-1.5 text-xs font-semibold rounded-full bg-[#EEF2FF] text-[#2D55F5] flex items-center gap-1.5 transition-all"
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
@@ -230,7 +230,7 @@ export default function DomainPacksPage() {
                   <polyline points="2 17 12 22 22 17" />
                   <polyline points="2 12 12 17 22 12" />
                 </svg>
-                Domain packs
+                Templates
               </Link>
               <Link
                 to="connections"
@@ -269,15 +269,15 @@ export default function DomainPacksPage() {
         <div className="max-w-[1360px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs font-medium text-[#5F6678]">
-              <Link to="threads" className="hover:text-[#2D55F5]">Threads</Link>
+              <Link to="workflows" className="hover:text-[#2D55F5]">Workflows</Link>
               <span>/</span>
-              <span className="text-[#0A0F1F] font-semibold">Domain Packs Catalog</span>
+              <span className="text-[#0A0F1F] font-semibold">Templates Catalog</span>
             </div>
             <h1 className="text-2xl font-bold text-[#0A0F1F] tracking-tight mt-1">
-              Enterprise Domain Packs
+              Enterprise Templates
             </h1>
             <p className="text-sm text-[#5F6678] mt-1">
-              Pre-configured data pipeline templates with certified ontology schemas, automated AI validation rules, and destination writebacks.
+              Pre-configured data workflow templates with certified ontology schemas, automated AI validation rules, and destination writebacks.
             </p>
           </div>
 
@@ -291,7 +291,7 @@ export default function DomainPacksPage() {
             </span>
             <input
               type="text"
-              placeholder="Search packs, rules, schemas..."
+              placeholder="Search templates, rules, schemas..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-3.5 py-2 bg-[#F5F6FA] border border-[#E3E6EE] rounded-full text-xs text-[#0A0F1F] placeholder:text-[#8E95A9] focus:outline-none focus:border-[#2D55F5] focus:bg-white transition-all"
@@ -396,7 +396,7 @@ export default function DomainPacksPage() {
                   onClick={() => handleDeployPack(pack)}
                   className="px-4 py-2 rounded-xl bg-[#2D55F5] hover:bg-[#1E3EB8] text-white text-xs font-semibold shadow-xs hover:shadow-md transition-all cursor-pointer flex items-center gap-1.5"
                 >
-                  <span>Use Domain Pack</span>
+                  <span>Use Template</span>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <polyline points="9 18 15 12 9 6" />
                   </svg>
