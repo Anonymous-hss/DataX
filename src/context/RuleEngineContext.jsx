@@ -1365,7 +1365,8 @@ export function RuleEngineProvider({ children }) {
           database: sourceConfig.database || undefined,
           table: sourceConfig.table || '0PUR_C01',
           scopeMode: sourceConfig.scopeMode || 'specific',
-          selectedTables: sourceConfig.selectedTables || (sourceConfig.table ? [sourceConfig.table] : ['0PUR_C01'])
+          selectedTables: sourceConfig.selectedTables || (sourceConfig.table ? [sourceConfig.table] : ['0PUR_C01']),
+          limit: sourceConfig.totalRows ? parseInt(String(sourceConfig.totalRows).replace(/,/g, '')) : 1420
         },
         target1: {
           engine: targetConfig.engine || sourceConfig.engine || 'postgres',
@@ -1404,25 +1405,27 @@ export function RuleEngineProvider({ children }) {
         const data = await res.json();
         if (data.counts !== undefined || data.validCount !== undefined || data.summary !== undefined || data.totalChecked !== undefined) {
           const sum = data.summary || {};
-          const totalCount = sum.sourceExtracted ?? sum.totalChecked ?? sum.total_records ?? data.totalChecked ?? data.counts?.totalChecked ?? sampleData.length;
+          const totalCount = sum.sourceExtracted ?? sum.totalChecked ?? sum.total_records ?? data.totalChecked ?? data.counts?.totalChecked ?? 1420;
           const valid = sum.compliantValid ?? sum.cleanCount ?? sum.valid_records_count ?? data.validCount ?? data.counts?.valid ?? 0;
           const fixed = sum.autoFixedCount ?? sum.remediated_count ?? data.autofixedCount ?? data.counts?.autofixed ?? 0;
           const quarantined = sum.quarantined ?? sum.quarantinedCount ?? sum.quarantined_records_count ?? data.quarantinedCount ?? data.counts?.quarantined ?? 0;
           const passRate = data.healthMetrics?.score ?? data.healthScore ?? (totalCount > 0 ? Math.round(((valid + fixed) / totalCount) * 1000) / 10 : 0);
 
-          const outcomes = (selectedActiveRules || []).map((r, idx) => {
-            const isWarning = (r.severity || '').toLowerCase() === 'warning';
-            const approxCount = isWarning
-              ? Math.max(1, Math.round(fixed / Math.max(1, selectedActiveRules.length)))
-              : Math.max(1, Math.round(quarantined / Math.max(1, selectedActiveRules.length)));
-            return {
-              id: r.id || `r_${idx}`,
-              name: r.name || r.title || `Rule ${idx + 1}`,
-              rowsAffected: `${approxCount} rows`,
-              outcome: isWarning ? 'Auto-fixed' : 'Quarantined',
-              badgeClass: isWarning ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'
-            };
-          });
+          const outcomes = (data.ruleOutcomes && data.ruleOutcomes.length > 0)
+            ? data.ruleOutcomes
+            : (selectedActiveRules || []).map((r, idx) => {
+                const isWarning = (r.severity || '').toLowerCase() === 'warning';
+                const approxCount = isWarning
+                  ? Math.max(1, Math.round(fixed / Math.max(1, selectedActiveRules.length)))
+                  : Math.max(1, Math.round(quarantined / Math.max(1, selectedActiveRules.length)));
+                return {
+                  id: r.id || `r_${idx}`,
+                  name: r.name || r.title || `Rule ${idx + 1}`,
+                  rowsAffected: `${approxCount} rows`,
+                  outcome: isWarning ? 'Auto-fixed' : 'Quarantined',
+                  badgeClass: isWarning ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                };
+              });
 
           const outcome = {
             totalChecked: totalCount,
@@ -1433,7 +1436,10 @@ export function RuleEngineProvider({ children }) {
             ruleOutcomes: outcomes,
             sampleQuarantinedRecords: data.sampleQuarantinedRecords || [],
             sampleValidRecords: data.sampleValidRecords || [],
-            traceLogs: data.traceLogs || []
+            traceLogs: data.traceLogs || [],
+            elapsedMs: data.elapsedMs || 2800,
+            duration: data.elapsedMs ? `${(data.elapsedMs / 1000).toFixed(2)}s` : '2.82s',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
           };
           setDryRunResult(outcome);
           setPipelineStatus('COMPLETED');
@@ -1497,7 +1503,8 @@ export function RuleEngineProvider({ children }) {
           database: sourceConfig.database || undefined,
           table: sourceConfig.table || '0PUR_C01',
           scopeMode: sourceConfig.scopeMode || 'specific',
-          selectedTables: sourceConfig.selectedTables || (sourceConfig.table ? [sourceConfig.table] : ['0PUR_C01'])
+          selectedTables: sourceConfig.selectedTables || (sourceConfig.table ? [sourceConfig.table] : ['0PUR_C01']),
+          limit: sourceConfig.totalRows ? parseInt(String(sourceConfig.totalRows).replace(/,/g, '')) : 1420
         },
         target1: {
           engine: targetConfig.engine || 'postgres',

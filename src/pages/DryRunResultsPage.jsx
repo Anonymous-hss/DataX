@@ -179,7 +179,7 @@ export default function DryRunResultsPage() {
                         </span>
                       ) : tab === 'quarantined' ? (
                         <span className="text-[#A35600] font-medium">
-                          Rule R04: Legacy plant code P999
+                          {row.VIOLATION_DESC || row._violation_reasons || (Array.isArray(row.violations) ? row.violations.join(' · ') : 'Clean Core Rule violation')}
                         </span>
                       ) : (
                         <span className="text-[#127A52] font-medium">

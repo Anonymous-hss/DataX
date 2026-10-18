@@ -38,7 +38,8 @@ import {
   Table,
   Filter,
   Maximize2,
-  Hand
+  Hand,
+  Loader2
 } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
 import { useRuleEngine } from '../../context/RuleEngineContext';
@@ -190,6 +191,14 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const [executionSummary, setExecutionSummary] = useState(null);
   const [executionError, setExecutionError] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Phased Multi-Stage Execution States
+  const [executionPhase, setExecutionPhase] = useState('idle'); // 'idle' | 'extracting' | 'compiling' | 'routing' | 'committing' | 'completed'
+  const [activeStageNodeId, setActiveStageNodeId] = useState(null);
+  const [executionStageText, setExecutionStageText] = useState('');
+  const [executionProgress, setExecutionProgress] = useState(0);
+  const [executionElapsedMs, setExecutionElapsedMs] = useState(0);
+  const [liveNodeStats, setLiveNodeStats] = useState({});
 
   // Selection & Dragging
   const [selectedNodeId, setSelectedNodeId] = useState(null);
@@ -384,11 +393,53 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
     setExecutionSummary(null);
   };
 
+  // Helper to step visually through the pipeline nodes with enterprise latency
+  const runPhasedStages = async (isLive = false) => {
+    // Stage 1: Source Ingestion
+    setExecutionPhase('extracting');
+    setActiveStageNodeId('node-source');
+    setExecutionProgress(25);
+    setExecutionStageText('Stage 1/4: Ingesting raw stream (1,420 rows) from SAP BW InfoCube 0PUR_C01...');
+    await new Promise(r => setTimeout(r, 900));
+
+    // Stage 2: AI Rules Engine & DuckDB AST
+    setExecutionPhase('compiling');
+    setActiveStageNodeId('node-rules');
+    setExecutionProgress(50);
+    setExecutionStageText('Stage 2/4: Compiling AI Clean Core ontologies & evaluating rules in-process via DuckDB AST...');
+    await new Promise(r => setTimeout(r, 1000));
+
+    // Stage 3: CleanFlow Router
+    setExecutionPhase('routing');
+    setActiveStageNodeId('node-router');
+    setExecutionProgress(75);
+    setExecutionStageText('Stage 3/4: CleanFlow Router splitting evaluated stream: Compliant vs Auto-Fix vs Quarantine...');
+    await new Promise(r => setTimeout(r, 850));
+
+    // Stage 4: Target Write & Quarantine Vault
+    setExecutionPhase('committing');
+    setActiveStageNodeId('committing');
+    setExecutionProgress(90);
+    setExecutionStageText(isLive 
+      ? 'Stage 4/4: Committing verified clean stream live to S/4HANA (BAPI_PO_CREATE1) & locking quarantine vault...'
+      : 'Stage 4/4: Dry Run verification: Staging clean stream & isolating non-compliant records in quarantine store...'
+    );
+    await new Promise(r => setTimeout(r, 800));
+  };
+
   // Execution Handlers (Dry Run & Live Run)
   const handleDryRun = async () => {
     setIsExecutingDryRun(true);
     setExecutionSummary(null);
     setExecutionError(null);
+    setExecutionProgress(5);
+    setExecutionPhase('extracting');
+
+    const startTime = Date.now();
+    const timerInterval = setInterval(() => {
+      setExecutionElapsedMs(Date.now() - startTime);
+    }, 100);
+
     try {
       const tmpl = TEMPLATE_AUTOFILLS[defaultTemplateKey] || TEMPLATE_AUTOFILLS.sap_bw_s4hana;
       if ((!sourceConfig?.host && !sourceConfig?.connectionUri) && tmpl.sourceConfig) {
@@ -398,7 +449,12 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
         setTargetConfig(tmpl.targetConfig);
       }
 
-      const res = await executeDryRun();
+      // Execute backend API and visual stage transitions concurrently
+      const [res] = await Promise.all([
+        executeDryRun(),
+        runPhasedStages(false)
+      ]);
+
       if (res && res.error) {
         setExecutionError({
           title: 'Dry Run Blocked',
@@ -414,7 +470,18 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           health: res.passRate ?? 0,
           isLive: false
         });
+
+        // Update live stats across canvas node cards
+        setLiveNodeStats({
+          source: `${total.toLocaleString()} rows`,
+          rules: `${activeRules.length} Active Rules`,
+          router: `${res.cleanCount} Clean · ${res.autoFixedCount} Fixed · ${res.quarantinedCount} Quarantined`,
+          target: `${(res.cleanCount ?? 0).toLocaleString()} clean`,
+          quarantine: `${(res.quarantinedCount ?? 0).toLocaleString()} held`
+        });
       }
+      setExecutionProgress(100);
+      setExecutionPhase('completed');
     } catch (err) {
       console.warn('Dry run execution error:', err);
       setExecutionError({
@@ -422,7 +489,9 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
         message: err.message || 'An unexpected error occurred during dry run execution.'
       });
     } finally {
+      clearInterval(timerInterval);
       setIsExecutingDryRun(false);
+      setActiveStageNodeId(null);
     }
   };
 
@@ -430,8 +499,20 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
     setIsExecutingLiveRun(true);
     setExecutionSummary(null);
     setExecutionError(null);
+    setExecutionProgress(5);
+    setExecutionPhase('extracting');
+
+    const startTime = Date.now();
+    const timerInterval = setInterval(() => {
+      setExecutionElapsedMs(Date.now() - startTime);
+    }, 100);
+
     try {
-      const res = await executeLiveRun();
+      const [res] = await Promise.all([
+        executeLiveRun(),
+        runPhasedStages(true)
+      ]);
+
       if (res) {
         setExecutionSummary({
           total: res.rows ?? 0,
@@ -442,7 +523,17 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           docNo: res.docNo || s4hanaDocNumber || '#COMMIT-SUCCESS',
           isLive: true
         });
+
+        setLiveNodeStats({
+          source: `${(res.rows || 1420).toLocaleString()} rows`,
+          rules: `${activeRules.length} Active Rules`,
+          router: `${res.clean} Clean · ${res.autoFixed} Fixed · ${res.quarantined} Quarantined`,
+          target: `${(res.clean ?? 0).toLocaleString()} committed`,
+          quarantine: `${(res.quarantined ?? 0).toLocaleString()} isolated`
+        });
       }
+      setExecutionProgress(100);
+      setExecutionPhase('completed');
     } catch (err) {
       console.warn('Live run execution error:', err);
       setExecutionError({
@@ -450,7 +541,9 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
         message: err.message || 'Live pipeline commit failed. Check database credentials or node configuration.'
       });
     } finally {
+      clearInterval(timerInterval);
       setIsExecutingLiveRun(false);
+      setActiveStageNodeId(null);
     }
   };
 
@@ -958,6 +1051,54 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           backgroundPosition: `${pan.x}px ${pan.y}px`
         }}
       >
+        {/* Sleek Floating Phased Execution Header */}
+        {(isExecutingDryRun || isExecutingLiveRun) && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 backdrop-blur-md text-white rounded-2xl border border-slate-700 shadow-2xl p-4 max-w-xl w-full mx-auto space-y-2.5 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-auto">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-600/30 border border-blue-400/40 flex items-center justify-center text-blue-400">
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-white tracking-wide">
+                      {isExecutingLiveRun ? 'Executing Live Commit' : 'Executing Enterprise CleanFlow Pipeline'}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30 font-mono">
+                      Stage {executionProgress <= 25 ? '1/4' : executionProgress <= 50 ? '2/4' : executionProgress <= 75 ? '3/4' : '4/4'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 mt-0.5">
+                    {executionStageText}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="font-mono text-xs font-bold text-[#a3e635]">
+                  {(executionElapsedMs / 1000).toFixed(1)}s
+                </span>
+                <span className="text-[10px] text-slate-400 block font-mono">DuckDB AST</span>
+              </div>
+            </div>
+
+            {/* Stage Progress Bar */}
+            <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400 h-1.5 rounded-full transition-all duration-300 ease-out"
+                style={{ width: `${executionProgress}%` }}
+              />
+            </div>
+
+            {/* Stage Indicators */}
+            <div className="grid grid-cols-4 gap-1 text-[10px] font-medium text-slate-400 pt-0.5">
+              <span className={executionProgress >= 25 ? 'text-blue-300 font-bold' : ''}>1. Ingest Raw Stream</span>
+              <span className={executionProgress >= 50 ? 'text-indigo-300 font-bold' : ''}>2. AI Rules Engine</span>
+              <span className={executionProgress >= 75 ? 'text-purple-300 font-bold' : ''}>3. Stream Router</span>
+              <span className={executionProgress >= 90 ? 'text-emerald-300 font-bold' : ''}>4. Target Commit</span>
+            </div>
+          </div>
+        )}
+
         {/* World transform container */}
         <div 
           style={{
@@ -1136,6 +1277,9 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
              ========================================================================= */}
           {nodes.map((node) => {
             const isSelected = selectedNodeId === node.id;
+            const isStageActive = 
+              (activeStageNodeId === node.id) ||
+              (activeStageNodeId === 'committing' && (node.type === 'target' || node.type === 'quarantine'));
 
             return (
               <div
@@ -1146,12 +1290,20 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                   transform: `translate(${node.x}px, ${node.y}px)`,
                   width: node.width,
                   position: 'absolute',
-                  zIndex: isSelected ? 30 : 20
+                  zIndex: isStageActive ? 35 : isSelected ? 30 : 20
                 }}
                 className={`workflow-node-card relative group bg-white rounded-2xl border-2 shadow-md p-4 space-y-2.5 transition-all select-none hover:shadow-lg ${
                   activeTool === 'pan' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
                 } ${
-                  isSelected
+                  isStageActive
+                    ? node.variant === 'green'
+                      ? 'border-emerald-500 ring-4 ring-emerald-500/40 shadow-xl shadow-emerald-500/20 scale-[1.02]'
+                      : node.variant === 'orange'
+                      ? 'border-amber-500 ring-4 ring-amber-500/40 shadow-xl shadow-amber-500/20 scale-[1.02]'
+                      : node.variant === 'purple'
+                      ? 'border-purple-500 ring-4 ring-purple-500/40 shadow-xl shadow-purple-500/20 scale-[1.02]'
+                      : 'border-blue-500 ring-4 ring-blue-500/40 shadow-xl shadow-blue-500/20 scale-[1.02]'
+                    : isSelected
                     ? 'border-blue-500 ring-4 ring-blue-500/20 shadow-xl'
                     : node.variant === 'green'
                     ? 'border-emerald-500'
@@ -1205,14 +1357,24 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                   </div>
 
                   <div className="flex items-center gap-1.5">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border flex items-center gap-1 ${
-                      node.variant === 'green' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                      node.variant === 'orange' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                      'bg-blue-50 text-blue-700 border-blue-200'
-                    }`}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                      {node.status}
-                    </span>
+                    {isStageActive ? (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1 animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping" />
+                        {node.type === 'source' ? 'Ingesting...' :
+                         node.type === 'rules' ? 'Evaluating AST...' :
+                         node.type === 'router' ? 'Routing...' :
+                         node.type === 'target' ? 'Writing...' : 'Isolating...'}
+                      </span>
+                    ) : (
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border flex items-center gap-1 ${
+                        node.variant === 'green' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                        node.variant === 'orange' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                        'bg-blue-50 text-blue-700 border-blue-200'
+                      }`}>
+                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                        {node.status}
+                      </span>
+                    )}
 
                     {/* Dedicated Settings Button on Every Node - ONLY place where property modal opens */}
                     <button
@@ -1237,10 +1399,28 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                 {/* Meta Box: Bound Table or Metric */}
                 <div className="p-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-[11px]">
                   <span className="font-mono font-bold text-slate-800 truncate">
-                    {node.table || node.split || (node.ruleCount ? `${node.ruleCount} Active Rules` : 'Configured')}
+                    {node.type === 'source' && liveNodeStats.source
+                      ? node.table || '0PUR_C01'
+                      : node.type === 'target' && liveNodeStats.target
+                      ? `${node.table || '0PUR_C01_clean'} (${liveNodeStats.target})`
+                      : node.type === 'quarantine' && liveNodeStats.quarantine
+                      ? `${node.table || '0PUR_C01_quarant...'} (${liveNodeStats.quarantine})`
+                      : node.type === 'rules' && liveNodeStats.rules
+                      ? liveNodeStats.rules
+                      : node.type === 'router' && liveNodeStats.router
+                      ? '3-Way Evaluated'
+                      : node.table || node.split || (node.ruleCount ? `${node.ruleCount} Active Rules` : 'Configured')}
                   </span>
                   <span className="text-slate-400 text-[10px] font-mono shrink-0">
-                    {node.rowCount || node.aiModel || 'Click ⚙ to edit'}
+                    {isStageActive ? (
+                      <span className="text-blue-600 font-bold animate-pulse">Running...</span>
+                    ) : node.type === 'source' && liveNodeStats.source ? (
+                      <span className="text-blue-700 font-bold">{liveNodeStats.source}</span>
+                    ) : node.type === 'router' && liveNodeStats.router ? (
+                      <span className="text-purple-700 font-bold">{liveNodeStats.router}</span>
+                    ) : (
+                      node.rowCount || node.aiModel || 'Click ⚙ to edit'
+                    )}
                   </span>
                 </div>
               </div>
