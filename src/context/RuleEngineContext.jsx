@@ -575,6 +575,84 @@ export const PREBUILT_DOMAIN_PACKS = {
   }
 };
 
+export const DEFAULT_CANVAS_NODES = [
+  {
+    id: 'node-source',
+    type: 'source',
+    x: 80,
+    y: 160,
+    width: 260,
+    height: 135,
+    title: 'Source Ingestion',
+    system: 'SAP BW InfoCube / HANA',
+    table: '0PUR_C01',
+    rowCount: '1,420 rows',
+    status: 'Ready',
+    variant: 'blue'
+  },
+  {
+    id: 'node-rules',
+    type: 'rules',
+    x: 410,
+    y: 160,
+    width: 260,
+    height: 135,
+    title: 'AI Rules Engine',
+    system: 'Clean Core Ontologies',
+    ruleCount: 5,
+    aiModel: 'gpt-5-mini',
+    status: 'Auto-Fix Armed',
+    variant: 'indigo'
+  },
+  {
+    id: 'node-router',
+    type: 'router',
+    x: 740,
+    y: 160,
+    width: 240,
+    height: 135,
+    title: 'CleanFlow Router',
+    system: '3-Way Stream Splitter',
+    split: 'Clean · Fixed · Quarantined',
+    status: 'Active',
+    variant: 'purple'
+  },
+  {
+    id: 'node-target',
+    type: 'target',
+    x: 1060,
+    y: 80,
+    width: 260,
+    height: 135,
+    title: 'Target ERP',
+    system: 'SAP S/4HANA Clean Core',
+    table: '0PUR_C01_clean',
+    bapi: 'BAPI_PO_CREATE1',
+    status: 'Ready to Commit',
+    variant: 'green'
+  },
+  {
+    id: 'node-quarantine',
+    type: 'quarantine',
+    x: 1060,
+    y: 270,
+    width: 260,
+    height: 135,
+    title: 'Quarantine Store',
+    system: 'Dead-Letter Isolation',
+    table: '0PUR_C01_quarantine',
+    status: 'Audit Locked',
+    variant: 'orange'
+  }
+];
+
+export const DEFAULT_CANVAS_EDGES = [
+  { id: 'e-1', from: 'node-source', to: 'node-rules', label: 'Raw Stream', variant: 'blue' },
+  { id: 'e-2', from: 'node-rules', to: 'node-router', label: 'Evaluated', variant: 'blue' },
+  { id: 'e-3', from: 'node-router', to: 'node-target', label: 'Compliant & Auto-Fixed', variant: 'green' },
+  { id: 'e-4', from: 'node-router', to: 'node-quarantine', label: 'Critical Violations', variant: 'orange' }
+];
+
 const RuleEngineContext = createContext(null);
 
 export function RuleEngineProvider({ children }) {
@@ -630,6 +708,123 @@ export function RuleEngineProvider({ children }) {
       console.warn('Failed storing threads for user:', user.id, e);
     }
   }, [threads, user?.id]);
+
+  // Persistent Canvas State (In-Memory Session & LocalStorage Sync)
+  const [workflowNodes, setWorkflowNodesState] = useState(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('datax_canvas_nodes');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not read stored canvas nodes:', e);
+    }
+    return DEFAULT_CANVAS_NODES;
+  });
+
+  const [workflowEdges, setWorkflowEdgesState] = useState(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('datax_canvas_edges');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not read stored canvas edges:', e);
+    }
+    return DEFAULT_CANVAS_EDGES;
+  });
+
+  const [activeWorkflowMeta, setActiveWorkflowMetaState] = useState(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('datax_active_workflow_meta');
+        if (stored) return JSON.parse(stored);
+      }
+    } catch (e) {}
+    return {
+      id: 'thread_sap_s4hana',
+      name: 'SAP BW → S/4HANA Clean Core Modernizer',
+      category: 'ERP Modernization',
+      badge: 'SAP Certified Ontology',
+      status: 'active'
+    };
+  });
+
+  const [isSavingWorkflow, setIsSavingWorkflow] = useState(false);
+  const [lastSavedWorkflowTime, setLastSavedWorkflowTime] = useState(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        return localStorage.getItem('datax_last_saved_time') || null;
+      }
+    } catch (e) {}
+    return null;
+  });
+
+  // State setters that automatically synchronize with localStorage
+  const setWorkflowNodes = useCallback((newNodes) => {
+    setWorkflowNodesState(prev => {
+      const resolved = typeof newNodes === 'function' ? newNodes(prev) : newNodes;
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('datax_canvas_nodes', JSON.stringify(resolved));
+        }
+      } catch (e) {}
+      return resolved;
+    });
+  }, []);
+
+  const setWorkflowEdges = useCallback((newEdges) => {
+    setWorkflowEdgesState(prev => {
+      const resolved = typeof newEdges === 'function' ? newEdges(prev) : newEdges;
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('datax_canvas_edges', JSON.stringify(resolved));
+        }
+      } catch (e) {}
+      return resolved;
+    });
+  }, []);
+
+  const setActiveWorkflowMeta = useCallback((newMeta) => {
+    setActiveWorkflowMetaState(prev => {
+      const resolved = typeof newMeta === 'function' ? newMeta(prev) : newMeta;
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('datax_active_workflow_meta', JSON.stringify(resolved));
+        }
+      } catch (e) {}
+      return resolved;
+    });
+  }, []);
+
+  // Fetch threads from backend server on initial mount to sync database state
+  useEffect(() => {
+    const fetchServerThreads = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/threads`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.threads) && data.threads.length > 0) {
+            setThreads(prev => {
+              const map = new Map();
+              prev.forEach(t => map.set(t.id, t));
+              data.threads.forEach(t => map.set(t.id, { ...(map.get(t.id) || {}), ...t }));
+              return Array.from(map.values());
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('Could not sync threads from server:', e);
+      }
+    };
+    fetchServerThreads();
+  }, []);
 
   // Active Thread Selection
   const [activeThread, setActiveThread] = useState(PREBUILT_DOMAIN_PACKS.sap_bw_s4hana);
@@ -894,16 +1089,25 @@ export function RuleEngineProvider({ children }) {
     loadInitialSampleData(activeThread);
   }, []);
 
-  // Action: Switch Active Thread
+  // Action: Switch Active Thread & Load Associated Canvas Nodes
   const selectThread = (threadIdOrPackKey) => {
     const found = threads.find(t => t.id === threadIdOrPackKey || t.threadId === threadIdOrPackKey) 
       || PREBUILT_DOMAIN_PACKS[threadIdOrPackKey] 
       || PREBUILT_DOMAIN_PACKS.sap_bw_s4hana;
 
     setActiveThread(found);
+    setActiveWorkflowMeta(found);
 
-    const src = found.source || (found.domainPackId === 'sap_bw_s4hana' ? PREBUILT_DOMAIN_PACKS.sap_bw_s4hana.source : PREBUILT_DOMAIN_PACKS.customer_master_reconciliation.source);
-    const tgt = found.target || (found.domainPackId === 'sap_bw_s4hana' ? PREBUILT_DOMAIN_PACKS.sap_bw_s4hana.target : PREBUILT_DOMAIN_PACKS.customer_master_reconciliation.target);
+    // If the thread has custom saved nodes and edges, load them into canvas state!
+    if (found.nodes && Array.isArray(found.nodes) && found.nodes.length > 0) {
+      setWorkflowNodes(found.nodes);
+    }
+    if (found.edges && Array.isArray(found.edges) && found.edges.length > 0) {
+      setWorkflowEdges(found.edges);
+    }
+
+    const src = found.source || found.sourceConfig || (found.domainPackId === 'sap_bw_s4hana' ? PREBUILT_DOMAIN_PACKS.sap_bw_s4hana.source : PREBUILT_DOMAIN_PACKS.customer_master_reconciliation.source);
+    const tgt = found.target || found.targetConfig || (found.domainPackId === 'sap_bw_s4hana' ? PREBUILT_DOMAIN_PACKS.sap_bw_s4hana.target : PREBUILT_DOMAIN_PACKS.customer_master_reconciliation.target);
     const rls = found.rules || (found.domainPackId === 'sap_bw_s4hana' ? PREBUILT_DOMAIN_PACKS.sap_bw_s4hana.rules : PREBUILT_DOMAIN_PACKS.customer_master_reconciliation.rules);
 
     setSourceConfig(src);
@@ -914,6 +1118,106 @@ export function RuleEngineProvider({ children }) {
     setPreviewRows([]);
     setSampleData([]);
   };
+
+  // Action: Save Workflow Graph to Backend API & In-Memory / Local Storage Session
+  const saveWorkflow = useCallback(async (overrideData = {}) => {
+    setIsSavingWorkflow(true);
+    try {
+      const nodesToSave = overrideData.nodes !== undefined ? overrideData.nodes : workflowNodes;
+      const edgesToSave = overrideData.edges !== undefined ? overrideData.edges : workflowEdges;
+      const currentMeta = overrideData.meta || activeWorkflowMeta || {};
+      const srcToSave = overrideData.sourceConfig || sourceConfig || {};
+      const tgtToSave = overrideData.targetConfig || targetConfig || {};
+      const rulesToSave = overrideData.rules || activeRules || [];
+
+      const threadId = overrideData.id || currentMeta.id || activeThread?.id || `thread_${Date.now()}`;
+      const workflowName = overrideData.name || currentMeta.name || activeThread?.name || 'Enterprise CleanFlow Pipeline';
+
+      const payload = {
+        id: threadId,
+        name: workflowName,
+        description: currentMeta.description || activeThread?.description || 'Custom autonomous CleanFlow pipeline with node-based orchestration.',
+        domainPackId: currentMeta.domainPackId || activeThread?.domainPackId || 'custom',
+        category: currentMeta.category || activeThread?.category || 'ERP Modernization',
+        badge: currentMeta.badge || activeThread?.badge || 'Custom Pipeline',
+        status: currentMeta.status || 'active',
+        autoFixEnabled: autoFixEnabled ?? true,
+        nodes: nodesToSave,
+        edges: edgesToSave,
+        sourceConfig: srcToSave,
+        targetConfig: tgtToSave,
+        rules: rulesToSave
+      };
+
+      // 1. Post to backend save endpoint
+      let backendSaved = null;
+      try {
+        const res = await fetch(`${API_BASE}/workflow/save`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const json = await res.json();
+          backendSaved = json.thread;
+        } else {
+          // Fallback to /threads
+          const fallbackRes = await fetch(`${API_BASE}/threads`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (fallbackRes.ok) {
+            const json = await fallbackRes.json();
+            backendSaved = json.thread;
+          }
+        }
+      } catch (fetchErr) {
+        console.warn('Network save error, fallback to local storage:', fetchErr);
+      }
+
+      const finalRecord = backendSaved || {
+        ...payload,
+        nodesCount: nodesToSave.length,
+        edgesCount: edgesToSave.length,
+        updatedAt: new Date().toISOString()
+      };
+
+      // 2. Update threads list in context so Workflows page reflects it immediately
+      setThreads(prev => {
+        const idx = prev.findIndex(t => t.id === threadId);
+        if (idx >= 0) {
+          const updated = [...prev];
+          updated[idx] = { ...updated[idx], ...finalRecord };
+          return updated;
+        } else {
+          return [finalRecord, ...prev];
+        }
+      });
+
+      // 3. Update activeThread and activeWorkflowMeta
+      setActiveThread(prev => ({ ...(prev || {}), ...finalRecord }));
+      setActiveWorkflowMeta(finalRecord);
+      setWorkflowNodes(nodesToSave);
+      setWorkflowEdges(edgesToSave);
+
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setLastSavedWorkflowTime(timeStr);
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('datax_last_saved_time', timeStr);
+        }
+      } catch (e) {}
+
+      return { success: true, thread: finalRecord, savedAt: timeStr };
+    } catch (err) {
+      console.error('saveWorkflow failed:', err);
+      return { success: false, error: err.message };
+    } finally {
+      setIsSavingWorkflow(false);
+    }
+  }, [workflowNodes, workflowEdges, activeWorkflowMeta, sourceConfig, targetConfig, activeRules, activeThread, autoFixEnabled, setWorkflowNodes, setWorkflowEdges, setActiveWorkflowMeta]);
+
 
   // Action: Test Database Connection (calls live backend API with tenant headers)
   const testConnection = async (config, isTarget = false) => {
@@ -1348,6 +1652,17 @@ export function RuleEngineProvider({ children }) {
     dynamicHealthScore,
     selectThread,
     setActiveThread,
+
+    // Canvas Workflow State & Cloud Persistence
+    workflowNodes,
+    setWorkflowNodes,
+    workflowEdges,
+    setWorkflowEdges,
+    activeWorkflowMeta,
+    setActiveWorkflowMeta,
+    saveWorkflow,
+    isSavingWorkflow,
+    lastSavedWorkflowTime,
 
     // Source & Target State
     sourceConfig,

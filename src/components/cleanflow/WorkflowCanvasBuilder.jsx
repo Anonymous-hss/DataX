@@ -515,7 +515,17 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
     executeLiveRun,
     pipelineStatus,
     dryRunResult,
-    s4hanaDocNumber
+    s4hanaDocNumber,
+    // Persistent Canvas Graph & Session State
+    workflowNodes,
+    setWorkflowNodes,
+    workflowEdges,
+    setWorkflowEdges,
+    activeWorkflowMeta,
+    setActiveWorkflowMeta,
+    saveWorkflow,
+    isSavingWorkflow,
+    lastSavedWorkflowTime
   } = useRuleEngine();
 
   // Determine initial template key
@@ -529,10 +539,62 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const panStartRef = useRef({ x: 0, y: 0 });
   const canvasRef = useRef(null);
 
-  // Workflow Graph State: Nodes & Edges
+  // Workflow Graph State: Nodes & Edges (backed by persistent memory & localStorage session)
   const initialSetup = isScratchInitial ? { nodes: [], edges: [] } : (TEMPLATE_AUTOFILLS[defaultTemplateKey] || TEMPLATE_AUTOFILLS.sap_bw_s4hana);
-  const [nodes, setNodes] = useState(initialSetup.nodes);
-  const [edges, setEdges] = useState(initialSetup.edges);
+  
+  const [nodes, setNodesState] = useState(() => {
+    if (Array.isArray(workflowNodes) && workflowNodes.length > 0) {
+      return workflowNodes;
+    }
+    return initialSetup.nodes;
+  });
+
+  const [edges, setEdgesState] = useState(() => {
+    if (Array.isArray(workflowEdges) && workflowEdges.length > 0) {
+      return workflowEdges;
+    }
+    return initialSetup.edges;
+  });
+
+  // Track latest nodes in a ref for fast drag performance & mouse release persistence
+  const nodesRef = useRef(nodes);
+  useEffect(() => {
+    nodesRef.current = nodes;
+  }, [nodes]);
+
+  // Synchronized state setters that immediately update context & localStorage session
+  const setNodes = useCallback((updater) => {
+    setNodesState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      nodesRef.current = next;
+      setWorkflowNodes(next);
+      return next;
+    });
+  }, [setWorkflowNodes]);
+
+  const setEdges = useCallback((updater) => {
+    setEdgesState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      setWorkflowEdges(next);
+      return next;
+    });
+  }, [setWorkflowEdges]);
+
+  // Synchronize when switching workflows from catalog or domain pack
+  const lastActiveThreadIdRef = useRef(activeThread?.id);
+  useEffect(() => {
+    if (activeThread?.id && activeThread.id !== lastActiveThreadIdRef.current) {
+      lastActiveThreadIdRef.current = activeThread.id;
+      if (Array.isArray(activeThread.nodes) && activeThread.nodes.length > 0) {
+        setNodesState(activeThread.nodes);
+        setWorkflowNodes(activeThread.nodes);
+      }
+      if (Array.isArray(activeThread.edges) && activeThread.edges.length > 0) {
+        setEdgesState(activeThread.edges);
+        setWorkflowEdges(activeThread.edges);
+      }
+    }
+  }, [activeThread, setWorkflowNodes, setWorkflowEdges]);
 
   // Execution & Live Status State
   const [isExecutingDryRun, setIsExecutingDryRun] = useState(false);
@@ -810,9 +872,29 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
     }
   };
 
-  const handleSaveWorkflow = () => {
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2000);
+  const handleSaveWorkflow = async () => {
+    try {
+      const res = await saveWorkflow({
+        nodes,
+        edges,
+        sourceConfig,
+        targetConfig,
+        rules: activeRules,
+        meta: {
+          id: activeThread?.id || activeWorkflowMeta?.id || 'thread_sap_s4hana',
+          name: activeThread?.name || activeWorkflowMeta?.name || 'Enterprise CleanFlow Pipeline',
+          category: activeThread?.category || activeWorkflowMeta?.category || 'ERP Modernization',
+          badge: activeThread?.badge || activeWorkflowMeta?.badge || 'CleanFlow Dynamic Graph',
+          status: 'active'
+        }
+      });
+      if (res && res.success) {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 2500);
+      }
+    } catch (err) {
+      console.error('Save workflow failed:', err);
+    }
   };
 
   // =========================================================================
@@ -869,7 +951,11 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       const newX = Math.round((e.clientX - pan.x) / zoom - dragOffsetRef.current.x);
       const newY = Math.round((e.clientY - pan.y) / zoom - dragOffsetRef.current.y);
 
-      setNodes(prev => prev.map(n => n.id === draggingNodeId ? { ...n, x: newX, y: newY } : n));
+      setNodesState(prev => {
+        const next = prev.map(n => n.id === draggingNodeId ? { ...n, x: newX, y: newY } : n);
+        nodesRef.current = next;
+        return next;
+      });
     } else if (drawingEdge) {
       setDrawingEdge(prev => prev ? ({
         ...prev,
@@ -885,10 +971,14 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   }, [draggingNodeId, drawingEdge, isPanning, pan, zoom]);
 
   const handleMouseUp = useCallback(() => {
+    if (draggingNodeId) {
+      // Commit final dragged node coordinates to memory session and storage
+      setWorkflowNodes(nodesRef.current);
+    }
     setDraggingNodeId(null);
     setIsPanning(false);
     setDrawingEdge(null);
-  }, []);
+  }, [draggingNodeId, setWorkflowNodes]);
 
   useEffect(() => {
     window.addEventListener('mousemove', handleMouseMove);
@@ -1206,11 +1296,29 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           {/* Save Workflow */}
           <button
             onClick={handleSaveWorkflow}
-            className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
-            title="Save workflow graph configuration"
+            disabled={isSavingWorkflow}
+            className={`px-3.5 py-2 rounded-xl border text-xs font-semibold shadow-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+              saveSuccess
+                ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                : isSavingWorkflow
+                ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
+            }`}
+            title={lastSavedWorkflowTime ? `Last saved at ${lastSavedWorkflowTime} (Persisted to Cloud & Local State)` : 'Save workflow graph configuration to backend database'}
           >
-            <Save className={`w-3.5 h-3.5 ${saveSuccess ? 'text-emerald-600' : 'text-slate-500'}`} />
-            {saveSuccess ? 'Saved' : 'Save'}
+            {isSavingWorkflow ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+            ) : saveSuccess ? (
+              <Check className="w-3.5 h-3.5 text-emerald-600" />
+            ) : (
+              <Save className="w-3.5 h-3.5 text-slate-500" />
+            )}
+            <span>
+              {isSavingWorkflow ? 'Saving...' : saveSuccess ? 'Saved' : 'Save'}
+            </span>
+            {lastSavedWorkflowTime && !isSavingWorkflow && !saveSuccess && (
+              <span className="text-[10px] text-slate-400 font-normal ml-0.5">({lastSavedWorkflowTime})</span>
+            )}
           </button>
 
           {/* Dry Run */}
