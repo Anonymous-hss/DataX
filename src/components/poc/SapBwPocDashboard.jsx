@@ -333,6 +333,40 @@ export default function SapBwPocDashboard({ onBackToWebsite, onBackToThreads, on
           </div>
         </div>
 
+        {/* Enterprise Architecture Evaluator Notice */}
+        <div className="p-4 rounded-xl border border-blue-500/40 bg-gradient-to-r from-blue-950/80 via-slate-900/90 to-blue-950/80 backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs shadow-lg">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-white text-[13px]">
+                  Enterprise Architecture Note: Interactive ReAct Simulation
+                </span>
+                <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono text-[10px] font-bold border border-amber-500/30">
+                  Concept Prototype
+                </span>
+              </div>
+              <p className="text-slate-300 leading-relaxed text-[11px] sm:text-xs">
+                This dashboard visualizes the 4-stage ReAct reasoning loop using local sample datasets. For <strong>live cloud database reconciliation</strong> (Neon PostgreSQL, MongoDB Atlas), <strong>real Azure OpenAI rule synthesis</strong>, and <strong>persisted target writebacks</strong>, please evaluate the <strong>Workflow Canvas</strong> / <strong>CleanFlow Studio</strong> or run <strong><code className="text-cyan-300 bg-slate-800 px-1.5 py-0.5 rounded">python agent_harness.py</code></strong> in your terminal.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => {
+                window.location.hash = '#canvas';
+                if (onBackToThreads) onBackToThreads();
+              }}
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer whitespace-nowrap"
+            >
+              <span>Launch Live Workflow Canvas</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
         {/* Hero Header for POC */}
         <div className="glass-panel p-6 sm:p-8 rounded-2xl border border-blue-500/20 bg-gradient-to-r from-[#0c1730] via-[#081024] to-[#070d1d] relative overflow-hidden">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">

@@ -21,8 +21,15 @@ npm install
 # 2. Launch Vite Development Server
 npm run dev
 ```
-- Local URL: **`http://localhost:5173/`**
-- Direct DataX POC URL: **`http://localhost:5173/#poc`**
+- Main Marketing Website: **`http://localhost:5173/#website`**
+- **Live Interactive Workflow Canvas (Primary)**: **`http://localhost:5173/#canvas`**
+- **CleanFlow Studio Sandbox**: **`http://localhost:5173/#sandbox`**
+- **Enterprise Run History**: **`http://localhost:5173/#history`**
+- **Standalone Terminal Harness (No-Blackbox CLI)**: Run `python agent_harness.py`
+- *Archived Prototype Simulation*: `http://localhost:5173/#legacy-poc` (Visual demo with static datasets)
+
+> [!NOTE]
+> **Enterprise Evaluator Guidance**: For authentic evaluation of database connectivity, real Azure OpenAI rule synthesis, and non-blackbox target writebacks, use **CleanFlow Canvas (`#canvas`)** or the **Standalone Python Harness (`python agent_harness.py`)**. The legacy POC dashboard (`#legacy-poc`) is an archived offline mockup.
 
 ---
 

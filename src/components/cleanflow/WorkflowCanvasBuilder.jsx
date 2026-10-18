@@ -600,6 +600,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const [isExecutingDryRun, setIsExecutingDryRun] = useState(false);
   const [isExecutingLiveRun, setIsExecutingLiveRun] = useState(false);
   const [executionSummary, setExecutionSummary] = useState(null);
+  const [executionError, setExecutionError] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Selection & Dragging
@@ -799,6 +800,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const handleDryRun = async () => {
     setIsExecutingDryRun(true);
     setExecutionSummary(null);
+    setExecutionError(null);
     try {
       const tmpl = TEMPLATE_AUTOFILLS[defaultTemplateKey] || TEMPLATE_AUTOFILLS.sap_bw_s4hana;
       if ((!sourceConfig?.host && !sourceConfig?.connectionUri) && tmpl.sourceConfig) {
@@ -810,33 +812,26 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
 
       const res = await executeDryRun();
       if (res && res.error) {
-        setExecutionSummary({
-          total: 1420,
-          clean: 1298,
-          fixed: 122,
-          quarantined: 0,
-          health: 98.4,
-          isLive: false
+        setExecutionError({
+          title: 'Dry Run Blocked',
+          message: res.message || res.error || 'Pipeline execution failed. Please verify credentials and rule configuration.'
         });
-      } else {
+      } else if (res) {
+        const total = res.totalChecked ?? ((res.cleanCount || 0) + (res.autoFixedCount || 0) + (res.quarantinedCount || 0));
         setExecutionSummary({
-          total: res?.totalChecked ?? 1420,
-          clean: res?.cleanCount ?? 1298,
-          fixed: res?.autoFixedCount ?? 122,
-          quarantined: res?.quarantinedCount ?? 0,
-          health: res?.passRate ?? 98.4,
+          total,
+          clean: res.cleanCount ?? 0,
+          fixed: res.autoFixedCount ?? 0,
+          quarantined: res.quarantinedCount ?? 0,
+          health: res.passRate ?? 0,
           isLive: false
         });
       }
     } catch (err) {
       console.warn('Dry run execution error:', err);
-      setExecutionSummary({
-        total: 1420,
-        clean: 1298,
-        fixed: 122,
-        quarantined: 0,
-        health: 98.4,
-        isLive: false
+      setExecutionError({
+        title: 'Dry Run Execution Error',
+        message: err.message || 'An unexpected error occurred during dry run execution.'
       });
     } finally {
       setIsExecutingDryRun(false);
@@ -845,27 +840,26 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
 
   const handleRunLive = async () => {
     setIsExecutingLiveRun(true);
+    setExecutionSummary(null);
+    setExecutionError(null);
     try {
       const res = await executeLiveRun();
-      setExecutionSummary({
-        total: res?.rows ?? 1420,
-        clean: res?.clean ?? 1298,
-        fixed: res?.autoFixed ?? 122,
-        quarantined: res?.quarantined ?? 0,
-        health: res?.health ?? 98.4,
-        docNo: res?.docNo || s4hanaDocNumber || '#COMMIT-89421',
-        isLive: true
-      });
+      if (res) {
+        setExecutionSummary({
+          total: res.rows ?? 0,
+          clean: res.clean ?? 0,
+          fixed: res.autoFixed ?? 0,
+          quarantined: res.quarantined ?? 0,
+          health: res.health ?? 0,
+          docNo: res.docNo || s4hanaDocNumber || '#COMMIT-SUCCESS',
+          isLive: true
+        });
+      }
     } catch (err) {
       console.warn('Live run execution error:', err);
-      setExecutionSummary({
-        total: 1420,
-        clean: 1298,
-        fixed: 122,
-        quarantined: 0,
-        health: 98.4,
-        docNo: '#COMMIT-89421',
-        isLive: true
+      setExecutionError({
+        title: 'Live Commit Failed',
+        message: err.message || 'Live pipeline commit failed. Check database credentials or node configuration.'
       });
     } finally {
       setIsExecutingLiveRun(false);
@@ -1110,14 +1104,25 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       port: srcPort,
       database: srcDbName,
       user: srcUser,
-      password: srcPass
+      password: srcPass,
+      connectionUri: connectMethod === 'string' ? connString : undefined
     });
     setSrcTesting(false);
-    setSrcTestMeta({
-      success: true,
-      latencyMs: res?.latencyMs || 42,
-      tableCount: 6
-    });
+    if (res && res.success) {
+      setSrcTestMeta({
+        success: true,
+        latencyMs: res.latencyMs || 42,
+        tableCount: res.tableCount || (res.tables ? res.tables.length : 6),
+        message: res.message || 'Connected successfully'
+      });
+    } else {
+      setSrcTestMeta({
+        success: false,
+        latencyMs: res?.latencyMs || 0,
+        error: res?.error || res?.message || 'Connection failed: Unable to connect to database.',
+        message: res?.message || res?.error || 'Connection failed'
+      });
+    }
   };
 
   const handleSaveSourceConfig = () => {
@@ -1829,6 +1834,32 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       )}
 
       {/* =========================================================================
+          EXECUTION ERROR TOAST BANNER (HONEST ERROR DISPLAY)
+         ========================================================================= */}
+      {executionError && (
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-40 bg-rose-50/95 backdrop-blur-md rounded-2xl border border-rose-300 shadow-2xl p-4 flex items-center gap-4 animate-in slide-in-from-bottom duration-200 max-w-xl w-full text-rose-900">
+          <div className="w-10 h-10 rounded-xl bg-rose-100 border border-rose-200 flex items-center justify-center shrink-0 text-rose-700">
+            <AlertTriangle className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-sm font-bold text-rose-950 flex items-center gap-2">
+              {executionError.title}
+            </h4>
+            <p className="text-xs text-rose-800/90 mt-0.5 break-words">
+              {executionError.message}
+            </p>
+          </div>
+          <button
+            onClick={() => setExecutionError(null)}
+            className="w-7 h-7 rounded-lg text-rose-400 hover:text-rose-800 hover:bg-rose-100 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+            title="Dismiss error"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* =========================================================================
           MODAL 1: ADD NODE MODAL (Clean Operational Catalog)
          ========================================================================= */}
       {isAddNodeModalOpen && (
@@ -2180,10 +2211,20 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
 
                     <div className="flex items-center gap-3">
                       {srcTestMeta && (
-                        <span className="text-xs font-bold text-emerald-700 flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                          <Check className="w-3.5 h-3.5" />
-                          Connected ({srcTestMeta.latencyMs}ms)
-                        </span>
+                        srcTestMeta.success ? (
+                          <span className="text-xs font-bold text-emerald-700 flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                            <Check className="w-3.5 h-3.5" />
+                            Connected ({srcTestMeta.latencyMs}ms)
+                          </span>
+                        ) : (
+                          <span 
+                            className="text-xs font-bold text-rose-700 flex items-center gap-1.5 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200 max-w-[280px] truncate"
+                            title={srcTestMeta.error || srcTestMeta.message}
+                          >
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                            <span className="truncate">{srcTestMeta.error || srcTestMeta.message || 'Connection Failed'}</span>
+                          </span>
+                        )
                       )}
                       <button
                         type="button"
