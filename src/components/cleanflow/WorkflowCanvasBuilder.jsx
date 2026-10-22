@@ -40,10 +40,15 @@ import {
   Maximize2,
   Hand,
   Loader2,
-  Radio,
   Cloud,
-  FolderTree
+  FolderTree,
+  UserCheck,
+  BookOpen
 } from 'lucide-react';
+import VectorMatcherModalPanel from './nodes/VectorMatcherModalPanel';
+import RagModalPanel from './nodes/RagModalPanel';
+import ConditionalSwitchModalPanel from './nodes/ConditionalSwitchModalPanel';
+import HitlModalPanel from './nodes/HitlModalPanel';
 import { useNavigation } from '../../context/NavigationContext';
 import { useRuleEngine } from '../../context/RuleEngineContext';
 import { getTableCatalog, getTableData } from '../../data/sampleDatasets';
@@ -68,6 +73,8 @@ const OPERATIONAL_CATALOG = [
     category: '2. Intelligence Engine & Transformations',
     items: [
       { type: 'rules', name: 'Intelligence Engine (Azure OpenAI)', desc: 'Natural language business rule synthesizer', system: 'gpt-5-mini', icon: FileCode2, variant: 'indigo' },
+      { type: 'vector_matcher', name: 'Semantic Vector Matcher', desc: 'Finds fuzzy-matching records using AI similarity (e.g. "IBM Corp" ↔ "International Business Machines")', system: 'text-embedding-3-small', icon: Layers, variant: 'indigo' },
+      { type: 'rag', name: 'RAG Context Enricher', desc: 'Searches your company knowledge library and attaches relevant context to each data record', system: 'RAG Enricher', icon: BookOpen, variant: 'purple' },
       { type: 'rules', name: 'RFC-5322 Email Normalizer', desc: 'Auto-repairs syntax, trims whitespace, lowercases domains', system: 'Rule Pack', icon: ShieldCheck, variant: 'green' },
       { type: 'rules', name: 'SAP Plant Ontology Resolver', desc: 'Maps Plant-Dallas string into S/4HANA code P1000', system: 'Ontology Graph', icon: Zap, variant: 'blue' },
       { type: 'rules', name: 'SOX 404 Financial Balancer', desc: 'Strict Debits = Credits balance validation', system: 'SOX Pack', icon: Sliders, variant: 'orange' }
@@ -76,7 +83,9 @@ const OPERATIONAL_CATALOG = [
   {
     category: '3. In-Flight Routing & Execution',
     items: [
-      { type: 'router', name: 'CleanFlow In-Flight Router', desc: 'Autonomous 3-way split: Compliant, Auto-Fixed, Quarantined', system: 'Parallel Router', icon: GitBranch, variant: 'purple' }
+      { type: 'router', name: 'CleanFlow In-Flight Router', desc: 'Autonomous 3-way split: Compliant, Auto-Fixed, Quarantined', system: 'Parallel Router', icon: GitBranch, variant: 'purple' },
+      { type: 'conditional', name: 'Conditional (If-Else)', desc: 'Routes records to a TRUE or FALSE path based on one condition you define', system: 'If-Else Router', icon: GitBranch, variant: 'purple' },
+      { type: 'hitl', name: 'Human in Loop', desc: 'Pauses the pipeline for a human reviewer to Approve or Reject before records continue', system: 'Approval Gate', icon: UserCheck, variant: 'orange' }
     ]
   },
   {
@@ -333,6 +342,34 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   // Router Modal states
   const [routerThreshold, setRouterThreshold] = useState(90);
   const [routerAutoFixPolicy, setRouterAutoFixPolicy] = useState('autonomous'); // 'autonomous' | 'strict_quarantine'
+
+  // Semantic Vector Matcher states
+  const [vectorModel, setVectorModel] = useState('text-embedding-3-small');
+  const [vectorTargetField, setVectorTargetField] = useState('VENDOR_NAME');
+  const [vectorThreshold, setVectorThreshold] = useState(85);
+  const [vectorIndex, setVectorIndex] = useState('Azure AI Search (enterprise-vendors)');
+  const [vectorAutoResolve, setVectorAutoResolve] = useState(true);
+
+  // RAG Context Enricher states
+  const [ragKnowledgeBase, setRagKnowledgeBase] = useState('Azure AI Search (enterprise-policies)');
+  const [ragQueryKey, setRagQueryKey] = useState('ITEM_DESCRIPTION');
+  const [ragTopK, setRagTopK] = useState(3);
+  const [ragTargetField, setRagTargetField] = useState('RAG_CONTEXT_METADATA');
+  const [ragFallback, setRagFallback] = useState('pass_thru');
+
+  // Conditional Router states (simple IF / ELSE — exactly 2 outputs)
+  const [conditionField, setConditionField] = useState('TOTAL_AMOUNT');
+  const [conditionOp, setConditionOp] = useState('>');
+  const [conditionVal, setConditionVal] = useState('50000');
+  const [condTrueDest, setCondTrueDest] = useState('High-Value Review');
+  const [condFalseDest, setCondFalseDest] = useState('Standard Flow');
+
+  // Human-in-the-Loop states
+  const [hitlTriggerPolicy, setHitlTriggerPolicy] = useState('amount_threshold');
+  const [hitlReviewerRole, setHitlReviewerRole] = useState('Procurement Controller');
+  const [hitlSlaTimeout, setHitlSlaTimeout] = useState('8');
+  const [hitlWebhook, setHitlWebhook] = useState('');
+  const [hitlActionMode, setHitlActionMode] = useState('approve_reject');
 
   // Target Modal states
   const [tgtDbType, setTgtDbType] = useState('SAP S/4HANA');
@@ -837,6 +874,10 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
     const isAzure = (item.system || '').includes('Azure') || (item.name || '').includes('Azure');
     const isSalesforce = (item.system || '').includes('Salesforce') || (item.name || '').includes('Salesforce');
     const isS3 = (item.system || '').includes('S3') || (item.system || '').includes('AWS');
+    const isVectorMatcher = item.type === 'vector_matcher';
+    const isRag = item.type === 'rag';
+    const isConditional = item.type === 'conditional';
+    const isHitl = item.type === 'hitl';
 
     const newNode = {
       id: newId,
@@ -847,9 +888,24 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       y: Math.round(200 + (Math.random() * 60 - 30)),
       width: 260,
       height: 135,
-      status: isAzure ? 'Connected' : isSalesforce ? 'Connected' : isS3 ? 'Discovered' : 'Configured',
-      table: isAzure ? 'telemetry_logs.parquet' : isSalesforce ? 'Account' : isS3 ? 'orders_2026_q1.parquet' : undefined,
-      rowCount: isAzure ? '18,200 rows' : isSalesforce ? '3,450 records' : isS3 ? '12,400 rows' : undefined,
+      status: isAzure ? 'Connected' : isSalesforce ? 'Connected' : isS3 ? 'Discovered' 
+        : isVectorMatcher ? 'Similarity 85%'
+        : isRag ? 'Top-3 RAG Active'
+        : isConditional ? '3-Way Active'
+        : isHitl ? 'Gate Armed (>$50k)'
+        : 'Configured',
+      table: isAzure ? 'telemetry_logs.parquet' : isSalesforce ? 'Account' : isS3 ? 'orders_2026_q1.parquet' 
+        : isVectorMatcher ? 'VENDOR_NAME'
+        : isRag ? 'RAG_METADATA'
+        : isConditional ? 'TOTAL_AMOUNT'
+        : isHitl ? 'APPROVAL_GATE'
+        : undefined,
+      rowCount: isAzure ? '18,200 rows' : isSalesforce ? '3,450 records' : isS3 ? '12,400 rows' 
+        : isVectorMatcher ? 'Cosine Similarity'
+        : isRag ? 'Top-K Knowledge'
+        : isConditional ? 'Multi-Branch'
+        : isHitl ? 'Human Sign-off'
+        : undefined,
       variant: item.variant || 'blue'
     };
 
@@ -986,6 +1042,56 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       ...n,
       ruleCount: rulesList.filter(r => r.selected !== false).length,
       status: autoFixActive ? 'Auto-Fix Armed' : 'Strict Check'
+    } : n));
+    setIsPropertyModalOpen(false);
+  };
+
+  const handleSaveVectorMatcherConfig = () => {
+    setNodes(prev => prev.map(n => n.id === selectedNodeId ? {
+      ...n,
+      system: vectorModel,
+      table: `Cosine: ${vectorTargetField}`,
+      status: `Threshold ${vectorThreshold}%`,
+      rowCount: vectorIndex.split(' ')[0]
+    } : n));
+    setIsPropertyModalOpen(false);
+  };
+
+  const handleSaveRagConfig = () => {
+    setNodes(prev => prev.map(n => n.id === selectedNodeId ? {
+      ...n,
+      system: `Top-${ragTopK} Chunks`,
+      table: ragTargetField,
+      status: 'RAG Armed',
+      rowCount: 'Knowledge Store'
+    } : n));
+    setIsPropertyModalOpen(false);
+  };
+
+  const handleSaveConditionalConfig = () => {
+    setNodes(prev => prev.map(n => n.id === selectedNodeId ? {
+      ...n,
+      system: 'If-Else Router',
+      table: `IF ${conditionField} ${conditionOp} ${conditionVal}`,
+      status: 'Configured',
+      rowCount: 'TRUE / FALSE'
+    } : n));
+    setIsPropertyModalOpen(false);
+  };
+
+  const handleSaveHitlConfig = () => {
+    const triggerLabels = {
+      amount_threshold: 'Amount > $50k',
+      confidence_threshold: 'Low AI Confidence',
+      sox_discrepancy: 'SOX Mismatch',
+      critical_anomaly: 'Critical Anomaly'
+    };
+    setNodes(prev => prev.map(n => n.id === selectedNodeId ? {
+      ...n,
+      system: hitlReviewerRole,
+      table: triggerLabels[hitlTriggerPolicy] || 'Condition Check',
+      status: hitlSlaTimeout === 'indefinite' ? 'No Deadline' : `SLA ${hitlSlaTimeout}h`,
+      rowCount: 'Human Review'
     } : n));
     setIsPropertyModalOpen(false);
   };
@@ -1464,8 +1570,31 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                   </div>
                 )}
 
-                {/* 2. OUTPUT PORT (Right Side) */}
-                {node.type !== 'quarantine' && (
+                {/* 2. OUTPUT PORT(S) — Conditional gets TRUE+FALSE ports; others get a single port */}
+                {node.type === 'conditional' ? (
+                  <div className="absolute -right-14 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-30">
+                    <div
+                      onMouseDown={(e) => handleStartEdge(e, node.id)}
+                      className="flex items-center gap-1 cursor-crosshair"
+                      title="TRUE path — drag to connect"
+                    >
+                      <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 px-1 py-0.5 rounded select-none">TRUE</span>
+                      <div className="w-5 h-5 rounded-full bg-white border-2 border-emerald-500 hover:border-emerald-700 flex items-center justify-center hover:scale-125 transition-transform shadow-xs">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      </div>
+                    </div>
+                    <div
+                      onMouseDown={(e) => handleStartEdge(e, node.id)}
+                      className="flex items-center gap-1 cursor-crosshair"
+                      title="FALSE / Default path — drag to connect"
+                    >
+                      <span className="text-[9px] font-bold text-slate-600 bg-slate-100 border border-slate-300 px-1 py-0.5 rounded select-none">FALSE</span>
+                      <div className="w-5 h-5 rounded-full bg-white border-2 border-slate-400 hover:border-slate-600 flex items-center justify-center hover:scale-125 transition-transform shadow-xs">
+                        <span className="w-2 h-2 rounded-full bg-slate-500" />
+                      </div>
+                    </div>
+                  </div>
+                ) : node.type !== 'quarantine' ? (
                   <div
                     onMouseDown={(e) => handleStartEdge(e, node.id)}
                     className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border-2 border-slate-400 group-hover:border-blue-500 flex items-center justify-center hover:scale-125 transition-transform cursor-crosshair z-30 shadow-xs"
@@ -1473,7 +1602,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                   >
                     <span className="w-2 h-2 rounded-full bg-slate-600 group-hover:bg-blue-600" />
                   </div>
-                )}
+                ) : null}
 
                 {/* Card Top Row: Icon + Title + Status Pill + Settings Button */}
                 <div className="flex items-center justify-between">
@@ -1490,6 +1619,10 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                         ((node.system || '').includes('S3') || (node.system || '').includes('Storage') || (node.system || '').includes('AWS')) ? <FolderTree className="w-4 h-4" /> :
                         <Database className="w-4 h-4" />
                       ) :
+                       node.type === 'vector_matcher' ? <Layers className="w-4 h-4" /> :
+                       node.type === 'rag' ? <BookOpen className="w-4 h-4" /> :
+                       node.type === 'conditional' ? <GitBranch className="w-4 h-4" /> :
+                       node.type === 'hitl' ? <UserCheck className="w-4 h-4" /> :
                        node.type === 'rules' ? <FileCode2 className="w-4 h-4" /> :
                        node.type === 'router' ? <GitBranch className="w-4 h-4" /> :
                        node.type === 'quarantine' ? <AlertTriangle className="w-4 h-4" /> :
@@ -1505,6 +1638,10 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1 animate-pulse">
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping" />
                         {node.type === 'source' ? 'Ingesting...' :
+                         node.type === 'vector_matcher' ? 'Matching Vectors...' :
+                         node.type === 'rag' ? 'Retrieving Context...' :
+                         node.type === 'conditional' ? 'Evaluating Switch...' :
+                         node.type === 'hitl' ? 'Awaiting Sign-off...' :
                          node.type === 'rules' ? 'Evaluating AST...' :
                          node.type === 'router' ? 'Routing...' :
                          node.type === 'target' ? 'Writing...' : 'Isolating...'}
@@ -1899,7 +2036,11 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                   selectedNode.variant === 'indigo' ? 'bg-indigo-600 border-indigo-700' :
                   'bg-blue-600 border-blue-700'
                 }`}>
-                  {selectedNode.type === 'rules' ? <FileCode2 className="w-5 h-5" /> :
+                  {selectedNode.type === 'vector_matcher' ? <Layers className="w-5 h-5" /> :
+                   selectedNode.type === 'rag' ? <BookOpen className="w-5 h-5" /> :
+                   selectedNode.type === 'conditional' ? <GitBranch className="w-5 h-5" /> :
+                   selectedNode.type === 'hitl' ? <UserCheck className="w-5 h-5" /> :
+                   selectedNode.type === 'rules' ? <FileCode2 className="w-5 h-5" /> :
                    selectedNode.type === 'router' ? <GitBranch className="w-5 h-5" /> :
                    selectedNode.type === 'quarantine' ? <AlertTriangle className="w-5 h-5" /> :
                    srcDbType === 'AWS S3' ? <FolderTree className="w-5 h-5" /> :
@@ -1911,7 +2052,11 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                     {selectedNode.title || 'Configure Node'}
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    {selectedNode.type === 'source' ? (
+                    {selectedNode.type === 'vector_matcher' ? 'Finds fuzzy-matching records using AI similarity scoring' :
+                     selectedNode.type === 'rag' ? 'Searches your knowledge library and enriches records with relevant context' :
+                     selectedNode.type === 'conditional' ? 'Directs records to TRUE or FALSE path based on your condition' :
+                     selectedNode.type === 'hitl' ? 'Pauses pipeline and waits for human Approve / Reject decision' :
+                     selectedNode.type === 'source' ? (
                       srcDbType === 'AWS S3' ? 'AWS S3 Bucket & Object Lake Discovery' :
                       srcDbType === 'Azure' ? 'Azure Blob Storage Container & Parquet Discovery' :
                       srcDbType === 'Salesforce' ? 'Salesforce CRM Objects & API Configuration' :
@@ -2782,8 +2927,80 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                 </div>
               )}
 
+              {/* =========================================================================
+                  3. SEMANTIC VECTOR MATCHER PANEL
+                 ========================================================================= */}
+              {selectedNode.type === 'vector_matcher' && (
+                <VectorMatcherModalPanel
+                  model={vectorModel}
+                  onModelChange={setVectorModel}
+                  targetField={vectorTargetField}
+                  onTargetFieldChange={setVectorTargetField}
+                  threshold={vectorThreshold}
+                  onThresholdChange={setVectorThreshold}
+                  vectorIndex={vectorIndex}
+                  onVectorIndexChange={setVectorIndex}
+                  autoResolve={vectorAutoResolve}
+                  onAutoResolveChange={setVectorAutoResolve}
+                />
+              )}
+
+              {/* =========================================================================
+                  4. RAG CONTEXT ENRICHER PANEL
+                 ========================================================================= */}
+              {selectedNode.type === 'rag' && (
+                <RagModalPanel
+                  knowledgeBase={ragKnowledgeBase}
+                  onKnowledgeBaseChange={setRagKnowledgeBase}
+                  queryKey={ragQueryKey}
+                  onQueryKeyChange={setRagQueryKey}
+                  topK={ragTopK}
+                  onTopKChange={setRagTopK}
+                  targetField={ragTargetField}
+                  onTargetFieldChange={setRagTargetField}
+                  fallbackPolicy={ragFallback}
+                  onFallbackPolicyChange={setRagFallback}
+                />
+              )}
+
+              {/* =========================================================================
+                  5. CONDITIONAL SWITCH PANEL
+                 ========================================================================= */}
+              {selectedNode.type === 'conditional' && (
+                <ConditionalSwitchModalPanel
+                  conditionField={conditionField}
+                  onConditionFieldChange={setConditionField}
+                  conditionOp={conditionOp}
+                  onConditionOpChange={setConditionOp}
+                  conditionVal={conditionVal}
+                  onConditionValChange={setConditionVal}
+                  trueDest={condTrueDest}
+                  onTrueDestChange={setCondTrueDest}
+                  falseDest={condFalseDest}
+                  onFalseDestChange={setCondFalseDest}
+                />
+              )}
+
+              {/* =========================================================================
+                  6. HUMAN-IN-THE-LOOP GOVERNANCE PANEL
+                 ========================================================================= */}
+              {selectedNode.type === 'hitl' && (
+                <HitlModalPanel
+                  triggerPolicy={hitlTriggerPolicy}
+                  onTriggerPolicyChange={setHitlTriggerPolicy}
+                  reviewerRole={hitlReviewerRole}
+                  onReviewerRoleChange={setHitlReviewerRole}
+                  slaTimeout={hitlSlaTimeout}
+                  onSlaTimeoutChange={setHitlSlaTimeout}
+                  webhook={hitlWebhook}
+                  onWebhookChange={setHitlWebhook}
+                  actionMode={hitlActionMode}
+                  onActionModeChange={setHitlActionMode}
+                />
+              )}
+
               {/* =========================================================
-                  6. CONNECT WITH EDGES OPTION (UI Dropdown Connectors)
+                  CONNECT WITH EDGES OPTION (UI Dropdown Connectors)
                  ========================================================= */}
               <div className="pt-3 border-t border-slate-200 space-y-2">
                 <label className="block text-xs font-bold text-slate-900">
@@ -2881,6 +3098,34 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                     className="px-5 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold shadow-xs cursor-pointer"
                   >
                     Save Target Settings
+                  </button>
+                ) : selectedNode.type === 'vector_matcher' ? (
+                  <button
+                    onClick={handleSaveVectorMatcherConfig}
+                    className="px-5 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 text-xs font-bold shadow-xs cursor-pointer"
+                  >
+                    Save Vector Matcher Settings
+                  </button>
+                ) : selectedNode.type === 'rag' ? (
+                  <button
+                    onClick={handleSaveRagConfig}
+                    className="px-5 py-2 rounded-xl bg-purple-600 text-white hover:bg-purple-700 text-xs font-bold shadow-xs cursor-pointer"
+                  >
+                    Save RAG Settings
+                  </button>
+                ) : selectedNode.type === 'conditional' ? (
+                  <button
+                    onClick={handleSaveConditionalConfig}
+                    className="px-5 py-2 rounded-xl bg-violet-600 text-white hover:bg-violet-700 text-xs font-bold shadow-xs cursor-pointer"
+                  >
+                    Save Switch Settings
+                  </button>
+                ) : selectedNode.type === 'hitl' ? (
+                  <button
+                    onClick={handleSaveHitlConfig}
+                    className="px-5 py-2 rounded-xl bg-amber-600 text-white hover:bg-amber-700 text-xs font-bold shadow-xs cursor-pointer"
+                  >
+                    Save Governance Gate Settings
                   </button>
                 ) : (
                   <button
