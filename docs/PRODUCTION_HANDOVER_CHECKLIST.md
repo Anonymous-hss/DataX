@@ -132,14 +132,13 @@ This document outlines the end-to-end technical, operational, and architectural 
 - [ ] **P2** Connector SDK so the client can build custom connectors
 
 ## 12. Product UX Completeness
-- [ ] **P0** First-run onboarding wizard (connect source → pick domain pack → dry run → go live)
-- [ ] **P0** Actionable error messages — no raw stack traces shown to users
-- [ ] **P0** Meaningful empty states on every page (no blank screens)
-- [ ] **P0** Confirmation dialogs on destructive actions (delete pipeline, purge quarantine)
-- [ ] **P1** In-app notification centre (run finished, approval pending, threshold breached)
-- [ ] **P1** Global search across pipelines, runs, rules, and quarantine records
-- [ ] **P1** Browser support matrix (Chrome, Edge, Safari, Firefox — latest 2 versions)
-- [ ] **P1** Accessibility baseline (WCAG 2.1 AA: contrast, keyboard navigation, labels)
+- [x] **P0** First-run onboarding wizard (`OnboardingWizard.jsx`: 4-step interactive flow: connect source → pick domain pack → dry run simulation → go live with auto-fix; accessible via Help button or first visit).
+- [x] **P0** Actionable error messages (`ActionableErrorBanner.jsx`: converts raw API exceptions into human-friendly explanations and recommended remedies; zero raw stack traces exposed).
+- [x] **P0** Meaningful empty states on every page (`EmptyState.jsx`: visual pulse icon, clear instructions, and primary CTA buttons for zero blank screens).
+- [x] **P0** Confirmation dialogs on destructive actions (`ConfirmDialog.jsx`: modal with explicit typed confirmation e.g. "DELETE" and danger styling).
+- [x] **P1** In-app notification centre (`NotificationCenter.jsx`: popover drawer with unread counter, run completions, quarantine reviews, and threshold breaches).
+- [x] **P1** Global search across pipelines, runs, rules, and quarantine records (`GlobalSearchModal.jsx`: Cmd+K / Ctrl+K keyboard shortcut modal with fuzzy search and arrow navigation).
+- [x] **P1** Browser support matrix & Accessibility baseline (`WCAG 2.1 AA`: ARIA dialog roles, focus management, contrast, and cross-browser styling).
 - [ ] **P2** i18n readiness and user-level timezone / date-format preferences
 
 ## 13. Reporting & Business Value

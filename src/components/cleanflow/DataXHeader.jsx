@@ -16,6 +16,9 @@ import {
 import { useNavigation } from '../../context/NavigationContext';
 import { useRuleEngine, isCredentialConfigured } from '../../context/RuleEngineContext';
 import DataXUserMenu from '../common/DataXUserMenu';
+import NotificationCenter from '../common/NotificationCenter';
+import GlobalSearchModal from '../common/GlobalSearchModal';
+import OnboardingWizard from '../common/OnboardingWizard';
 
 export default function DataXHeader({ 
   currentPage, 
@@ -30,6 +33,20 @@ export default function DataXHeader({
   const { activeThread, sourceConfig, targetConfig } = useRuleEngine();
   const [saveSuccess, setSaveSuccess] = React.useState(false);
   const [headerAlert, setHeaderAlert] = React.useState(null);
+  const [searchModalOpen, setSearchModalOpen] = React.useState(false);
+  const [onboardingOpen, setOnboardingOpen] = React.useState(false);
+
+  // Global Cmd+K / Ctrl+K listener for search
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setSearchModalOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleSaveClick = () => {
     setSaveSuccess(true);
@@ -140,22 +157,33 @@ export default function DataXHeader({
 
           {/* Search, Notifications & User */}
           <div className="flex items-center gap-3">
-            <div className="relative hidden sm:block w-48 md:w-56">
+            <div 
+              onClick={() => setSearchModalOpen(true)}
+              className="relative hidden sm:flex items-center w-48 md:w-56 cursor-pointer"
+            >
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
+                readOnly
                 placeholder="Search workflows, tables..."
-                className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                className="w-full pl-8 pr-10 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 placeholder:text-slate-400 cursor-pointer hover:bg-slate-100 transition-all"
               />
+              <kbd className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-slate-400 bg-slate-200/70 px-1 py-0.5 rounded border border-slate-300 pointer-events-none">
+                ⌘K
+              </kbd>
             </div>
 
-            <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+            <button 
+              onClick={() => setOnboardingOpen(true)}
+              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              title="First-Run Onboarding Guide"
+              aria-label="Open Onboarding Guide"
+            >
               <HelpCircle className="w-4 h-4" />
             </button>
-            <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors relative">
-              <Bell className="w-4 h-4" />
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 absolute top-1.5 right-1.5" />
-            </button>
+
+            {/* In-App Notification Center */}
+            <NotificationCenter />
 
             {/* Dynamic Clerk Profile Avatar & Profile Details */}
             <div className="flex items-center pl-1 border-l border-slate-200">
@@ -256,6 +284,16 @@ export default function DataXHeader({
           )}
         </section>
       )}
+
+      {/* Global Command Modals (UX-01 & UX-05) */}
+      <GlobalSearchModal 
+        isOpen={searchModalOpen} 
+        onClose={() => setSearchModalOpen(false)} 
+      />
+      <OnboardingWizard 
+        isOpen={onboardingOpen} 
+        onClose={() => setOnboardingOpen(false)} 
+      />
     </>
   );
 }
