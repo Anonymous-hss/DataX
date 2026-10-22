@@ -49,6 +49,8 @@ import VectorMatcherModalPanel from './nodes/VectorMatcherModalPanel';
 import RagModalPanel from './nodes/RagModalPanel';
 import ConditionalSwitchModalPanel from './nodes/ConditionalSwitchModalPanel';
 import HitlModalPanel from './nodes/HitlModalPanel';
+import PineconeModalPanel from './nodes/PineconeModalPanel';
+import BigQueryModalPanel from './nodes/BigQueryModalPanel';
 import { useNavigation } from '../../context/NavigationContext';
 import { useRuleEngine } from '../../context/RuleEngineContext';
 import { getTableCatalog, getTableData } from '../../data/sampleDatasets';
@@ -93,6 +95,8 @@ const OPERATIONAL_CATALOG = [
     items: [
       { type: 'target', name: 'SAP S/4HANA (BAPI_PO_CREATE1)', desc: 'Operational ERP writeback with human verification gate', system: 'SAP S/4HANA', icon: Database, variant: 'green' },
       { type: 'target', name: 'Databricks Unity Catalog Lakehouse', desc: 'Persist compliant records into Delta Lake Gold table', system: 'Databricks', icon: Database, variant: 'green' },
+      { type: 'bigquery', name: 'Google BigQuery', desc: 'Enterprise cloud data warehouse for real-time analytics and SQL pipelines', system: 'Google BigQuery', icon: Database, variant: 'blue' },
+      { type: 'pinecone', name: 'Pinecone', desc: 'Vector database store for high-dimensional embeddings and semantic search', system: 'Pinecone Vector DB', icon: Database, variant: 'green' },
       { type: 'quarantine', name: 'Audit Quarantine Store', desc: 'Audit-locked isolation for critical failed records', system: 'Dead-Letter', icon: AlertTriangle, variant: 'orange' }
     ]
   }
@@ -370,6 +374,23 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const [hitlSlaTimeout, setHitlSlaTimeout] = useState('8');
   const [hitlWebhook, setHitlWebhook] = useState('');
   const [hitlActionMode, setHitlActionMode] = useState('approve_reject');
+
+  // Pinecone Vector DB states
+  const [pineconeIndex, setPineconeIndex] = useState('enterprise-knowledge-base');
+  const [pineconeHost, setPineconeHost] = useState('https://enterprise-knowledge-base-d7e2.svc.aped-4627-b74a.pinecone.io');
+  const [pineconeApiKey, setPineconeApiKey] = useState('pcsk_67b841a_9x2A8KzP4L019mNqQweR_sec');
+  const [pineconeNamespace, setPineconeNamespace] = useState('production');
+  const [pineconeDimension, setPineconeDimension] = useState('1536');
+  const [pineconeMetric, setPineconeMetric] = useState('cosine');
+
+  // Google BigQuery states
+  const [bqProject, setBqProject] = useState('datax-enterprise-analytics');
+  const [bqDataset, setBqDataset] = useState('cleanflow_analytics_gold');
+  const [bqTable, setBqTable] = useState('0PUR_C01_clean');
+  const [bqLocation, setBqLocation] = useState('US');
+  const [bqEmail, setBqEmail] = useState('datax-bigquery-writer@datax-enterprise-analytics.iam.gserviceaccount.com');
+  const [bqKeyId, setBqKeyId] = useState('d82f7190c4b2a890123ef');
+  const [bqWriteMode, setBqWriteMode] = useState('append');
 
   // Target Modal states
   const [tgtDbType, setTgtDbType] = useState('SAP S/4HANA');
@@ -878,6 +899,8 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
     const isRag = item.type === 'rag';
     const isConditional = item.type === 'conditional';
     const isHitl = item.type === 'hitl';
+    const isPinecone = item.type === 'pinecone';
+    const isBigQuery = item.type === 'bigquery';
 
     const newNode = {
       id: newId,
@@ -893,18 +916,24 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
         : isRag ? 'Top-3 RAG Active'
         : isConditional ? '3-Way Active'
         : isHitl ? 'Gate Armed (>$50k)'
+        : isPinecone ? 'Vector Store (1536)'
+        : isBigQuery ? 'BigQuery Write API'
         : 'Configured',
       table: isAzure ? 'telemetry_logs.parquet' : isSalesforce ? 'Account' : isS3 ? 'orders_2026_q1.parquet' 
         : isVectorMatcher ? 'VENDOR_NAME'
         : isRag ? 'RAG_METADATA'
         : isConditional ? 'TOTAL_AMOUNT'
         : isHitl ? 'APPROVAL_GATE'
+        : isPinecone ? 'enterprise-knowledge-base'
+        : isBigQuery ? '0PUR_C01_clean'
         : undefined,
       rowCount: isAzure ? '18,200 rows' : isSalesforce ? '3,450 records' : isS3 ? '12,400 rows' 
         : isVectorMatcher ? 'Cosine Similarity'
         : isRag ? 'Top-K Knowledge'
         : isConditional ? 'Multi-Branch'
         : isHitl ? 'Human Sign-off'
+        : isPinecone ? '14,250 vectors'
+        : isBigQuery ? 'Gold Dataset'
         : undefined,
       variant: item.variant || 'blue'
     };
@@ -1092,6 +1121,28 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       table: triggerLabels[hitlTriggerPolicy] || 'Condition Check',
       status: hitlSlaTimeout === 'indefinite' ? 'No Deadline' : `SLA ${hitlSlaTimeout}h`,
       rowCount: 'Human Review'
+    } : n));
+    setIsPropertyModalOpen(false);
+  };
+
+  const handleSavePineconeConfig = () => {
+    setNodes(prev => prev.map(n => n.id === selectedNodeId ? {
+      ...n,
+      system: 'Pinecone Vector DB',
+      table: pineconeIndex,
+      status: `${pineconeDimension} dim · ${pineconeMetric}`,
+      rowCount: `${pineconeNamespace} ns`
+    } : n));
+    setIsPropertyModalOpen(false);
+  };
+
+  const handleSaveBigQueryConfig = () => {
+    setNodes(prev => prev.map(n => n.id === selectedNodeId ? {
+      ...n,
+      system: 'Google BigQuery',
+      table: `${bqDataset}.${bqTable}`,
+      status: `GCP: ${bqProject}`,
+      rowCount: bqWriteMode.toUpperCase()
     } : n));
     setIsPropertyModalOpen(false);
   };
@@ -2056,6 +2107,8 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                      selectedNode.type === 'rag' ? 'Searches your knowledge library and enriches records with relevant context' :
                      selectedNode.type === 'conditional' ? 'Directs records to TRUE or FALSE path based on your condition' :
                      selectedNode.type === 'hitl' ? 'Pauses pipeline and waits for human Approve / Reject decision' :
+                     selectedNode.type === 'pinecone' ? 'Pinecone Vector Database Index & Settings' :
+                     selectedNode.type === 'bigquery' ? 'Google BigQuery Cloud Warehouse & Write API' :
                      selectedNode.type === 'source' ? (
                       srcDbType === 'AWS S3' ? 'AWS S3 Bucket & Object Lake Discovery' :
                       srcDbType === 'Azure' ? 'Azure Blob Storage Container & Parquet Discovery' :
@@ -2999,6 +3052,48 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                 />
               )}
 
+              {/* =========================================================================
+                  7. PINECONE VECTOR DATABASE PANEL
+                 ========================================================================= */}
+              {selectedNode.type === 'pinecone' && (
+                <PineconeModalPanel
+                  indexName={pineconeIndex}
+                  onIndexNameChange={setPineconeIndex}
+                  host={pineconeHost}
+                  onHostChange={setPineconeHost}
+                  apiKey={pineconeApiKey}
+                  onApiKeyChange={setPineconeApiKey}
+                  namespace={pineconeNamespace}
+                  onNamespaceChange={setPineconeNamespace}
+                  dimension={pineconeDimension}
+                  onDimensionChange={setPineconeDimension}
+                  metric={pineconeMetric}
+                  onMetricChange={setPineconeMetric}
+                />
+              )}
+
+              {/* =========================================================================
+                  8. GOOGLE BIGQUERY CLOUD WAREHOUSE PANEL
+                 ========================================================================= */}
+              {selectedNode.type === 'bigquery' && (
+                <BigQueryModalPanel
+                  projectId={bqProject}
+                  onProjectIdChange={setBqProject}
+                  datasetId={bqDataset}
+                  onDatasetIdChange={setBqDataset}
+                  tableName={bqTable}
+                  onTableNameChange={setBqTable}
+                  location={bqLocation}
+                  onLocationChange={setBqLocation}
+                  clientEmail={bqEmail}
+                  onClientEmailChange={setBqEmail}
+                  privateKeyId={bqKeyId}
+                  onPrivateKeyIdChange={setBqKeyId}
+                  writeMode={bqWriteMode}
+                  onWriteModeChange={setBqWriteMode}
+                />
+              )}
+
               {/* =========================================================
                   CONNECT WITH EDGES OPTION (UI Dropdown Connectors)
                  ========================================================= */}
@@ -3126,6 +3221,20 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                     className="px-5 py-2 rounded-xl bg-amber-600 text-white hover:bg-amber-700 text-xs font-bold shadow-xs cursor-pointer"
                   >
                     Save Governance Gate Settings
+                  </button>
+                ) : selectedNode.type === 'pinecone' ? (
+                  <button
+                    onClick={handleSavePineconeConfig}
+                    className="px-5 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold shadow-xs cursor-pointer"
+                  >
+                    Save Pinecone Settings
+                  </button>
+                ) : selectedNode.type === 'bigquery' ? (
+                  <button
+                    onClick={handleSaveBigQueryConfig}
+                    className="px-5 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-bold shadow-xs cursor-pointer"
+                  >
+                    Save BigQuery Settings
                   </button>
                 ) : (
                   <button
