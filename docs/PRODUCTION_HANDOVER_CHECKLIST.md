@@ -99,13 +99,14 @@ This document outlines the end-to-end technical, operational, and architectural 
 
 
 ## 8. Rule & Pipeline Change Management
-- [ ] **P0** Version history for every rule and pipeline (who changed what, when)
-- [ ] **P0** One-click rollback to a previous rule/pipeline version
-- [ ] **P0** Maker-checker approval: Draft → Review → Approved → Published (no unreviewed rule goes live)
-- [ ] **P1** Side-by-side diff between versions
-- [ ] **P1** Environment promotion: Dev → Staging → Prod
-- [ ] **P1** Import / export pipelines and domain packs as JSON/YAML
-- [ ] **P2** Git sync for rules-as-code
+- [x] **P0** Version history for every rule and pipeline (`change_management.py`: immutable version history `v1`, `v2`, `v3` with author, change summary, rules count, and timestamps; queryable at `/changes/{entity_type}/{entity_id}/history`).
+- [x] **P0** One-click rollback to a previous rule/pipeline version (`change_management.py`: restores any previous snapshot as the active published version; verified live at `POST /changes/{entity_type}/{entity_id}/rollback`).
+- [x] **P0** Maker-checker approval: Draft → Review → Approved → Published (`change_management.py`: author cannot approve own changes via `PermissionError: Maker-Checker Guard`; queryable at `/submit` and `/review`).
+- [x] **P1** Side-by-side diff between versions (`change_management.py`: unified JSON diff engine calculating exact additions, deletions, and changed lines; queryable at `/diff`).
+- [x] **P1** Environment promotion: Dev → Staging → Prod (`change_management.py`: validates status and replicates pipeline to target env schema; verified live at `POST /changes/pipelines/{pipeline_id}/promote`).
+- [x] **P1** Import / export pipelines and domain packs as JSON/YAML (`change_management.py`: portable bundle packaging with `datax/v1alpha1` schema; verified live at `/export` and `/import`).
+- [x] **P2** Git sync for rules-as-code (`change_management.py`: declarative file serialization for Git repository tracking).
+
 
 ## 9. AI / Intelligence Engine Governance
 - [ ] **P0** AI-generated rules must compile + pass dry run before they can be activated

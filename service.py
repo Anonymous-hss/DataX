@@ -470,6 +470,108 @@ def api_webhook_trigger(pipeline_id: str, payload: Optional[Dict[str, Any]] = No
 
 
 # -----------------------------------------------------------------------------
+# Rule & Pipeline Change Management Routes (Section 8)
+# -----------------------------------------------------------------------------
+@app.get("/changes/{entity_type}/{entity_id}/history")
+def api_get_change_history(entity_type: str, entity_id: str, user: Dict[str, Any] = Depends(get_current_user)):
+    """P0: Returns version history timeline for a rule or pipeline."""
+    from change_management import change_service
+    return {"status": "success", "history": change_service.get_version_history(entity_type, entity_id)}
+
+
+@app.post("/changes/{entity_type}/{entity_id}/rollback")
+def api_rollback_version(
+    entity_type: str,
+    entity_id: str,
+    target_version_id: str = "v1",
+    user: Dict[str, Any] = Depends(require_roles(["Admin", "Data Steward"]))
+):
+    """P0: One-click rollback to any previous version."""
+    from change_management import change_service
+    try:
+        return change_service.rollback(entity_type, entity_id, target_version_id, user.get("email", "admin@dataglow.ai"))
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.post("/changes/{entity_type}/{entity_id}/submit")
+def api_submit_for_review(
+    entity_type: str,
+    entity_id: str,
+    snapshot: Dict[str, Any],
+    change_summary: str = "Proposed rule modifications",
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """P0: Maker submits proposed changes for review."""
+    from change_management import change_service
+    entry = change_service.submit_for_review(
+        entity_type, entity_id, snapshot, user.get("email", "operator@dataglow.ai"), change_summary
+    )
+    return {"status": "success", "version": entry}
+
+
+@app.post("/changes/{entity_type}/{entity_id}/review")
+def api_review_change(
+    entity_type: str,
+    entity_id: str,
+    version_id: str = "v1",
+    action: str = "APPROVE",  # APPROVE | PUBLISH | REJECT
+    comment: str = "",
+    user: Dict[str, Any] = Depends(require_roles(["Admin", "Data Steward"]))
+):
+    """P0: Checker reviews and approves/publishes/rejects a change."""
+    from change_management import change_service
+    try:
+        return change_service.review_action(
+            entity_type, entity_id, version_id, user.get("email", "steward@dataglow.ai"), action, comment
+        )
+    except PermissionError as pe:
+        raise HTTPException(status_code=403, detail=str(pe))
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+
+
+@app.get("/changes/{entity_type}/{entity_id}/diff")
+def api_get_version_diff(entity_type: str, entity_id: str, v_from: str, v_to: str, user: Dict[str, Any] = Depends(get_current_user)):
+    """P1: Side-by-side unified diff between two versions."""
+    from change_management import change_service
+    try:
+        return change_service.compute_diff(entity_type, entity_id, v_from, v_to)
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+
+
+@app.post("/changes/pipelines/{pipeline_id}/promote")
+def api_promote_pipeline(
+    pipeline_id: str,
+    from_env: str = "dev",
+    to_env: str = "staging",
+    user: Dict[str, Any] = Depends(require_roles(["Admin", "Data Steward"]))
+):
+    """P1: Promotes pipeline definition across Dev -> Staging -> Prod environments."""
+    from change_management import change_service
+    try:
+        return change_service.promote(pipeline_id, from_env, to_env, user.get("email", "admin@dataglow.ai"))
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+
+
+@app.get("/changes/{entity_type}/{entity_id}/export")
+def api_export_bundle(entity_type: str, entity_id: str, user: Dict[str, Any] = Depends(get_current_user)):
+    """P1: Exports pipeline/domain pack bundle as portable JSON/YAML."""
+    from change_management import change_service
+    return change_service.export_bundle(entity_type, entity_id)
+
+
+@app.post("/changes/import")
+def api_import_bundle(bundle: Dict[str, Any], user: Dict[str, Any] = Depends(require_roles(["Admin", "Data Steward"]))):
+    """P1: Imports external pipeline/domain pack bundle."""
+    from change_management import change_service
+    entry = change_service.import_bundle(bundle, user.get("email", "admin@dataglow.ai"))
+    return {"status": "success", "imported_version": entry}
+
+
+# -----------------------------------------------------------------------------
 # AI Rule Synthesis (With REL-01 Retries, REL-02 Breaker, REL-05 Offline Fallback)
 # -----------------------------------------------------------------------------
 @app.post("/rules/generate")
