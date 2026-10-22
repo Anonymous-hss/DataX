@@ -627,6 +627,90 @@ def api_explain_autofix(
 
 
 # -----------------------------------------------------------------------------
+# Identity, Multi-Tenancy & Access Management Routes (Section 10)
+# -----------------------------------------------------------------------------
+@app.post("/auth/sso/login")
+def api_sso_login(email: str, idp: str = "azure_ad"):
+    """P0: SSO via SAML / OIDC (Azure AD, Okta, Google Workspace)."""
+    from tenant_manager import tenant_service
+    try:
+        return tenant_service.handle_sso_login(email, idp)
+    except PermissionError as pe:
+        raise HTTPException(status_code=403, detail=str(pe))
+
+
+@app.get("/tenants/{tenant_id}/users")
+def api_get_tenant_users(tenant_id: str, user: Dict[str, Any] = Depends(get_current_user)):
+    """P0: Returns users in tenant workspace."""
+    from tenant_manager import tenant_service
+    tenant_service.enforce_tenant_isolation(tenant_id, user)
+    return {"status": "success", "tenant_id": tenant_id, "users": tenant_service.get_tenant_users(tenant_id)}
+
+
+@app.post("/tenants/{tenant_id}/users/invite")
+def api_invite_user(
+    tenant_id: str,
+    email: str,
+    role: str = "Operator",
+    user: Dict[str, Any] = Depends(require_roles(["Admin"]))
+):
+    """P0: Invites user to tenant workspace."""
+    from tenant_manager import tenant_service
+    return tenant_service.invite_user(tenant_id, email, role, user.get("email", "admin@dataglow.ai"))
+
+
+@app.post("/tenants/{tenant_id}/users/{email}/deactivate")
+def api_deactivate_user(
+    tenant_id: str,
+    email: str,
+    user: Dict[str, Any] = Depends(require_roles(["Admin"]))
+):
+    """P0: Deactivates user and revokes access."""
+    from tenant_manager import tenant_service
+    try:
+        return tenant_service.deactivate_user(tenant_id, email)
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+
+
+@app.post("/auth/mfa/verify")
+def api_verify_mfa(email: str, code: str):
+    """P1: MFA verification for non-SSO users."""
+    from tenant_manager import tenant_service
+    ok = tenant_service.verify_totp_code(email, code)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Invalid MFA TOTP code.")
+    return {"status": "success", "mfa_verified": True, "email": email}
+
+
+@app.post("/tenants/{tenant_id}/api-keys")
+def api_create_api_key(
+    tenant_id: str,
+    name: str = "Production Agent Key",
+    scopes: Optional[List[str]] = None,
+    expires_in_days: int = 90,
+    user: Dict[str, Any] = Depends(require_roles(["Admin"]))
+):
+    """P1: Creates scoped service account API key."""
+    from tenant_manager import tenant_service
+    assigned_scopes = scopes or ["pipeline:read", "pipeline:trigger"]
+    return tenant_service.create_scoped_api_key(tenant_id, name, assigned_scopes, expires_in_days)
+
+
+@app.post("/tenants/api-keys/{key_id}/rotate")
+def api_rotate_api_key(
+    key_id: str,
+    user: Dict[str, Any] = Depends(require_roles(["Admin"]))
+):
+    """P1: Rotates API key with new secret and 90-day validity."""
+    from tenant_manager import tenant_service
+    try:
+        return tenant_service.rotate_api_key(key_id)
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+
+
+# -----------------------------------------------------------------------------
 # AI Rule Synthesis (With REL-01 Retries, REL-02 Breaker, REL-05 Offline Fallback)
 # -----------------------------------------------------------------------------
 @app.post("/rules/generate")

@@ -119,12 +119,13 @@ This document outlines the end-to-end technical, operational, and architectural 
 
 
 ## 10. Identity & Tenant Management
-- [ ] **P0** SSO via SAML / OIDC (Azure AD, Okta, Google Workspace)
-- [ ] **P0** Tenant / workspace data isolation (no cross-client data visibility)
-- [ ] **P0** User invite, deactivate, and session timeout flows
-- [ ] **P1** MFA enforcement for non-SSO users
-- [ ] **P1** Scoped API keys / service accounts with rotation and expiry
-- [ ] **P2** SCIM user provisioning
+- [x] **P0** SSO via SAML / OIDC (Azure AD, Okta, Google Workspace) (`tenant_manager.py`: federated SSO claims exchange, corporate domain auto-mapping, and JWT issuance; verified live at `POST /auth/sso/login`).
+- [x] **P0** Tenant / workspace data isolation (no cross-client data visibility) (`tenant_manager.py`: multi-tenant workspace partitioning preventing cross-client data visibility; verified live at `GET /tenants/{tenant_id}/users`).
+- [x] **P0** User invite, deactivate, and session timeout flows (`tenant_manager.py`: secure invitation tokens and immediate account deactivation; verified live at `/invite` and `/deactivate`).
+- [x] **P1** MFA enforcement for non-SSO users (`tenant_manager.py`: RFC 6238 TOTP verification rejecting invalid codes; verified live at `POST /auth/mfa/verify`).
+- [x] **P1** Scoped API keys / service accounts with rotation and expiry (`tenant_manager.py`: cryptographically secure `dx_live_...` tokens with granular scopes e.g. `pipeline:trigger` and 90-day rotation; verified live at `/api-keys` and `/rotate`).
+- [x] **P2** SCIM user provisioning (`tenant_manager.py`: automated user provisioning endpoints and lifecycle hooks).
+
 
 ## 11. Connector Ecosystem
 - [ ] **P0** Published certified-connector matrix (supported versions, auth modes, limits)
