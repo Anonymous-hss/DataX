@@ -76,22 +76,147 @@ This document outlines the end-to-end technical, operational, and architectural 
 
 ---
 
-## 7. Handover Milestone Roadmap
+# PART B — Product Completeness (Product Manager View)
+
+> Part A covers platform hardening. Part B covers what turns DataX from "a working pipeline" into **a product a client can own, operate, trust, and renew**.
+> Priority: **P0** = blocks handover · **P1** = needed within hypercare · **P2** = roadmap / post-handover.
+
+---
+
+## 7. Scheduling & Run Orchestration
+- [ ] **P0** Cron-based schedules per pipeline (hourly / daily / custom) with timezone support
+- [ ] **P0** Run controls: pause, resume, cancel, and per-run timeout
+- [ ] **P0** Concurrency guard — prevent two overlapping runs of the same pipeline
+- [ ] **P1** Re-run from failed stage only (not the whole pipeline)
+- [ ] **P1** Event triggers: file landed (S3/ADLS/SFTP), webhook, upstream pipeline completed
+- [ ] **P1** Pipeline dependencies (run B only after A succeeds)
+- [ ] **P2** Historical backfill for a date range
+
+## 8. Rule & Pipeline Change Management
+- [ ] **P0** Version history for every rule and pipeline (who changed what, when)
+- [ ] **P0** One-click rollback to a previous rule/pipeline version
+- [ ] **P0** Maker-checker approval: Draft → Review → Approved → Published (no unreviewed rule goes live)
+- [ ] **P1** Side-by-side diff between versions
+- [ ] **P1** Environment promotion: Dev → Staging → Prod
+- [ ] **P1** Import / export pipelines and domain packs as JSON/YAML
+- [ ] **P2** Git sync for rules-as-code
+
+## 9. AI / Intelligence Engine Governance
+- [ ] **P0** AI-generated rules must compile + pass dry run before they can be activated
+- [ ] **P0** Data-sharing control: only schema + masked samples go to the LLM; opt-in toggle per tenant
+- [ ] **P0** Explainability on every auto-fix ("why was this changed, by which rule")
+- [ ] **P1** Confidence threshold — low-confidence fixes go to human review instead of auto-applying
+- [ ] **P1** LLM token/cost tracking per tenant with monthly budget caps
+- [ ] **P1** Golden-dataset evaluation suite to measure rule-generation accuracy across model upgrades
+- [ ] **P1** Model version pinning (no silent behaviour change when the provider updates a model)
+
+## 10. Identity & Tenant Management
+- [ ] **P0** SSO via SAML / OIDC (Azure AD, Okta, Google Workspace)
+- [ ] **P0** Tenant / workspace data isolation (no cross-client data visibility)
+- [ ] **P0** User invite, deactivate, and session timeout flows
+- [ ] **P1** MFA enforcement for non-SSO users
+- [ ] **P1** Scoped API keys / service accounts with rotation and expiry
+- [ ] **P2** SCIM user provisioning
+
+## 11. Connector Ecosystem
+- [ ] **P0** Published certified-connector matrix (supported versions, auth modes, limits)
+- [ ] **P0** Incremental loads with watermark / CDC (not full reload every run)
+- [ ] **P1** File sources: S3, ADLS, SFTP — CSV, Parquet, Excel, JSON
+- [ ] **P1** Schema evolution policy per connector (new column = auto-add / alert / block)
+- [ ] **P1** Connector health page (last success, latency, error rate)
+- [ ] **P2** Connector SDK so the client can build custom connectors
+
+## 12. Product UX Completeness
+- [ ] **P0** First-run onboarding wizard (connect source → pick domain pack → dry run → go live)
+- [ ] **P0** Actionable error messages — no raw stack traces shown to users
+- [ ] **P0** Meaningful empty states on every page (no blank screens)
+- [ ] **P0** Confirmation dialogs on destructive actions (delete pipeline, purge quarantine)
+- [ ] **P1** In-app notification centre (run finished, approval pending, threshold breached)
+- [ ] **P1** Global search across pipelines, runs, rules, and quarantine records
+- [ ] **P1** Browser support matrix (Chrome, Edge, Safari, Firefox — latest 2 versions)
+- [ ] **P1** Accessibility baseline (WCAG 2.1 AA: contrast, keyboard navigation, labels)
+- [ ] **P2** i18n readiness and user-level timezone / date-format preferences
+
+## 13. Reporting & Business Value
+- [ ] **P0** Data Quality Scorecard per pipeline / domain with trend over time
+- [ ] **P0** Exportable audit report (PDF/CSV) for compliance auditors
+- [ ] **P1** ROI dashboard — records auto-fixed, engineer-hours saved, failures prevented
+- [ ] **P1** Scheduled stakeholder reports (weekly quality digest)
+- [ ] **P2** BI connector / embeddable dashboards (Power BI, Tableau)
+
+## 14. Developer Platform & Integrations
+- [ ] **P0** Public REST API with OpenAPI/Swagger documentation
+- [ ] **P0** API versioning (`/v1/...`) and deprecation policy
+- [ ] **P1** Outbound webhooks: `run.completed`, `run.failed`, `quarantine.threshold_breached`
+- [ ] **P1** Orchestrator operators: Airflow, Azure Data Factory, Databricks Workflows
+- [ ] **P1** ITSM integration — auto-create ServiceNow / Jira ticket for critical quarantine
+- [ ] **P2** CLI and Terraform provider
+
+## 15. Engineering Quality & Release Management
+- [ ] **P0** CI/CD pipeline with build, test, and lint gates (replace manual file-upload deploys)
+- [ ] **P0** Separate Dev / Staging / Prod environments
+- [ ] **P0** Deployment rollback in one step; clean-up of stale build assets on the server
+- [ ] **P0** Remove all credentials from scripts and repos; rotate any credential that was ever stored in plaintext
+- [ ] **P1** Test coverage targets (unit ≥ 70% on engine; E2E on the critical canvas → run → inspect flow)
+- [ ] **P1** Semantic versioning + client-facing release notes / changelog
+- [ ] **P1** Feature flags to roll out features per tenant
+- [ ] **P1** Dependency vulnerability scanning (SCA) and SBOM generation
+
+## 16. Data Lifecycle & Business Continuity
+- [ ] **P0** Automated backups with a *tested* restore (not just configured)
+- [ ] **P0** Defined RPO / RTO (e.g. RPO 15 min, RTO 1 hr) agreed with client
+- [ ] **P1** Client data export / offboarding — client can take all their data and config
+- [ ] **P1** Tenant data deletion on request (right-to-erasure)
+- [ ] **P2** Data-residency region choice; multi-region failover
+
+## 17. Commercial, Legal & Compliance
+- [ ] **P0** MSA, DPA, Privacy Policy, and Terms of Service signed
+- [ ] **P0** Sub-processor list disclosed (e.g. Azure OpenAI, cloud host)
+- [ ] **P0** Third-party penetration test report
+- [ ] **P1** License / entitlement enforcement (row volume, pipelines, connectors per plan)
+- [ ] **P1** Usage metering for billing
+- [ ] **P1** Security questionnaire pack ready (CAIQ / SIG-Lite)
+- [ ] **P1** Open-source license audit of all dependencies
+- [ ] **P2** SOC 2 Type I readiness
+
+## 18. Support & Customer Success
+- [ ] **P0** Support tiers with response-time SLAs (P1 incident: 1 hr, P2: 4 hrs, P3: 1 business day)
+- [ ] **P0** Escalation matrix with named contacts
+- [ ] **P0** Public status page for uptime and incidents
+- [ ] **P1** Help centre / knowledge base and in-app contextual help
+- [ ] **P1** Training: admin session, data-steward session, recorded videos
+- [ ] **P1** Opt-in product usage analytics to see which features clients actually use
+- [ ] **P1** Feedback channel and quarterly business review (QBR) cadence
+
+## 19. Go-Live & Cutover Plan
+- [ ] **P0** UAT plan with client-owned test cases and sign-off
+- [ ] **P0** **Shadow mode** — run DataX in parallel with the legacy pipeline and reconcile outputs before switching
+- [ ] **P0** Written go / no-go criteria
+- [ ] **P0** Cutover runbook and rollback plan back to the legacy process
+- [ ] **P0** 2–4 week hypercare period with daily check-ins after go-live
+
+---
+
+## 20. Handover Roadmap (indicative — nothing marked complete yet)
 
 ```mermaid
 gantt
-    title DataX Production Handover Milestones
+    title DataX Production Handover Roadmap
     dateFormat  YYYY-MM-DD
-    section Phase 1: Hardening
-    Exponential Retries & Circuit Breakers  :done, p1, 2026-10-23, 3d
-    Connection Pooling & Load Testing       :active, p2, 2026-10-25, 4d
-    section Phase 2: Security & Governance
-    RBAC & Vault Secret Migration          :p3, 2026-10-28, 4d
-    Prompt Hardening & PII Sanitization    :p4, 2026-10-31, 3d
-    section Phase 3: Observability
-    Email & Webhook Alerting Service       :p5, 2026-11-03, 3d
-    Prometheus Metrics & Health Probes     :p6, 2026-11-05, 3d
-    section Phase 4: Client Handover
-    Docker/Helm Package & DR Simulation    :p7, 2026-11-08, 4d
-    Runbook Documentation & Sign-Off       :p8, 2026-11-11, 3d
+    section Hardening (Part A)
+    Retries, Circuit Breakers, Idempotency  :a1, 2026-10-26, 5d
+    Load Testing & Connection Pooling       :a2, after a1, 4d
+    RBAC, Secrets Vault, Injection Hardening:a3, after a1, 6d
+    Alerts, Email, Metrics, Health Probes   :a4, after a2, 4d
+    section Product (Part B)
+    Scheduling & Run Controls               :b1, 2026-10-26, 5d
+    Rule Versioning & Maker-Checker         :b2, after b1, 5d
+    SSO & Tenant Isolation                  :b3, after a3, 5d
+    Onboarding, Errors, Empty States        :b4, after b1, 4d
+    Scorecard & Audit Report Export         :b5, after b2, 4d
+    CI/CD & Staging Environment             :b6, 2026-10-26, 5d
+    section Go-Live
+    Pen Test, Legal & Support Setup         :c1, after a4, 5d
+    UAT & Shadow-Mode Reconciliation        :c2, after b5, 7d
+    Cutover & Hypercare                     :c3, after c2, 14d
 ```
