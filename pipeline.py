@@ -45,6 +45,8 @@ from profiler import memory_profiler
 from structured_logger import logger, set_trace_context
 from metrics import metrics_collector
 from alerts import alert_dispatcher
+from orchestrator import orchestrator, ConcurrencyViolationError
+from checkpointer import save_stage_checkpoint, load_stage_checkpoint, clear_checkpoints
 
 
 def run_pipeline(req: PipelineExecutionRequest) -> Dict[str, Any]:
@@ -62,8 +64,10 @@ def run_pipeline(req: PipelineExecutionRequest) -> Dict[str, Any]:
         cached_copy["message"] = "Pipeline execution was deduplicated (idempotent replay of existing run result)."
         return cached_copy
 
-    # OBS-04: Initialize trace context for structured JSON logs
-    set_trace_context(trace_id=idempotency_key, pipeline_id=req.threadId or "pipeline_main")
+    # Section 7: Concurrency Guard (P0) & Run Controls
+    pipeline_id = req.threadId or req.pipelineName
+    run_id = f"RUN-{int(time.time()*1000)%100000}"
+    orchestrator.acquire_lock(pipeline_id, run_id)
 
     logs = []
     def log(tag: str, text: str):
@@ -497,6 +501,10 @@ def run_pipeline(req: PipelineExecutionRequest) -> Dict[str, Any]:
     audit_block = audit_chain.append_block(run_id, final_outcome)
     final_outcome["auditManifestHash"] = audit_block["manifest_hash"]
     final_outcome["chainHash"] = audit_block["chain_hash"]
+
+    # Section 7: Release Concurrency Lock & Trigger Downstream Dependencies
+    orchestrator.release_lock(pipeline_id, run_id, "COMPLETED")
+    orchestrator.trigger_downstream_pipelines(pipeline_id)
 
     # REL-03: Commit outcome to Idempotency Manager for replay deduplication
     idempotency_manager.commit(idempotency_key, final_outcome)

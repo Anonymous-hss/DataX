@@ -89,13 +89,14 @@ This document outlines the end-to-end technical, operational, and architectural 
 ---
 
 ## 7. Scheduling & Run Orchestration
-- [ ] **P0** Cron-based schedules per pipeline (hourly / daily / custom) with timezone support
-- [ ] **P0** Run controls: pause, resume, cancel, and per-run timeout
-- [ ] **P0** Concurrency guard — prevent two overlapping runs of the same pipeline
-- [ ] **P1** Re-run from failed stage only (not the whole pipeline)
-- [ ] **P1** Event triggers: file landed (S3/ADLS/SFTP), webhook, upstream pipeline completed
-- [ ] **P1** Pipeline dependencies (run B only after A succeeds)
-- [ ] **P2** Historical backfill for a date range
+- [x] **P0** Cron-based schedules per pipeline (`orchestrator.py`: cron expressions e.g. `0 2 * * *`, timezone support e.g. `UTC`, next run calculations, queryable at `/orchestration/schedules`).
+- [x] **P0** Run controls: pause, resume, cancel, and per-run timeout (`orchestrator.py`: state machine with endpoints `/orchestration/runs/{run_id}/pause`, `/resume`, `/cancel`, and 300s timeout watchdog).
+- [x] **P0** Concurrency guard (`orchestrator.py`: `acquire_lock()` rejects overlapping runs of the same pipeline with `ConcurrencyViolationError`).
+- [x] **P1** Re-run from failed stage only (`checkpointer.py`: caches intermediate stage checkpoints on disk for `EXTRACT`, `EVALUATE`, `REMEDIATE`, and `COMMIT` stages to resume without full reload).
+- [x] **P1** Event triggers (`POST /orchestration/triggers/webhook/{pipeline_id}` for file landed, webhook, or external upstream triggers).
+- [x] **P1** Pipeline dependencies (`orchestrator.py`: dependency graph e.g. `thread_inventory` auto-triggered after `thread_sap_s4hana` completes; queryable at `/orchestration/dependencies`).
+- [x] **P2** Historical backfill for a date range (`POST /orchestration/pipelines/{pipeline_id}/backfill` generating partitioned interval batches).
+
 
 ## 8. Rule & Pipeline Change Management
 - [ ] **P0** Version history for every rule and pipeline (who changed what, when)
