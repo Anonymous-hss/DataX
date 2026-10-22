@@ -876,6 +876,51 @@ def api_get_terraform_template():
 
 
 # -----------------------------------------------------------------------------
+# Release Management, Feature Flags & Engineering Quality (Section 15)
+# -----------------------------------------------------------------------------
+@app.get("/system/flags")
+def api_get_feature_flags(tenant_id: str = "tenant_default"):
+    """P1: Gets active feature flags per tenant."""
+    from release_management import release_service
+    return {"status": "success", "flags": release_service.get_all_flags(tenant_id)}
+
+
+@app.post("/system/flags/{flag_name}")
+def api_update_feature_flag(
+    flag_name: str,
+    enabled: bool,
+    user: Dict[str, Any] = Depends(require_roles(["Admin"]))
+):
+    """P1: Updates feature flag rollout status."""
+    from release_management import release_service
+    return release_service.update_feature_flag(flag_name, enabled)
+
+
+@app.post("/system/release/rollback")
+def api_trigger_rollback(
+    target_version: str = "v2.4.9",
+    user: Dict[str, Any] = Depends(require_roles(["Admin"]))
+):
+    """P0: Triggers one-step deployment rollback."""
+    from release_management import release_service
+    return release_service.trigger_rollback(target_version)
+
+
+@app.get("/system/version/changelog")
+def api_get_changelog():
+    """P1: Client-facing semantic versioning changelog."""
+    from release_management import release_service
+    return {"status": "success", "changelog": release_service.get_client_changelog()}
+
+
+@app.get("/system/sbom")
+def api_get_sbom():
+    """P1: CycloneDX Software Bill of Materials (SBOM) and SCA security report."""
+    from release_management import release_service
+    return release_service.get_sbom_report()
+
+
+# -----------------------------------------------------------------------------
 # AI Rule Synthesis (With REL-01 Retries, REL-02 Breaker, REL-05 Offline Fallback)
 # -----------------------------------------------------------------------------
 @app.post("/rules/generate")

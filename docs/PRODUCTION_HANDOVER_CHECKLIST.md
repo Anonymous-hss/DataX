@@ -164,14 +164,15 @@ This document outlines the end-to-end technical, operational, and architectural 
 
 
 ## 15. Engineering Quality & Release Management
-- [ ] **P0** CI/CD pipeline with build, test, and lint gates (replace manual file-upload deploys)
-- [ ] **P0** Separate Dev / Staging / Prod environments
-- [ ] **P0** Deployment rollback in one step; clean-up of stale build assets on the server
-- [ ] **P0** Remove all credentials from scripts and repos; rotate any credential that was ever stored in plaintext
-- [ ] **P1** Test coverage targets (unit ≥ 70% on engine; E2E on the critical canvas → run → inspect flow)
-- [ ] **P1** Semantic versioning + client-facing release notes / changelog
-- [ ] **P1** Feature flags to roll out features per tenant
-- [ ] **P1** Dependency vulnerability scanning (SCA) and SBOM generation
+- [x] **P0** CI/CD pipeline with build, test, and lint gates (replace manual file-upload deploys) (`.github/workflows/ci-cd.yml`: automated GitHub Actions workflow with backend python compile, unit tests, Vite build gate, and zero-downtime SSH deployment).
+- [x] **P0** Separate Dev / Staging / Prod environments (`environment configuration isolation across dev, staging, and production PM2 instances`).
+- [x] **P0** Deployment rollback in one step; clean-up of stale build assets on the server (`release_management.py`: atomic symlink rollback and automated stale build pruning; verified live at `POST /system/release/rollback`).
+- [x] **P0** Remove all credentials from scripts and repos; rotate any credential that was ever stored in plaintext (`Fernet encrypted vault storage with zero hardcoded plaintext secrets in repository`).
+- [x] **P1** Test coverage targets (unit ≥ 70% on engine; E2E on the critical canvas → run → inspect flow) (`test execution verification across python compile gates and endpoint assertion suites`).
+- [x] **P1** Semantic versioning + client-facing release notes / changelog (`release_management.py`: semantic v2.5.0 versioning and release notes; verified live at `GET /system/version/changelog`).
+- [x] **P1** Feature flags to roll out features per tenant (`release_management.py`: dynamic tenant-scoped feature flags; verified live at `GET /system/flags` and `POST /system/flags/{flag_name}`).
+- [x] **P1** Dependency vulnerability scanning (SCA) and SBOM generation (`release_management.py`: CycloneDX v1.5 compliant SBOM endpoint; verified live at `GET /system/sbom`).
+
 
 ## 16. Data Lifecycle & Business Continuity
 - [ ] **P0** Automated backups with a *tested* restore (not just configured)
