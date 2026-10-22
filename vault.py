@@ -23,6 +23,12 @@ DEFAULT_NEON_URI = os.environ.get("DATAX_NEON_URI", os.environ.get("DATABASE_URL
 
 
 def get_vault_cipher():
+    env_key = os.environ.get("DATAX_MASTER_KEY")
+    if env_key:
+        try:
+            return Fernet(env_key.encode('utf-8') if isinstance(env_key, str) else env_key)
+        except Exception:
+            pass
     if not os.path.exists(VAULT_KEY_FILE):
         key = Fernet.generate_key()
         with open(VAULT_KEY_FILE, "wb") as f:
@@ -209,18 +215,22 @@ def load_runs() -> List[Dict[str, Any]]:
 
 
 def append_run(run_entry: Dict[str, Any]):
+    from sanitizer import mask_telemetry_payload
+    sanitized_entry = mask_telemetry_payload(run_entry)
     runs = load_runs()
-    runs.insert(0, run_entry)
+    runs.insert(0, sanitized_entry)
     runs = runs[:100]
     with open(RUNS_STORE_FILE, "w") as f:
         json.dump(runs, f, indent=2)
 
 
 def append_audit_log(thread_id: str, log_entry: Dict[str, Any]):
+    from sanitizer import mask_telemetry_payload
+    sanitized_entry = mask_telemetry_payload(log_entry)
     logs = load_audit_logs()
     if thread_id not in logs:
         logs[thread_id] = []
-    logs[thread_id].insert(0, log_entry)
+    logs[thread_id].insert(0, sanitized_entry)
     logs[thread_id] = logs[thread_id][:50]
     with open(AUDIT_LOGS_FILE, "w") as f:
         json.dump(logs, f, indent=2)

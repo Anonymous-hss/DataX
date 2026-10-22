@@ -13,6 +13,7 @@ class RuleItem(BaseModel):
     column: Optional[str] = "GENERAL"
     check_type: Optional[str] = "REGEX_FORMAT"
     condition: Optional[str] = ""
+    code: Optional[str] = ""
     severity: Optional[str] = "critical"
     enabled: Optional[bool] = True
     description: Optional[str] = ""
@@ -112,3 +113,9 @@ class GenerateRulesRequest(BaseModel):
     columns: Optional[List[str]] = []
     prompt: Optional[str] = "Line items must have positive quantities."
     engine: Optional[str] = "sap_bw"
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: Optional[str] = "admin"
+    role: Optional[str] = None

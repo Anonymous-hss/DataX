@@ -74,6 +74,17 @@ def run_pipeline(req: PipelineExecutionRequest) -> Dict[str, Any]:
     if auto_fix_on:
         log("AGENT", "🛠️ AUTO-FIX ENGINE ACTIVE: Deterministic self-healing enabled for whitespace, casing, legacy plant codes, and inverted signs.")
 
+    # SEC-04: Prompt & AST Rule Injection Defense
+    from sanitizer import sanitize_prompt_and_rules
+    for rule in (req.rules or []):
+        r_code = getattr(rule, "code", "") or getattr(rule, "condition", "") or ""
+        try:
+            sanitize_prompt_and_rules(r_code)
+        except ValueError as ve:
+            log("SECURITY_VIOLATION", f"Malicious AST injection pattern blocked: {str(ve)}")
+            idempotency_manager.release(idempotency_key)
+            raise HTTPException(status_code=400, detail=str(ve))
+
     # 1. Source Pre-flight Validation & Extraction
     src_uri = get_resolved_uri(req.source)
     src_engine = req.source.engine.lower()
