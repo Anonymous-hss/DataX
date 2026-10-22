@@ -6,13 +6,14 @@ This document outlines the end-to-end technical, operational, and architectural 
 
 ## 1. Resilience, Fault Tolerance & Reliability
 
-| ID | Item | Priority | Implementation Scope | Definition of Done (DoD) |
-| :--- | :--- | :---: | :--- | :--- |
-| **REL-01** | **Exponential Backoff & Jitter Retries** | **P0** | Wrap all external connector calls (SAP BAPI, Postgres, Mongo, Azure OpenAI) with retry logic (`tenacity` in Python, 3-5 retries, base 2s with random jitter). | Transient network drops or rate-limit HTTP 429s automatically recover without pipeline failure. |
-| **REL-02** | **Circuit Breaker Pattern** | **P0** | Implement circuit breakers (`pybreaker`) on target DB writes and LLM endpoints. If failure rate > 50% over 1 min, open circuit to avoid resource exhaustion. | Downstream failure fails fast with graceful fallback rather than hanging worker threads. |
-| **REL-03** | **Idempotent Pipeline Execution** | **P0** | Attach a deterministic `execution_id` / idempotency key to each run. Ensure target DB staging/writes use upsert / merge keys (`ON CONFLICT DO UPDATE` or staging-then-swap). | Re-running a failed or aborted pipeline never creates duplicate rows in target systems. |
-| **REL-04** | **Dead-Letter Queue (DLQ) Durability** | **P1** | Ensure Quarantine records are written to durable storage (PostgreSQL/DuckDB file) with disk write sync, not volatile in-memory queues alone. | Process crashes or server restarts retain 100% of quarantined records for audit inspection. |
-| **REL-05** | **Offline Fallback for AI Logic** | **P1** | Cache compiled rule ASTs and domain pack heuristics locally. If Azure OpenAI is unreachable, fallback to deterministic regex/AST rules. | Core data cleansing and validation continue operating even during cloud AI outages. |
+| ID | Item | Priority | Status | Implementation Scope & Verification | Definition of Done (DoD) |
+| :--- | :--- | :---: | :---: | :--- | :--- |
+| **REL-01** | **Exponential Backoff & Jitter Retries** | **P0** | ✅ **Done** | Implemented `retry_with_backoff()` in `resilience.py` with exponential backoff and randomized full jitter. Applied to Azure OpenAI synthesis (`/rules/generate`) and database connectors (`connectors.py`). | Transient network drops or rate-limit HTTP 429s automatically recover without pipeline failure. |
+| **REL-02** | **Circuit Breaker Pattern** | **P0** | ✅ **Done** | Implemented `CircuitBreaker` state machine in `resilience.py` (`CLOSED` -> `OPEN` -> `HALF_OPEN`). Dedicated instances guarding OpenAI (`openai_breaker`), Source DB (`source_db_breaker`), and Target DB (`target_db_breaker`). Live status queryable at `/resilience/status`. | Downstream failure fails fast with graceful fallback rather than hanging worker threads. |
+| **REL-03** | **Idempotent Pipeline Execution** | **P0** | ✅ **Done** | Implemented `IdempotencyManager` in `resilience.py` with persistence to disk. Pipeline executions (`/pipeline/execute`) check and acquire idempotency keys. Repeated calls return cached responses marked with `idempotent_replay: true`. Verified live via curl. | Re-running a failed or aborted pipeline never creates duplicate rows in target systems. |
+| **REL-04** | **Dead-Letter Queue (DLQ) Durability** | **P1** | ✅ **Done** | Implemented `DurableDLQManager` in `resilience.py` with atomic write and synchronous disk flush (`os.fsync()`). Quarantined records persist across restarts and queryable via `/quarantine/records` with `durability: FSYNC_VERIFIED`. Verified live via curl. | Process crashes or server restarts retain 100% of quarantined records for audit inspection. |
+| **REL-05** | **Offline Fallback for AI Logic** | **P1** | ✅ **Done** | Implemented `OfflineAIHeuristics` in `resilience.py` mapping SAP Clean Core, Customer 360, Financial GL, and Healthcare HIPAA domains. When OpenAI is unreachable or circuit is open, engine seamlessly synthesizes deterministic domain rules. Verified live via curl. | Core data cleansing and validation continue operating even during cloud AI outages. |
+
 
 ---
 

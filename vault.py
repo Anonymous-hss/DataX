@@ -1,0 +1,226 @@
+"""
+DataX Encrypted Credential Vault & Store Management
+Handles encrypted credential storage, thread templates, runs history, and audit logs.
+"""
+
+import os
+import json
+from typing import Dict, List, Any
+from cryptography.fernet import Fernet
+
+VAULT_DIR = os.environ.get("DATAX_VAULT_DIR", "/home/azureuserSDH/Production/datax-service")
+if not os.path.exists(VAULT_DIR):
+    VAULT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+VAULT_KEY_FILE = os.path.join(VAULT_DIR, ".vault.key")
+VAULT_DATA_FILE = os.path.join(VAULT_DIR, ".credentials_vault.json")
+THREADS_STORE_FILE = os.path.join(VAULT_DIR, ".threads_store.json")
+AUDIT_LOGS_FILE = os.path.join(VAULT_DIR, ".audit_logs.json")
+RUNS_STORE_FILE = os.path.join(VAULT_DIR, ".runs_store.json")
+
+DEFAULT_MONGO_URI = os.environ.get("DATAX_MONGO_URI", "")
+DEFAULT_NEON_URI = os.environ.get("DATAX_NEON_URI", os.environ.get("DATABASE_URL", ""))
+
+
+def get_vault_cipher():
+    if not os.path.exists(VAULT_KEY_FILE):
+        key = Fernet.generate_key()
+        with open(VAULT_KEY_FILE, "wb") as f:
+            f.write(key)
+    else:
+        with open(VAULT_KEY_FILE, "rb") as f:
+            key = f.read().strip()
+    return Fernet(key)
+
+
+def load_vault() -> Dict[str, Any]:
+    if not os.path.exists(VAULT_DATA_FILE):
+        return {}
+    try:
+        cipher = get_vault_cipher()
+        with open(VAULT_DATA_FILE, "rb") as f:
+            encrypted = f.read()
+            if not encrypted:
+                return {}
+            decrypted = cipher.decrypt(encrypted)
+            return json.loads(decrypted.decode("utf-8"))
+    except Exception as e:
+        print(f"Error loading vault: {e}")
+        return {}
+
+
+def save_vault(data: Dict[str, Any]):
+    cipher = get_vault_cipher()
+    raw = json.dumps(data).encode("utf-8")
+    encrypted = cipher.encrypt(raw)
+    with open(VAULT_DATA_FILE, "wb") as f:
+        f.write(encrypted)
+
+
+def get_credential_uri(cred_id_or_uri: str) -> str:
+    if cred_id_or_uri.startswith("cred_"):
+        vault = load_vault()
+        cred = vault.get(cred_id_or_uri)
+        if cred and "uri" in cred:
+            return cred["uri"]
+    return cred_id_or_uri
+
+
+def get_resolved_uri(req: Any) -> str:
+    if getattr(req, "credentialId", None):
+        return get_credential_uri(req.credentialId)
+    uri = getattr(req, "connectionUri", None)
+    if not uri or not isinstance(uri, str):
+        return ""
+    uri = uri.strip()
+    if not uri or "<" in uri or "user:password" in uri or "target-db.internal" in uri or "ep-sweet-neon" in uri or "••••" in uri:
+        return ""
+    return uri
+
+
+DEFAULT_THREADS = [
+    {
+        "id": "thread_sap_s4hana",
+        "name": "SAP BW ➔ S/4HANA Clean Core Modernizer",
+        "description": "Extract raw InfoCube purchasing lines, resolve legacy plant codes with ontology knowledge graph, enforce budget bounds, and stage BAPI_PO_CREATE1 orders with Gold Lakehouse replication.",
+        "domainPackId": "sap_bw_s4hana",
+        "category": "ERP Modernization",
+        "badge": "SAP Certified Ontology",
+        "status": "draft",
+        "autoFixEnabled": True,
+        "healthScore": None,
+        "healthGrade": None,
+        "driftStatus": "NOT_EVALUATED",
+        "driftScore": 0.0,
+        "runCount": 0,
+        "lastRun": None,
+        "nodesCount": 4,
+        "edgesCount": 4
+    },
+    {
+        "id": "thread_customer_master",
+        "name": "Customer Master & Identity Harmonizer",
+        "description": "Harmonize raw customer and user documents from MongoDB Atlas into PostgreSQL Neon DB, enforce RFC-5322 email syntax and non-negative balances, and replicate clean gold records.",
+        "domainPackId": "customer_master",
+        "category": "Customer 360",
+        "badge": "MongoDB ➔ Neon DB",
+        "status": "draft",
+        "autoFixEnabled": True,
+        "healthScore": None,
+        "healthGrade": None,
+        "driftStatus": "NOT_EVALUATED",
+        "driftScore": 0.0,
+        "runCount": 0,
+        "lastRun": None,
+        "nodesCount": 4,
+        "edgesCount": 4
+    },
+    {
+        "id": "thread_financial_gl",
+        "name": "Financial General Ledger & AP Compliance",
+        "description": "Audit general ledger and AP entries across disparate legacy systems, guarantee zero imbalance, verify ISO currency standards, and dual-dispatch approved entries to Financial ERP and audit warehouse.",
+        "domainPackId": "financial_gl_ledger",
+        "category": "Finance & Audit",
+        "badge": "SOX & GAAP Compliant",
+        "status": "draft",
+        "autoFixEnabled": True,
+        "healthScore": None,
+        "healthGrade": None,
+        "driftStatus": "NOT_EVALUATED",
+        "driftScore": 0.0,
+        "runCount": 0,
+        "lastRun": None,
+        "nodesCount": 4,
+        "edgesCount": 4
+    },
+    {
+        "id": "thread_healthcare_hipaa",
+        "name": "Healthcare Patient Master & HIPAA Sanitizer",
+        "description": "Ingest HL7 and EHR patient records, scrub PII anomalies, cross-verify National Provider Identifiers (NPI), and stage HIPAA-compliant clinical data to analytics warehouse.",
+        "domainPackId": "healthcare_hipaa",
+        "category": "Healthcare & Life Sciences",
+        "badge": "HIPAA & HL7 Compliant",
+        "status": "draft",
+        "autoFixEnabled": True,
+        "healthScore": None,
+        "healthGrade": None,
+        "driftStatus": "NOT_EVALUATED",
+        "driftScore": 0.0,
+        "runCount": 0,
+        "lastRun": None,
+        "nodesCount": 3,
+        "edgesCount": 3
+    },
+    {
+        "id": "thread_supply_chain",
+        "name": "Supply Chain Multi-Echelon Inventory Balancer",
+        "description": "Reconcile logistics warehouse counts with distribution center purchase orders, resolve SKU naming discrepancies, and feed real-time supply chain telemetry.",
+        "domainPackId": "supply_chain",
+        "category": "Supply Chain & Logistics",
+        "badge": "Multi-Echelon Balancer",
+        "status": "draft",
+        "autoFixEnabled": True,
+        "healthScore": None,
+        "healthGrade": None,
+        "driftStatus": "NOT_EVALUATED",
+        "driftScore": 0.0,
+        "runCount": 0,
+        "lastRun": None,
+        "nodesCount": 3,
+        "edgesCount": 3
+    }
+]
+
+
+def load_threads() -> List[Dict[str, Any]]:
+    if not os.path.exists(THREADS_STORE_FILE):
+        save_threads(DEFAULT_THREADS)
+        return DEFAULT_THREADS
+    try:
+        with open(THREADS_STORE_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return DEFAULT_THREADS
+
+
+def save_threads(threads: List[Dict[str, Any]]):
+    with open(THREADS_STORE_FILE, "w") as f:
+        json.dump(threads, f, indent=2)
+
+
+def load_audit_logs() -> Dict[str, List[Dict[str, Any]]]:
+    if not os.path.exists(AUDIT_LOGS_FILE):
+        return {}
+    try:
+        with open(AUDIT_LOGS_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def load_runs() -> List[Dict[str, Any]]:
+    if not os.path.exists(RUNS_STORE_FILE):
+        return []
+    try:
+        with open(RUNS_STORE_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+
+def append_run(run_entry: Dict[str, Any]):
+    runs = load_runs()
+    runs.insert(0, run_entry)
+    runs = runs[:100]
+    with open(RUNS_STORE_FILE, "w") as f:
+        json.dump(runs, f, indent=2)
+
+
+def append_audit_log(thread_id: str, log_entry: Dict[str, Any]):
+    logs = load_audit_logs()
+    if thread_id not in logs:
+        logs[thread_id] = []
+    logs[thread_id].insert(0, log_entry)
+    logs[thread_id] = logs[thread_id][:50]
+    with open(AUDIT_LOGS_FILE, "w") as f:
+        json.dump(logs, f, indent=2)
