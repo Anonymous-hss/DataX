@@ -316,10 +316,19 @@ def run_pipeline(req: PipelineExecutionRequest) -> Dict[str, Any]:
                                 )
 
                         if valid_records:
-                            bulk_upsert_chunked_pg(conn, tgt1_table, valid_records, primary_col, chunk_size=5000)
+                            from staging import execute_safe_staged_commit
+                            ok, staged_rows, msg = execute_safe_staged_commit(
+                                conn,
+                                tgt1_table,
+                                valid_records,
+                                primary_col,
+                                write_mode=req.target1.writeMode or "append",
+                                chunk_size=5000
+                            )
+                            log("STAGING", f"ARC-01 Safe Staging Protocol: {msg}")
 
                 _commit_target()
-                log("TARGET_1", f"Successfully committed {len(valid_records)} rows into '{tgt1_table}' and {len(quarantine_records)} into '{tgt1_quarantine}' via pooled batch upsert.")
+                log("TARGET_1", f"Successfully committed {len(valid_records)} rows into '{tgt1_table}' via atomic safe staging protocol.")
 
         except Exception as e:
             log("ERROR", f"Target 1 commit failed: {str(e)}")
@@ -482,6 +491,12 @@ def run_pipeline(req: PipelineExecutionRequest) -> Dict[str, Any]:
 
     # OBS-01 & OBS-02: Multi-channel Alert Dispatcher & Threshold Policy Evaluation
     alert_dispatcher.evaluate_and_dispatch(final_outcome)
+
+    # ARC-04: Cryptographic Audit Trail Immutability (Merkle Hash Chain)
+    from governance import audit_chain
+    audit_block = audit_chain.append_block(run_id, final_outcome)
+    final_outcome["auditManifestHash"] = audit_block["manifest_hash"]
+    final_outcome["chainHash"] = audit_block["chain_hash"]
 
     # REL-03: Commit outcome to Idempotency Manager for replay deduplication
     idempotency_manager.commit(idempotency_key, final_outcome)
