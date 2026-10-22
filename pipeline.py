@@ -39,6 +39,9 @@ from resilience import (
     idempotency_manager,
     durable_dlq,
 )
+from db_pool import db_pool
+from streamer import stream_postgresql_records, bulk_upsert_chunked_pg
+from profiler import memory_profiler
 
 
 def run_pipeline(req: PipelineExecutionRequest) -> Dict[str, Any]:
@@ -119,28 +122,15 @@ def run_pipeline(req: PipelineExecutionRequest) -> Dict[str, Any]:
         elif src_engine in ["postgres", "postgresql"]:
             @retry_with_backoff(max_retries=2, base_delay=1.0, jitter=True)
             def _extract_pg():
-                conn = psycopg2.connect(src_uri)
-                cur = conn.cursor(cursor_factory=RealDictCursor)
                 tbl_name = req.source.table or "raw_source_users"
-                limit_clause = f"LIMIT {req.source.limit}" if req.source.limit else "LIMIT 500"
-                cur.execute(f"SELECT * FROM {tbl_name} {limit_clause};")
+                limit_val = req.source.limit or 500
                 fetched = []
-                for r in cur.fetchall():
-                    row_dict = {}
-                    for k, v in r.items():
-                        if isinstance(v, Decimal):
-                            row_dict[k] = float(v)
-                        elif isinstance(v, datetime):
-                            row_dict[k] = v.isoformat()
-                        else:
-                            row_dict[k] = v
-                    fetched.append(row_dict)
-                cur.close()
-                conn.close()
+                for chunk in stream_postgresql_records(src_uri, tbl_name, limit=limit_val, chunk_size=5000):
+                    fetched.extend(chunk)
                 return fetched, tbl_name
 
             raw_records, tbl_name = _extract_pg()
-            log("INFO", f"Extracted {len(raw_records)} records from PostgreSQL '{tbl_name}'.")
+            log("INFO", f"Extracted {len(raw_records)} records from PostgreSQL '{tbl_name}' via pooled streaming cursor.")
 
         else:
             batch_limit = getattr(req.source, "limit", None) or getattr(req.source, "rowCount", None) or 1420
@@ -252,75 +242,73 @@ def run_pipeline(req: PipelineExecutionRequest) -> Dict[str, Any]:
             if tgt1_engine in ["postgres", "postgresql"]:
                 @retry_with_backoff(max_retries=2, base_delay=1.0, jitter=True)
                 def _commit_target():
-                    conn = psycopg2.connect(tgt1_uri)
-                    conn.autocommit = True
-                    cur = conn.cursor()
-
-                    if valid_records:
-                        sample_row = valid_records[0]
-                        primary_col = next((c for c in ["id", "ID", "PO_NUMBER", "MATNR", "MATERIAL_DOC", "EBELN", "ENTRY_ID"] if c in sample_row), list(sample_row.keys())[0])
-                        col_defs = []
-                        for k, val in sample_row.items():
-                            clean_col = re.sub(r'[^a-zA-Z0-9_]', '_', k)
-                            if k == primary_col:
-                                col_defs.append(f'"{clean_col}" VARCHAR(64) PRIMARY KEY')
-                            elif isinstance(val, (int, float)):
-                                col_defs.append(f'"{clean_col}" NUMERIC(16, 4)')
+                    with db_pool.get_connection(tgt1_uri) as conn:
+                        conn.autocommit = True
+                        with conn.cursor() as cur:
+                            if valid_records:
+                                sample_row = valid_records[0]
+                                primary_col = next((c for c in ["id", "ID", "PO_NUMBER", "MATNR", "MATERIAL_DOC", "EBELN", "ENTRY_ID"] if c in sample_row), list(sample_row.keys())[0])
+                                col_defs = []
+                                for k, val in sample_row.items():
+                                    clean_col = re.sub(r'[^a-zA-Z0-9_]', '_', k)
+                                    if k == primary_col:
+                                        col_defs.append(f'"{clean_col}" VARCHAR(64) PRIMARY KEY')
+                                    elif isinstance(val, (int, float)):
+                                        col_defs.append(f'"{clean_col}" NUMERIC(16, 4)')
+                                    else:
+                                        col_defs.append(f'"{clean_col}" TEXT')
+                                col_defs.append('"datax_status" VARCHAR(64) DEFAULT \'AI_VERIFIED_CLEAN\'')
+                                col_defs.append('"reconciled_at" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP')
+                                cols_sql = ", ".join(col_defs)
                             else:
-                                col_defs.append(f'"{clean_col}" TEXT')
-                        col_defs.append('"datax_status" VARCHAR(64) DEFAULT \'AI_VERIFIED_CLEAN\'')
-                        col_defs.append('"reconciled_at" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP')
-                        cols_sql = ", ".join(col_defs)
-                    else:
-                        primary_col = "id"
-                        cols_sql = '"id" VARCHAR(64) PRIMARY KEY, "raw_data" JSONB, "reconciled_at" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP'
+                                primary_col = "id"
+                                cols_sql = '"id" VARCHAR(64) PRIMARY KEY, "raw_data" JSONB, "reconciled_at" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP'
 
-                    cur.execute(f'CREATE TABLE IF NOT EXISTS {tgt1_table} ({cols_sql});')
-                    cur.execute(f"""
-                        CREATE TABLE IF NOT EXISTS {tgt1_quarantine} (
-                            quarantine_id SERIAL PRIMARY KEY,
-                            record_id VARCHAR(64),
-                            source_system VARCHAR(64) DEFAULT 'DataX_Pipeline',
-                            violations TEXT,
-                            raw_payload JSONB,
-                            quarantined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                        );
-                    """)
+                            cur.execute(f'CREATE TABLE IF NOT EXISTS {tgt1_table} ({cols_sql});')
+                            cur.execute(f"""
+                                CREATE TABLE IF NOT EXISTS {tgt1_quarantine} (
+                                    quarantine_id SERIAL PRIMARY KEY,
+                                    record_id VARCHAR(64),
+                                    source_system VARCHAR(64) DEFAULT 'DataX_Pipeline',
+                                    violations TEXT,
+                                    raw_payload JSONB,
+                                    quarantined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                                );
+                            """)
 
-                    if req.target1.writeMode == "overwrite":
-                        cur.execute(f"DELETE FROM {tgt1_table};")
-                        cur.execute(f"DELETE FROM {tgt1_quarantine};")
+                            if req.target1.writeMode == "overwrite":
+                                cur.execute(f"DELETE FROM {tgt1_table};")
+                                cur.execute(f"DELETE FROM {tgt1_quarantine};")
 
-                    for item in quarantine_records:
-                        rec = item.get("record", {})
-                        v_str = " | ".join(item.get("violations", []))
-                        rid = str(rec.get("id") or rec.get("PO_NUMBER") or rec.get("MATNR") or "N/A")
-                        cur.execute(f"""
-                            INSERT INTO {tgt1_quarantine} (record_id, source_system, violations, raw_payload)
-                            VALUES (%s, %s, %s, %s);
-                        """, (rid, src_engine, v_str, json.dumps(rec, default=str)))
+                            if quarantine_records:
+                                q_tuples = [
+                                    (
+                                        str(item.get("record", {}).get("id") or item.get("record", {}).get("PO_NUMBER") or item.get("record", {}).get("MATNR") or "N/A"),
+                                        src_engine,
+                                        " | ".join(item.get("violations", [])),
+                                        json.dumps(item.get("record", {}), default=str)
+                                    )
+                                    for item in quarantine_records
+                                ]
+                                from psycopg2.extras import execute_values
+                                execute_values(
+                                    cur,
+                                    f"INSERT INTO {tgt1_quarantine} (record_id, source_system, violations, raw_payload) VALUES %s;",
+                                    q_tuples,
+                                    page_size=5000
+                                )
 
-                    if valid_records:
-                        sample_cols = list(valid_records[0].keys())
-                        sanitized_cols = [re.sub(r'[^a-zA-Z0-9_]', '_', c) for c in sample_cols]
-                        col_names_str = ", ".join([f'"{c}"' for c in sanitized_cols])
-                        placeholders = ", ".join(["%s"] * len(sample_cols))
-                        update_assignments = ", ".join([f'"{sc}" = EXCLUDED."{sc}"' for sc in sanitized_cols if sc != primary_col])
-                        on_conflict = f'ON CONFLICT ("{primary_col}") DO UPDATE SET {update_assignments}' if update_assignments else f'ON CONFLICT ("{primary_col}") DO NOTHING'
-                        insert_query = f'INSERT INTO {tgt1_table} ({col_names_str}) VALUES ({placeholders}) {on_conflict};'
-
-                        for v in valid_records:
-                            vals = [v.get(c) for c in sample_cols]
-                            cur.execute(insert_query, vals)
-
-                    cur.close()
-                    conn.close()
+                        if valid_records:
+                            bulk_upsert_chunked_pg(conn, tgt1_table, valid_records, primary_col, chunk_size=5000)
 
                 _commit_target()
-                log("TARGET_1", f"Successfully committed {len(valid_records)} rows into '{tgt1_table}' and {len(quarantine_records)} into '{tgt1_quarantine}'.")
+                log("TARGET_1", f"Successfully committed {len(valid_records)} rows into '{tgt1_table}' and {len(quarantine_records)} into '{tgt1_quarantine}' via pooled batch upsert.")
 
         except Exception as e:
             log("ERROR", f"Target 1 commit failed: {str(e)}")
+
+    # PRF-02: Explicitly flush memory buffers and run GC collect to maintain plateau
+    memory_profiler.flush_buffers_and_gc()
 
     elapsed_ms = int((time.time() - start_time) * 1000)
     log("SUCCESS", f"Pipeline Completed in {elapsed_ms}ms: {len(valid_records)} Clean, {len(autofixed_records)} Auto-Fixed, {len(quarantine_records)} Quarantined.")

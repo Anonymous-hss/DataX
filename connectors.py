@@ -17,6 +17,7 @@ from models import StoreCredentialRequest, SampleDataRequest
 from vault import get_resolved_uri
 from sap_generator import get_sap_table_sample
 from resilience import retry_with_backoff, source_db_breaker
+from db_pool import db_pool
 
 
 def test_database_connection(req: StoreCredentialRequest) -> Dict[str, Any]:
@@ -80,19 +81,17 @@ def test_database_connection(req: StoreCredentialRequest) -> Dict[str, Any]:
         elif engine in ["postgres", "postgresql"]:
             @retry_with_backoff(max_retries=2, base_delay=0.8, jitter=True)
             def _connect_pg():
-                return source_db_breaker.call(lambda: psycopg2.connect(uri, connect_timeout=5))
+                with db_pool.get_connection(uri) as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            SELECT table_name 
+                            FROM information_schema.tables 
+                            WHERE table_schema = 'public'
+                            ORDER BY table_name;
+                        """)
+                        return [r[0] for r in cur.fetchall()]
 
-            conn = _connect_pg()
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT table_name 
-                FROM information_schema.tables 
-                WHERE table_schema = 'public'
-                ORDER BY table_name;
-            """)
-            tables = [r[0] for r in cur.fetchall()]
-            cur.close()
-            conn.close()
+            tables = _connect_pg()
             latency = int((time.time() - start_t) * 1000)
             return {
                 "success": True,
@@ -101,7 +100,7 @@ def test_database_connection(req: StoreCredentialRequest) -> Dict[str, Any]:
                 "database": req.database or "PostgreSQL",
                 "tables": tables,
                 "tableCount": len(tables),
-                "message": f"Successfully connected to PostgreSQL! Discovered {len(tables)} tables."
+                "message": f"Successfully connected to PostgreSQL! Discovered {len(tables)} tables via connection pool."
             }
 
         elif engine in ["sap_bw", "s4_hana", "sap"]:
@@ -270,16 +269,14 @@ def sample_table_data(req: SampleDataRequest) -> Dict[str, Any]:
         elif engine in ["postgres", "postgresql"]:
             @retry_with_backoff(max_retries=2, base_delay=0.8, jitter=True)
             def _sample_pg():
-                conn = psycopg2.connect(uri, connect_timeout=5)
-                cur = conn.cursor(cursor_factory=RealDictCursor)
-                cur.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;")
-                all_tables = [r["table_name"] for r in cur.fetchall()]
-                table_name = req.table if (req.table and req.table in all_tables) else (all_tables[0] if all_tables else "users")
-                cur.execute(f'SELECT * FROM "{table_name}" LIMIT {limit_val};')
-                raw_data = cur.fetchall()
-                cur.close()
-                conn.close()
-                return raw_data, table_name, all_tables
+                with db_pool.get_connection(uri) as conn:
+                    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                        cur.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;")
+                        all_tables = [r["table_name"] for r in cur.fetchall()]
+                        table_name = req.table if (req.table and req.table in all_tables) else (all_tables[0] if all_tables else "users")
+                        cur.execute(f'SELECT * FROM "{table_name}" LIMIT {limit_val};')
+                        raw_data = cur.fetchall()
+                        return raw_data, table_name, all_tables
 
             raw_data, table_name, all_tables = _sample_pg()
             rows = []

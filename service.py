@@ -44,6 +44,9 @@ from resilience import (
     durable_dlq,
     offline_ai_heuristics,
 )
+from db_pool import db_pool
+from profiler import memory_profiler
+from benchmark import run_performance_benchmark
 
 # -----------------------------------------------------------------------------
 # FastAPI Application & CORS
@@ -130,6 +133,34 @@ def api_get_resilience_status():
             "supported_domains": ["sap_clean_core", "customer_360", "financial_gl", "healthcare_hipaa"]
         }
     }
+
+
+# -----------------------------------------------------------------------------
+# Performance & Benchmarking Telemetry Routes (PRF-01 to PRF-04)
+# -----------------------------------------------------------------------------
+@app.get("/performance/profile")
+def api_get_memory_profile():
+    return {
+        "status": "healthy",
+        "memory": memory_profiler.get_summary(),
+        "connection_pools": db_pool.get_stats()
+    }
+
+
+@app.post("/performance/profile/flush")
+def api_flush_memory():
+    return {
+        "status": "success",
+        "result": memory_profiler.flush_buffers_and_gc()
+    }
+
+
+@app.post("/performance/benchmark")
+def api_run_benchmark(records: int = 10000, batch_size: int = 5000):
+    clamped_records = min(max(records, 1000), 100000)
+    clamped_batch = min(max(batch_size, 500), 10000)
+    report = run_performance_benchmark(total_records=clamped_records, chunk_size=clamped_batch)
+    return {"status": "success", "report": report}
 
 
 # -----------------------------------------------------------------------------
