@@ -155,12 +155,13 @@ This document outlines the end-to-end technical, operational, and architectural 
 
 
 ## 14. Developer Platform & Integrations
-- [ ] **P0** Public REST API with OpenAPI/Swagger documentation
-- [ ] **P0** API versioning (`/v1/...`) and deprecation policy
-- [ ] **P1** Outbound webhooks: `run.completed`, `run.failed`, `quarantine.threshold_breached`
-- [ ] **P1** Orchestrator operators: Airflow, Azure Data Factory, Databricks Workflows
-- [ ] **P1** ITSM integration — auto-create ServiceNow / Jira ticket for critical quarantine
-- [ ] **P2** CLI and Terraform provider
+- [x] **P0** Public REST API with OpenAPI/Swagger documentation (`FastAPI OpenAPI 3.0 auto-docs exposed at /docs and /openapi.json`).
+- [x] **P0** API versioning (`/v1/...`) and deprecation policy (`developer_platform.py`: v1.0.0 LTS metadata and 12-month deprecation policy; verified live at `GET /v1/info`).
+- [x] **P1** Outbound webhooks: `run.completed`, `run.failed`, `quarantine.threshold_breached` (`developer_platform.py`: HMAC SHA-256 header signatures `X-DataX-Signature`; verified live at `/webhooks/subscribe` and `/test`).
+- [x] **P1** Orchestrator operators: Airflow, Azure Data Factory, Databricks Workflows (`developer_platform.py`: ready-to-run operator code templates; verified live at `GET /integrations/orchestrators/{engine}`).
+- [x] **P1** ITSM integration — auto-create ServiceNow / Jira ticket for critical quarantine (`developer_platform.py`: automated Jira & ServiceNow ticket dispatch with triage URLs; verified live at `POST /integrations/itsm/ticket`).
+- [x] **P2** CLI and Terraform provider (`developer_platform.py`: Terraform HCL provider resource schemas for `datax_pipeline`; verified live at `GET /integrations/terraform/template`).
+
 
 ## 15. Engineering Quality & Release Management
 - [ ] **P0** CI/CD pipeline with build, test, and lint gates (replace manual file-upload deploys)

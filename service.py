@@ -820,6 +820,62 @@ def api_get_bi_tabular_feed():
 
 
 # -----------------------------------------------------------------------------
+# Developer Platform, Webhooks & Integrations Routes (Section 14)
+# -----------------------------------------------------------------------------
+@app.get("/v1/info")
+def api_get_v1_info():
+    """P0: API version metadata, OpenAPI docs links, and deprecation policy."""
+    from developer_platform import developer_service
+    return {"status": "success", "info": developer_service.get_version_info()}
+
+
+@app.post("/webhooks/subscribe")
+def api_subscribe_webhook(
+    url: str,
+    events: Optional[List[str]] = None,
+    secret: Optional[str] = None,
+    user: Dict[str, Any] = Depends(require_roles(["Admin"]))
+):
+    """P1: Subscribes outbound webhook for pipeline and quarantine events."""
+    from developer_platform import developer_service
+    return developer_service.subscribe_webhook(url, events or ["run.completed", "run.failed", "quarantine.threshold_breached"], secret)
+
+
+@app.post("/webhooks/test")
+def api_test_webhook(webhook_id: str = "wh_test", event_type: str = "run.completed"):
+    """P1: Dispatches test webhook with HMAC-SHA256 signature."""
+    from developer_platform import developer_service
+    return developer_service.trigger_webhook_test(webhook_id, event_type)
+
+
+@app.get("/integrations/orchestrators/{engine}")
+def api_get_orchestrator_template(engine: str):
+    """P1: Orchestrator operators (Airflow, Azure Data Factory, Databricks Workflows)."""
+    from developer_platform import developer_service
+    return {"status": "success", "template": developer_service.get_orchestrator_template(engine)}
+
+
+@app.post("/integrations/itsm/ticket")
+def api_create_itsm_ticket(
+    run_id: str,
+    violation_count: int = 14,
+    severity: str = "HIGH",
+    system: str = "jira",
+    user: Dict[str, Any] = Depends(require_roles(["Admin", "Data Steward"]))
+):
+    """P1: Generates ServiceNow / Jira ticket for critical quarantine breaches."""
+    from developer_platform import developer_service
+    return developer_service.create_itsm_ticket(run_id, severity, violation_count, system)
+
+
+@app.get("/integrations/terraform/template")
+def api_get_terraform_template():
+    """P2: Terraform provider resource definition template."""
+    from developer_platform import developer_service
+    return {"status": "success", "terraform": developer_service.get_terraform_template()}
+
+
+# -----------------------------------------------------------------------------
 # AI Rule Synthesis (With REL-01 Retries, REL-02 Breaker, REL-05 Offline Fallback)
 # -----------------------------------------------------------------------------
 @app.post("/rules/generate")
