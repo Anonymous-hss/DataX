@@ -10,7 +10,8 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional
 import time
 
-from fastapi import FastAPI, HTTPException, Depends, Security
+import shutil
+from fastapi import FastAPI, HTTPException, Depends, Security, Response
 from fastapi.middleware.cors import CORSMiddleware
 from openai import AzureOpenAI
 import uvicorn
@@ -59,6 +60,9 @@ from security_rbac import (
 )
 from sanitizer import sanitize_prompt_and_rules
 from rate_limiter import RateLimitMiddleware, rate_limiter
+from structured_logger import logger
+from metrics import metrics_collector
+from alerts import alert_dispatcher
 
 # -----------------------------------------------------------------------------
 # FastAPI Application & Security Middlewares (SEC-01 & SEC-06)
@@ -132,9 +136,66 @@ def health():
         "status": "healthy",
         "service": "datax-service",
         "version": "2.5.0",
-        "features": ["threads", "auto-fix", "quarantine-workbench", "dry-run", "health-score", "resilience"],
+        "features": ["threads", "auto-fix", "quarantine-workbench", "dry-run", "health-score", "resilience", "observability"],
         "timestamp": datetime.utcnow().isoformat()
     }
+
+
+@app.get("/health/live")
+def api_liveness_probe():
+    """OBS-03: Process Liveness Probe."""
+    return {
+        "status": "alive",
+        "service": "datax-service",
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+
+@app.get("/health/ready")
+def api_readiness_probe():
+    """OBS-03: System Readiness Probe (disk space > 10%, memory < 512MB, circuit breakers)."""
+    try:
+        disk = shutil.disk_usage("/")
+        free_pct = round((disk.free / disk.total) * 100, 1)
+        disk_ok = free_pct > 10.0
+    except Exception:
+        free_pct = 50.0
+        disk_ok = True
+
+    rss_mb = memory_profiler.get_current_rss_mb()
+    memory_ok = rss_mb < 512.0
+    target_ok = target_db_breaker.state != "OPEN"
+    source_ok = source_db_breaker.state != "OPEN"
+    is_ready = disk_ok and memory_ok and target_ok and source_ok
+
+    payload = {
+        "status": "ready" if is_ready else "not_ready",
+        "service": "datax-service",
+        "checks": {
+            "disk_space": {"status": "ok" if disk_ok else "critical", "free_percent": free_pct, "min_required": 10.0},
+            "memory_footprint": {"status": "ok" if memory_ok else "warning", "rss_mb": rss_mb, "max_allowed": 512.0},
+            "circuit_breakers": {
+                "source_db": source_db_breaker.state,
+                "target_db": target_db_breaker.state,
+                "openai": openai_breaker.state
+            },
+            "connection_pools": db_pool.get_stats()
+        },
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+    if not is_ready:
+        raise HTTPException(status_code=503, detail=payload)
+    return payload
+
+
+@app.get("/metrics")
+def api_prometheus_metrics():
+    """OBS-05: Prometheus Metrics Exporter (OpenMetrics standard exposition format)."""
+    return Response(
+        content=metrics_collector.export_metrics(),
+        media_type="text/plain; version=0.0.4; charset=utf-8"
+    )
 
 
 @app.get("/resilience/status")
@@ -227,6 +288,44 @@ def api_get_security_status(user: Dict[str, Any] = Depends(get_current_user)):
         "rate_limiter": rate_limiter.get_stats(),
         "at_rest_encryption": {"cipher": "AES-256-Fernet (Envelope Key Protected)", "status": "active"},
         "pii_masking": {"status": "active", "types_protected": ["SSN", "Credit Card", "Email", "Phone", "HIPAA_MRN"]}
+    }
+
+
+# -----------------------------------------------------------------------------
+# Observability & Alerting Routes (OBS-01 & OBS-02)
+# -----------------------------------------------------------------------------
+@app.get("/alerts/policies")
+def api_get_alert_policies(user: Dict[str, Any] = Depends(get_current_user)):
+    return {"status": "success", "policies": alert_dispatcher.get_policies()}
+
+
+@app.post("/alerts/policies")
+def api_save_alert_policies(policies: List[Dict[str, Any]], user: Dict[str, Any] = Depends(require_roles(["Admin", "Data Steward"]))):
+    alert_dispatcher.save_policies(policies)
+    return {"status": "success", "policies": policies, "count": len(policies)}
+
+
+@app.get("/alerts/history")
+def api_get_alert_history(limit: int = 20, user: Dict[str, Any] = Depends(get_current_user)):
+    history = alert_dispatcher.get_history(limit=limit)
+    return {"status": "success", "alerts": history, "count": len(history)}
+
+
+@app.post("/alerts/test")
+def api_test_alert(user: Dict[str, Any] = Depends(require_roles(["Admin", "Data Steward"]))):
+    sample_breach = {
+        "pipelineName": "Manual Alert Verification Test",
+        "runId": f"test_run_{int(time.time())}",
+        "status": "SUCCESS",
+        "counts": {"totalChecked": 1000, "valid": 800, "autofixed": 0, "quarantined": 200},
+        "driftMetrics": {"status": "DRIFT_DETECTED", "driftScore": 24.5},
+        "healthMetrics": {"score": 80.0}
+    }
+    alert_dispatcher.evaluate_and_dispatch(sample_breach)
+    return {
+        "status": "success",
+        "message": "Test alert evaluated against policies and dispatched.",
+        "test_payload": sample_breach
     }
 
 

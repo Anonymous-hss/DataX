@@ -42,6 +42,9 @@ from resilience import (
 from db_pool import db_pool
 from streamer import stream_postgresql_records, bulk_upsert_chunked_pg
 from profiler import memory_profiler
+from structured_logger import logger, set_trace_context
+from metrics import metrics_collector
+from alerts import alert_dispatcher
 
 
 def run_pipeline(req: PipelineExecutionRequest) -> Dict[str, Any]:
@@ -58,6 +61,9 @@ def run_pipeline(req: PipelineExecutionRequest) -> Dict[str, Any]:
         cached_copy["idempotency_key"] = idempotency_key
         cached_copy["message"] = "Pipeline execution was deduplicated (idempotent replay of existing run result)."
         return cached_copy
+
+    # OBS-04: Initialize trace context for structured JSON logs
+    set_trace_context(trace_id=idempotency_key, pipeline_id=req.threadId or "pipeline_main")
 
     logs = []
     def log(tag: str, text: str):
@@ -454,6 +460,28 @@ def run_pipeline(req: PipelineExecutionRequest) -> Dict[str, Any]:
         ],
         "traceLogs": logs
     }
+
+    # OBS-04: Structured JSON log emission
+    logger.info(
+        f"Pipeline '{req.pipelineName}' finished in {elapsed_ms}ms with score {health_val}%",
+        duration_ms=elapsed_ms,
+        compliant=len(valid_records),
+        autofixed=len(autofixed_records),
+        quarantined=len(quarantine_records),
+        is_dry_run=is_dry_run
+    )
+
+    # OBS-05: Prometheus metrics recording
+    metrics_collector.record_run(
+        success=True,
+        valid=len(valid_records),
+        autofixed=len(autofixed_records),
+        quarantined=len(quarantine_records),
+        duration_sec=elapsed_ms / 1000.0
+    )
+
+    # OBS-01 & OBS-02: Multi-channel Alert Dispatcher & Threshold Policy Evaluation
+    alert_dispatcher.evaluate_and_dispatch(final_outcome)
 
     # REL-03: Commit outcome to Idempotency Manager for replay deduplication
     idempotency_manager.commit(idempotency_key, final_outcome)
