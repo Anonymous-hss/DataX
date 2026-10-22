@@ -778,6 +778,48 @@ def api_get_connector_sdk_templates():
 
 
 # -----------------------------------------------------------------------------
+# Reporting, Quality Scorecard & Business Value Routes (Section 13)
+# -----------------------------------------------------------------------------
+@app.get("/reporting/scorecard/{pipeline_id}")
+def api_get_quality_scorecard(pipeline_id: str, user: Dict[str, Any] = Depends(get_current_user)):
+    """P0: Data Quality Scorecard (completeness, validity, uniqueness, etc.) with 7d trend."""
+    from reporting import reporting_service
+    return {"status": "success", "scorecard": reporting_service.get_quality_scorecard(pipeline_id)}
+
+
+@app.get("/reporting/audit-report/export")
+def api_export_audit_report(run_id: Optional[str] = None, format: str = "csv"):
+    """P0: Exportable audit report for compliance auditors (SOC2/ISO 27001)."""
+    from reporting import reporting_service
+    from fastapi.responses import Response
+    if format == "csv":
+        csv_data = reporting_service.export_audit_report_csv(run_id)
+        return Response(content=csv_data, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=datax_audit_report.csv"})
+    return {"status": "success", "message": "Specify format=csv for file download"}
+
+
+@app.get("/reporting/roi")
+def api_get_roi_metrics(user: Dict[str, Any] = Depends(get_current_user)):
+    """P1: Executive ROI dashboard (auto-fixed records, engineer hours, dollars saved)."""
+    from reporting import reporting_service
+    return {"status": "success", "roi": reporting_service.get_roi_metrics()}
+
+
+@app.get("/reporting/digest/weekly")
+def api_get_weekly_digest(user: Dict[str, Any] = Depends(get_current_user)):
+    """P1: Scheduled stakeholder digest for executive leadership."""
+    from reporting import reporting_service
+    return {"status": "success", "digest": reporting_service.get_weekly_digest()}
+
+
+@app.get("/reporting/bi/tabular-feed")
+def api_get_bi_tabular_feed():
+    """P2: Live feed formatted for direct import into Power BI & Tableau."""
+    from reporting import reporting_service
+    return reporting_service.get_bi_tabular_feed()
+
+
+# -----------------------------------------------------------------------------
 # AI Rule Synthesis (With REL-01 Retries, REL-02 Breaker, REL-05 Offline Fallback)
 # -----------------------------------------------------------------------------
 @app.post("/rules/generate")

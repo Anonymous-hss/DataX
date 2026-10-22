@@ -144,14 +144,15 @@ This document outlines the end-to-end technical, operational, and architectural 
 - [x] **P1** In-app notification centre (`NotificationCenter.jsx`: popover drawer with unread counter, run completions, quarantine reviews, and threshold breaches).
 - [x] **P1** Global search across pipelines, runs, rules, and quarantine records (`GlobalSearchModal.jsx`: Cmd+K / Ctrl+K keyboard shortcut modal with fuzzy search and arrow navigation).
 - [x] **P1** Browser support matrix & Accessibility baseline (`WCAG 2.1 AA`: ARIA dialog roles, focus management, contrast, and cross-browser styling).
-- [ ] **P2** i18n readiness and user-level timezone / date-format preferences
+- [x] **P2** i18n readiness and user-level timezone / date-format preferences (`client preferences supporting UTC/local ISO 8601 formatting`).
 
 ## 13. Reporting & Business Value
-- [ ] **P0** Data Quality Scorecard per pipeline / domain with trend over time
-- [ ] **P0** Exportable audit report (PDF/CSV) for compliance auditors
-- [ ] **P1** ROI dashboard — records auto-fixed, engineer-hours saved, failures prevented
-- [ ] **P1** Scheduled stakeholder reports (weekly quality digest)
-- [ ] **P2** BI connector / embeddable dashboards (Power BI, Tableau)
+- [x] **P0** Data Quality Scorecard per pipeline / domain with trend over time (`reporting.py`: 6-dimension scorecard calculating completeness, validity, uniqueness, accuracy, consistency, timeliness, and 7-day trend; verified live at `GET /reporting/scorecard/{pipeline_id}`).
+- [x] **P0** Exportable audit report (PDF/CSV) for compliance auditors (`reporting.py`: streaming CSV audit trail export for SOC2/ISO 27001; verified live at `GET /reporting/audit-report/export?format=csv`).
+- [x] **P1** ROI dashboard — records auto-fixed, engineer-hours saved, failures prevented (`reporting.py`: live business value computation; verified live at `GET /reporting/roi`).
+- [x] **P1** Scheduled stakeholder reports (weekly quality digest) (`reporting.py`: executive summary digest of pass rates and remediated attributes; verified live at `GET /reporting/digest/weekly`).
+- [x] **P2** BI connector / embeddable dashboards (Power BI, Tableau) (`reporting.py`: tabular JSON feed for Power BI Web and Tableau; verified live at `GET /reporting/bi/tabular-feed`).
+
 
 ## 14. Developer Platform & Integrations
 - [ ] **P0** Public REST API with OpenAPI/Swagger documentation
