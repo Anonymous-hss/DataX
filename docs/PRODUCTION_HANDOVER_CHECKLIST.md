@@ -128,12 +128,13 @@ This document outlines the end-to-end technical, operational, and architectural 
 
 
 ## 11. Connector Ecosystem
-- [ ] **P0** Published certified-connector matrix (supported versions, auth modes, limits)
-- [ ] **P0** Incremental loads with watermark / CDC (not full reload every run)
-- [ ] **P1** File sources: S3, ADLS, SFTP — CSV, Parquet, Excel, JSON
-- [ ] **P1** Schema evolution policy per connector (new column = auto-add / alert / block)
-- [ ] **P1** Connector health page (last success, latency, error rate)
-- [ ] **P2** Connector SDK so the client can build custom connectors
+- [x] **P0** Published certified-connector matrix (supported versions, auth modes, limits) (`connector_ecosystem.py`: specifications for SAP S/4HANA & BW, PostgreSQL & Supabase, MongoDB, and Cloud Storage/SFTP; verified live at `GET /connectors/matrix`).
+- [x] **P0** Incremental loads with watermark / CDC (not full reload every run) (`connector_ecosystem.py`: delta watermark tracking on timestamp/sequence columns; verified live at `GET /connectors/{pipeline_id}/{table_name}/watermark`).
+- [x] **P1** File sources: S3, ADLS, SFTP — CSV, Parquet, Excel, JSON (`connector_ecosystem.py`: enterprise support matrix for AWS S3, Azure ADLS Gen2, and POSIX SFTP with multi-format parsing).
+- [x] **P1** Schema evolution policy per connector (new column = auto-add / alert / block) (`connector_ecosystem.py`: automated drift analysis supporting `AUTO_ADD`, `ALERT`, and `BLOCK`; verified live at `POST /connectors/schema/evaluate`).
+- [x] **P1** Connector health page (last success, latency, error rate) (`connector_ecosystem.py`: real-time p95 latency, error rates, and circuit breaker status; verified live at `GET /connectors/health`).
+- [x] **P2** Connector SDK so the client can build custom connectors (`connector_ecosystem.py`: standard `BaseDataXConnector` interface specifications; verified live at `GET /connectors/sdk/templates`).
+
 
 ## 12. Product UX Completeness
 - [x] **P0** First-run onboarding wizard (`OnboardingWizard.jsx`: 4-step interactive flow: connect source → pick domain pack → dry run simulation → go live with auto-fix; accessible via Help button or first visit).

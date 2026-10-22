@@ -711,6 +711,73 @@ def api_rotate_api_key(
 
 
 # -----------------------------------------------------------------------------
+# Enterprise Connector Ecosystem Routes (Section 11)
+# -----------------------------------------------------------------------------
+@app.get("/connectors/matrix")
+def api_get_connector_matrix():
+    """P0: Published certified-connector matrix (versions, auth modes, protocols, limits)."""
+    from connector_ecosystem import CERTIFIED_CONNECTOR_MATRIX
+    return {"status": "success", "matrix": CERTIFIED_CONNECTOR_MATRIX}
+
+
+@app.get("/connectors/{pipeline_id}/{table_name}/watermark")
+def api_get_watermark(pipeline_id: str, table_name: str, user: Dict[str, Any] = Depends(get_current_user)):
+    """P0: Incremental load watermark state for CDC extraction."""
+    from connector_ecosystem import connector_service
+    return {"status": "success", "watermark": connector_service.get_watermark(pipeline_id, table_name)}
+
+
+@app.post("/connectors/{pipeline_id}/{table_name}/watermark")
+def api_update_watermark(
+    pipeline_id: str,
+    table_name: str,
+    watermark_value: str,
+    watermark_column: str = "UPDATED_AT",
+    user: Dict[str, Any] = Depends(require_roles(["Admin", "Data Steward"]))
+):
+    """P0: Updates CDC watermark after successful incremental sync."""
+    from connector_ecosystem import connector_service
+    return connector_service.update_watermark(pipeline_id, table_name, watermark_value, watermark_column)
+
+
+@app.post("/connectors/{pipeline_id}/{table_name}/watermark/reset")
+def api_reset_watermark(
+    pipeline_id: str,
+    table_name: str,
+    user: Dict[str, Any] = Depends(require_roles(["Admin", "Data Steward"]))
+):
+    """P0: Resets watermark to force full reload on next execution."""
+    from connector_ecosystem import connector_service
+    return connector_service.reset_watermark(pipeline_id, table_name)
+
+
+@app.post("/connectors/schema/evaluate")
+def api_evaluate_schema_evolution(
+    registered_columns: List[str],
+    incoming_columns: List[str],
+    policy: str = "ALERT",
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """P1: Schema evolution policy evaluation (AUTO_ADD / ALERT / BLOCK)."""
+    from connector_ecosystem import connector_service
+    return connector_service.evaluate_schema_evolution(registered_columns, incoming_columns, policy)
+
+
+@app.get("/connectors/health")
+def api_get_connectors_health():
+    """P1: Connector health page (last success, latency, error rate, circuit breaker state)."""
+    from connector_ecosystem import connector_service
+    return {"status": "success", "connectors": connector_service.get_connectors_health()}
+
+
+@app.get("/connectors/sdk/templates")
+def api_get_connector_sdk_templates():
+    """P2: Connector SDK template for custom partner connectors."""
+    from connector_ecosystem import connector_service
+    return {"status": "success", "sdk": connector_service.get_sdk_template()}
+
+
+# -----------------------------------------------------------------------------
 # AI Rule Synthesis (With REL-01 Retries, REL-02 Breaker, REL-05 Offline Fallback)
 # -----------------------------------------------------------------------------
 @app.post("/rules/generate")
