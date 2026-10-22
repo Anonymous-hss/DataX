@@ -27,6 +27,7 @@ from models import (
     SampleDataRequest,
     GenerateRulesRequest,
     LoginRequest,
+    RuleVerifyRequest,
 )
 from vault import (
     load_threads,
@@ -572,6 +573,60 @@ def api_import_bundle(bundle: Dict[str, Any], user: Dict[str, Any] = Depends(req
 
 
 # -----------------------------------------------------------------------------
+# AI Governance & Model Safety Routes (Section 9)
+# -----------------------------------------------------------------------------
+@app.get("/ai-governance/status")
+def api_get_ai_governance_status(tenant_id: str = "default", user: Dict[str, Any] = Depends(get_current_user)):
+    """P0 & P1: Returns pinned model version, privacy sharing opt-in, spend, and caps."""
+    from ai_governance import ai_governor
+    return {"status": "success", "governance": ai_governor.get_governance_report(tenant_id)}
+
+
+@app.post("/ai-governance/policy")
+def api_set_ai_policy(
+    tenant_id: str = "default",
+    allow_sharing: bool = False,
+    monthly_budget_usd: float = 50.0,
+    confidence_threshold: float = 0.85,
+    user: Dict[str, Any] = Depends(require_roles(["Admin", "Data Steward"]))
+):
+    """P0 & P1: Updates tenant privacy sharing opt-in, budget cap, and confidence threshold."""
+    from ai_governance import ai_governor
+    ai_governor.set_tenant_governance(tenant_id, allow_sharing, monthly_budget_usd, confidence_threshold)
+    return {
+        "status": "success",
+        "tenant_id": tenant_id,
+        "allow_external_llm_sharing": allow_sharing,
+        "monthly_budget_usd": monthly_budget_usd,
+        "confidence_threshold": confidence_threshold
+    }
+
+
+@app.post("/ai-governance/rules/verify")
+def api_verify_rules_compilation(req: RuleVerifyRequest):
+    """P0: Compilation & dry-run gate: rules must compile in DuckDB sandbox before activation."""
+    from ai_governance import ai_governor
+    result = ai_governor.verify_rule_compilation(req.rules, req.sample_records or [])
+    if not result["all_passed"]:
+        raise HTTPException(status_code=400, detail={"message": "Rule compilation failed", "diagnostics": result["diagnostics"]})
+    return {"status": "success", "verification": result}
+
+
+@app.post("/ai-governance/autofix/explain")
+def api_explain_autofix(
+    rule_id: str,
+    field: str,
+    original_value: Any,
+    fixed_value: Any,
+    heuristic_type: str = "WHITESPACE_TRIM",
+    tenant_id: str = "default"
+):
+    """P0 & P1: Auto-fix explainability trace and confidence threshold routing."""
+    from ai_governance import ai_governor
+    return ai_governor.evaluate_remediation_confidence(rule_id, field, original_value, fixed_value, heuristic_type, tenant_id)
+
+
+# -----------------------------------------------------------------------------
 # AI Rule Synthesis (With REL-01 Retries, REL-02 Breaker, REL-05 Offline Fallback)
 # -----------------------------------------------------------------------------
 @app.post("/rules/generate")
@@ -582,6 +637,22 @@ def api_generate_rules(req: GenerateRulesRequest):
             sanitize_prompt_and_rules(req.prompt)
         except ValueError as ve:
             raise HTTPException(status_code=400, detail=str(ve))
+
+    # P0: Data-sharing control: check tenant opt-in privacy & budget cap
+    from ai_governance import ai_governor
+    allowed, reason = ai_governor.check_llm_sharing_permission(tenant_id="default")
+    if not allowed:
+        print(f"[AI GOVERNOR] {reason}")
+        fallback_rules = offline_ai_heuristics.synthesize_rules(req.tableName, req.engine, req.columns, req.prompt)
+        return {
+            "success": True,
+            "engine": "Intelligence Engine (Local Certified Ontology)",
+            "table": req.tableName,
+            "rules": fallback_rules,
+            "count": len(fallback_rules),
+            "governance_status": "OFFLINE_PRIVACY_ENFORCED",
+            "reason": reason
+        }
 
     client, deployment = get_azure_openai_client()
 

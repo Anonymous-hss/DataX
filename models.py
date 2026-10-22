@@ -119,3 +119,8 @@ class LoginRequest(BaseModel):
     email: str
     password: Optional[str] = "admin"
     role: Optional[str] = None
+
+
+class RuleVerifyRequest(BaseModel):
+    rules: List[Dict[str, Any]]
+    sample_records: Optional[List[Dict[str, Any]]] = None

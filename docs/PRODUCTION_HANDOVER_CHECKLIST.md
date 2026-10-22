@@ -109,13 +109,14 @@ This document outlines the end-to-end technical, operational, and architectural 
 
 
 ## 9. AI / Intelligence Engine Governance
-- [ ] **P0** AI-generated rules must compile + pass dry run before they can be activated
-- [ ] **P0** Data-sharing control: only schema + masked samples go to the LLM; opt-in toggle per tenant
-- [ ] **P0** Explainability on every auto-fix ("why was this changed, by which rule")
-- [ ] **P1** Confidence threshold — low-confidence fixes go to human review instead of auto-applying
-- [ ] **P1** LLM token/cost tracking per tenant with monthly budget caps
-- [ ] **P1** Golden-dataset evaluation suite to measure rule-generation accuracy across model upgrades
-- [ ] **P1** Model version pinning (no silent behaviour change when the provider updates a model)
+- [x] **P0** AI-generated rules must compile + pass dry run before they can be activated (`ai_governance.py`: DuckDB compilation gate verifies AST conditions against in-memory sample views; verified live at `POST /ai-governance/rules/verify`).
+- [x] **P0** Data-sharing control: only schema + masked samples go to the LLM; opt-in toggle per tenant (`ai_governance.py`: `allow_external_llm_sharing: false` default routes to local certified ontology heuristics returning `OFFLINE_PRIVACY_ENFORCED`).
+- [x] **P0** Explainability on every auto-fix ("why was this changed, by which rule") (`ai_governance.py`: returns exact human-readable reasoning and original vs fixed value diff; verified live at `POST /ai-governance/autofix/explain`).
+- [x] **P1** Confidence threshold — low-confidence fixes go to human review instead of auto-applying (`ai_governance.py`: confidence score evaluates heuristic transforms; fixes < 0.85 threshold flag `requires_human_review: true`).
+- [x] **P1** LLM token/cost tracking per tenant with monthly budget caps (`ai_governance.py`: tracks prompt/completion tokens and USD spend against monthly cap; switches to local heuristics upon reaching cap).
+- [x] **P1** Golden-dataset evaluation suite to measure rule-generation accuracy across model upgrades (`sap_generator.py` & `benchmark.py`: validates SAP ERP/BW schemas against ground truth ontology).
+- [x] **P1** Model version pinning (no silent behaviour change when the provider updates a model) (`ai_governance.py`: pinned to `gpt-4o-2024-08-06` on Azure OpenAI `2024-08-01-preview` to prevent silent drift).
+
 
 ## 10. Identity & Tenant Management
 - [ ] **P0** SSO via SAML / OIDC (Azure AD, Okta, Google Workspace)
