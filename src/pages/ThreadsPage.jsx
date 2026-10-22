@@ -298,7 +298,7 @@ export default function ThreadsPage() {
               </svg>
             </button>
 
-            {/* Dynamic Clerk User Profile Section */}
+            {/* Dynamic Enterprise User Profile Section */}
             <DataXUserMenu />
           </div>
         </div>

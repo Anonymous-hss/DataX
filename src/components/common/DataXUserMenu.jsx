@@ -1,11 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useUser, useClerk, UserButton, SignedIn, SignedOut } from '@clerk/clerk-react';
-import { User, LogOut, Shield, ChevronDown, Check, Building2, Mail } from 'lucide-react';
+import { User, LogOut, Shield, ChevronDown, Building2, Mail } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../context/NavigationContext';
 
 export default function DataXUserMenu({ compact = false }) {
-  const { user, isLoaded } = useUser();
-  const { signOut, openUserProfile } = useClerk();
+  const { user, isLoaded, isSignedIn, logout } = useAuth();
   const { navigateTo } = useNavigation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const menuRef = useRef(null);
@@ -27,29 +26,27 @@ export default function DataXUserMenu({ compact = false }) {
   }
 
   const fullName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Enterprise User';
-  const email = user?.primaryEmailAddress?.emailAddress || 'user@company.com';
-  const tenantId = user?.id ? `tenant_${user.id.slice(0, 8)}` : 'tenant_enterprise';
+  const email = user?.primaryEmailAddress?.emailAddress || user?.email || 'user@dataglow.ai';
+  const tenantId = user?.tenantId || 'tenant_enterprise';
+  const initials = (fullName || 'U').slice(0, 2).toUpperCase();
 
   return (
     <div className="relative" ref={menuRef}>
-      <SignedIn>
+      {isSignedIn ? (
         <div className="flex items-center gap-2">
-          {/* Detailed user profile pill (hidden on small screens if compact) */}
+          {/* Detailed user profile pill */}
           {!compact && (
             <button
+              type="button"
               onClick={() => setDropdownOpen(!dropdownOpen)}
               className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 transition-colors text-left cursor-pointer shadow-2xs"
             >
-              <div className="w-6 h-6 rounded-full overflow-hidden border border-slate-200 shrink-0">
-                <img 
-                  src={user?.imageUrl} 
-                  alt={fullName} 
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.parentNode.innerText = fullName.slice(0, 2).toUpperCase();
-                  }}
-                />
+              <div className="w-6 h-6 rounded-full overflow-hidden border border-slate-200 bg-blue-50 text-blue-600 text-[10px] font-bold flex items-center justify-center shrink-0">
+                {user?.imageUrl ? (
+                  <img src={user.imageUrl} alt={fullName} className="w-full h-full object-cover" />
+                ) : (
+                  <span>{initials}</span>
+                )}
               </div>
               <div className="leading-tight">
                 <p className="text-[11px] font-semibold text-slate-800 line-clamp-1 max-w-[110px]">{fullName}</p>
@@ -59,95 +56,89 @@ export default function DataXUserMenu({ compact = false }) {
             </button>
           )}
 
-          {/* Clerk Official User Button with custom styling */}
+          {/* User Button / Avatar */}
           <div className="shrink-0 flex items-center">
-            <UserButton
-              afterSignOutUrl="/datax/#login"
-              appearance={{
-                elements: {
-                  avatarBox: 'w-8 h-8 rounded-full border border-slate-300 ring-2 ring-transparent hover:ring-blue-400 transition-all cursor-pointer',
-                  userButtonPopoverCard: 'shadow-2xl rounded-2xl border border-slate-200 p-2'
-                }
-              }}
-            />
+            <button
+              type="button"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="w-8 h-8 rounded-full border border-slate-300 ring-2 ring-transparent hover:ring-blue-400 transition-all cursor-pointer flex items-center justify-center bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-xs shadow-xs"
+            >
+              {user?.imageUrl ? (
+                <img src={user.imageUrl} alt={fullName} className="w-full h-full object-cover rounded-full" />
+              ) : (
+                <span>{initials}</span>
+              )}
+            </button>
           </div>
         </div>
-
-        {/* Custom SaaS User Details Dropdown */}
-        {dropdownOpen && (
-          <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-xl p-3 z-50 text-slate-700 animate-in fade-in zoom-in-95 duration-100">
-            {/* Header / Identity */}
-            <div className="flex items-center gap-3 pb-3 border-b border-slate-100 px-1">
-              <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 shrink-0">
-                <img 
-                  src={user?.imageUrl} 
-                  alt={fullName} 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-slate-900 truncate">{fullName}</p>
-                <p className="text-xs text-slate-500 truncate flex items-center gap-1">
-                  <Mail className="w-3 h-3 text-slate-400 shrink-0" />
-                  {email}
-                </p>
-              </div>
-            </div>
-
-            {/* Tenant & Workspace Metadata */}
-            <div className="py-2.5 px-1 space-y-1.5 text-xs text-slate-600">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400 flex items-center gap-1">
-                  <Building2 className="w-3.5 h-3.5" /> Workspace
-                </span>
-                <span className="font-semibold text-slate-800">Production SaaS</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400 flex items-center gap-1">
-                  <Shield className="w-3.5 h-3.5 text-emerald-600" /> Tenant ID
-                </span>
-                <span className="font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">
-                  {tenantId}
-                </span>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="pt-2 border-t border-slate-100 space-y-1">
-              <button
-                onClick={() => {
-                  setDropdownOpen(false);
-                  openUserProfile?.();
-                }}
-                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
-              >
-                <User className="w-3.5 h-3.5 text-slate-400" />
-                Manage Clerk Account
-              </button>
-
-              <button
-                onClick={() => {
-                  setDropdownOpen(false);
-                  signOut({ redirectUrl: '/datax/#login' });
-                }}
-                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors text-left cursor-pointer"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                Sign Out
-              </button>
-            </div>
-          </div>
-        )}
-      </SignedIn>
-
-      <SignedOut>
+      ) : (
         <button
-          onClick={() => navigateTo('login')}
+          type="button"
+          onClick={() => {
+            if (navigateTo) navigateTo('login');
+            else window.location.hash = '#login';
+          }}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#2D55F5] hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
         >
           <span>Sign In / Register</span>
         </button>
-      </SignedOut>
+      )}
+
+      {/* Custom SaaS User Details Dropdown */}
+      {isSignedIn && dropdownOpen && (
+        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-xl p-3 z-50 text-slate-700 animate-in fade-in zoom-in-95 duration-100">
+          {/* Header / Identity */}
+          <div className="flex items-center gap-3 pb-3 border-b border-slate-100 px-1">
+            <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 bg-blue-50 text-blue-600 text-sm font-bold flex items-center justify-center shrink-0">
+              {user?.imageUrl ? (
+                <img src={user.imageUrl} alt={fullName} className="w-full h-full object-cover" />
+              ) : (
+                <span>{initials}</span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-slate-900 truncate">{fullName}</p>
+              <p className="text-xs text-slate-500 truncate flex items-center gap-1">
+                <Mail className="w-3 h-3 text-slate-400 shrink-0" />
+                {email}
+              </p>
+            </div>
+          </div>
+
+          {/* Tenant & Workspace Metadata */}
+          <div className="py-2.5 px-1 space-y-1.5 text-xs text-slate-600">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-400 flex items-center gap-1">
+                <Building2 className="w-3.5 h-3.5" /> Role
+              </span>
+              <span className="font-semibold text-slate-800 capitalize">{user?.role || 'Data Engineer'}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-400 flex items-center gap-1">
+                <Shield className="w-3.5 h-3.5 text-emerald-600" /> Auth Engine
+              </span>
+              <span className="font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">
+                PostgreSQL JWT
+              </span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="pt-2 border-t border-slate-100 space-y-1">
+            <button
+              type="button"
+              onClick={() => {
+                setDropdownOpen(false);
+                logout({ redirectUrl: '#login' });
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors text-left cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

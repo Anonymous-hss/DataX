@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, 
@@ -14,9 +15,10 @@ import {
   Zap,
   Activity
 } from 'lucide-react';
-import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Navbar({ activeView, setActiveView, onOpenDemo }) {
+  const { isSignedIn, user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [productsDropdown, setProductsDropdown] = useState(false);
@@ -215,26 +217,27 @@ export default function Navbar({ activeView, setActiveView, onOpenDemo }) {
 
           {/* Action CTAs */}
           <div className="hidden sm:flex items-center gap-3">
-            <SignedIn>
-              <UserButton 
-                afterSignOutUrl="/datax" 
-                appearance={{
-                  elements: {
-                    avatarBox: "w-8 h-8 rounded-full shadow-xs ring-1 ring-cyan-500/30"
-                  }
+            {isSignedIn ? (
+              <button
+                type="button"
+                onClick={() => setActiveView('poc')}
+                className="w-8 h-8 rounded-full border border-slate-700 hover:border-cyan-400 bg-gradient-to-tr from-cyan-600 to-blue-600 text-white text-xs font-bold flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                title={`${user?.fullName || 'User'} (${user?.email || ''})`}
+              >
+                {(user?.fullName || 'U').slice(0, 2).toUpperCase()}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.hash = '#login';
+                  setActiveView('poc');
                 }}
-              />
-            </SignedIn>
-            <SignedOut>
-              <SignInButton mode="modal">
-                <button
-                  type="button"
-                  className="px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white rounded-lg border border-slate-700/80 hover:bg-slate-800/60 transition-colors"
-                >
-                  Sign in
-                </button>
-              </SignInButton>
-            </SignedOut>
+                className="px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white rounded-lg border border-slate-700/80 hover:bg-slate-800/60 transition-colors cursor-pointer"
+              >
+                Sign in
+              </button>
+            )}
 
             <button 
               onClick={onOpenDemo}

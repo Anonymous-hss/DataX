@@ -157,7 +157,7 @@ export default function DataXHeader({
               <span className="w-1.5 h-1.5 rounded-full bg-blue-600 absolute top-1.5 right-1.5" />
             </button>
 
-            {/* Dynamic Clerk Profile Avatar & Profile Details */}
+            {/* Dynamic Enterprise Profile Avatar & Profile Details */}
             <div className="flex items-center pl-1 border-l border-slate-200">
               <DataXUserMenu />
             </div>
