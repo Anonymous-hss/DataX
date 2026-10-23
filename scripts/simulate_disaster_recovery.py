@@ -25,9 +25,10 @@ def run_disaster_recovery_simulation():
 
     # Step 1: Stage active in-flight workload
     print("\n[PHASE 1] Staging active pipeline workload and durable DLQ records...")
+    run_ts = int(time.time())
     simulated_quarantine_batch = [
         {
-            "record": {"PO_NUMBER": f"PO450000{i}", "NETPR": -12.50 * i, "WERKS": "1000"},
+            "record": {"PO_NUMBER": f"DR_{run_ts}_{i}", "NETPR": -12.50 * i, "WERKS": "1000"},
             "violations": ["PO Net Price Negative"]
         }
         for i in range(1, 21)
@@ -65,7 +66,7 @@ def run_disaster_recovery_simulation():
     # Step 5: Verify zero data corruption & idempotency
     print("\n[PHASE 5] Verifying zero data loss & data consistency...")
     verified_records = durable_dlq.get_records(limit=50)
-    matched_count = sum(1 for r in verified_records if "PO450000" in str(r.get("raw_payload", "")))
+    matched_count = sum(1 for r in verified_records if f"DR_{run_ts}_" in str(r.get("raw_payload", "")))
     print(f"-> Pre-crash records: {len(simulated_quarantine_batch)}")
     print(f"-> Recovered uncorrupted records: {matched_count}")
 
