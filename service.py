@@ -12,7 +12,7 @@ import time
 
 import shutil
 from pydantic import BaseModel
-from fastapi import FastAPI, HTTPException, Depends, Security, Response, Request
+from fastapi import FastAPI, HTTPException, Depends, Security, Response, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
 from openai import AzureOpenAI
 import uvicorn
@@ -1407,7 +1407,10 @@ def api_record_feedback(sub: FeedbackSubmission):
 
 @app.post("/telemetry/errors")
 def api_record_error_telemetry(payload: Dict[str, Any] = Body(...)):
-    structured_logger.warn("frontend_telemetry_error", **payload)
+    try:
+        structured_logger.warn(f"frontend_telemetry_error: {payload.get('message', 'unknown')}", error_name=payload.get('name'))
+    except Exception:
+        pass
     return {"status": "recorded", "timestamp": time.time()}
 
 # -----------------------------------------------------------------------------
