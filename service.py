@@ -67,6 +67,7 @@ from alerts import alert_dispatcher
 from continuity import continuity_manager
 from entitlements import entitlements_engine
 from support_engine import support_engine, FeedbackSubmission
+from shadow_reconciler import shadow_reconciler
 
 # -----------------------------------------------------------------------------
 # FastAPI Application & Security Middlewares (SEC-01 & SEC-06)
@@ -1321,6 +1322,32 @@ def api_public_status():
 @app.post("/feedback")
 def api_record_feedback(sub: FeedbackSubmission):
     return support_engine.record_feedback(sub)
+
+# -----------------------------------------------------------------------------
+# Section 19: Shadow Mode Dual-Pipeline Reconciliation Routes
+# -----------------------------------------------------------------------------
+class ShadowReconciliationRequest(BaseModel):
+    batchId: str
+    pipelineName: str
+    legacyRecords: List[Dict[str, Any]]
+    dataxRecords: List[Dict[str, Any]]
+    primaryKey: Optional[str] = "id"
+    metricColumns: Optional[List[str]] = None
+
+@app.post("/reconciliation/shadow/compare")
+def api_shadow_reconcile(req: ShadowReconciliationRequest):
+    return shadow_reconciler.reconcile_batches(
+        batch_id=req.batchId,
+        pipeline_name=req.pipelineName,
+        legacy_records=req.legacyRecords,
+        datax_records=req.dataxRecords,
+        primary_key=req.primaryKey or "id",
+        metric_columns=req.metricColumns
+    )
+
+@app.get("/reconciliation/shadow/reports")
+def api_get_shadow_reports(limit: int = 10):
+    return shadow_reconciler.get_latest_reports(limit=limit)
 
 
 if __name__ == "__main__":

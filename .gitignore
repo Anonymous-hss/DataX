@@ -44,3 +44,4 @@ ENV/
 .dlq_storage.json
 .idempotency_store.json
 .quarantine_dlq.jsonl
+.reconciliation_store.json
