@@ -199,19 +199,6 @@ export default function ThreadsPage() {
     setCurrentPage(1);
   }, [search, filter]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredThreads.length / pageSize));
-  const pagedThreads = filteredThreads.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-
-  const handleConfirmDelete = async () => {
-    if (!threadToDelete) return;
-    try {
-      await deleteThread(threadToDelete.id);
-    } catch (e) {
-      console.warn("Delete thread API error:", e);
-    }
-    setThreadToDelete(null);
-  };
-
   const filteredThreads = formattedThreads.filter((t) => {
     if (filter === 'live' && t.status !== 'healthy') return false;
     if (filter === 'draft' && t.status !== 'draft') return false;
@@ -224,6 +211,19 @@ export default function ThreadsPage() {
     }
     return true;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredThreads.length / pageSize));
+  const pagedThreads = filteredThreads.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const handleConfirmDelete = async () => {
+    if (!threadToDelete) return;
+    try {
+      await deleteThread(threadToDelete.id);
+    } catch (e) {
+      console.warn("Delete thread API error:", e);
+    }
+    setThreadToDelete(null);
+  };
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#474E61] font-sans antialiased">

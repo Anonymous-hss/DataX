@@ -12,7 +12,7 @@ class ErrorMonitoringService {
     this.maxRecentErrors = 20;
     this.initialized = false;
     const base = (import.meta.env?.VITE_API_BASE || (typeof window !== 'undefined' && window.location.hostname.includes('dataglow.ai') ? '/datax-api' : '')).replace(/\/+$/, '');
-    this.endpoint = base ? `${base}/feedback` : '';
+    this.endpoint = base ? `${base}/telemetry/errors` : '';
   }
 
   init() {

@@ -1405,6 +1405,11 @@ def api_public_status():
 def api_record_feedback(sub: FeedbackSubmission):
     return support_engine.record_feedback(sub)
 
+@app.post("/telemetry/errors")
+def api_record_error_telemetry(payload: Dict[str, Any] = Body(...)):
+    structured_logger.warn("frontend_telemetry_error", **payload)
+    return {"status": "recorded", "timestamp": time.time()}
+
 # -----------------------------------------------------------------------------
 # Section 19: Shadow Mode Dual-Pipeline Reconciliation Routes
 # -----------------------------------------------------------------------------
