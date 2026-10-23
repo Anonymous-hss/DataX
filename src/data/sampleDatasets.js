@@ -377,7 +377,111 @@ export const generateSapEkpoRecords = (count = 50) => {
   return rows;
 };
 
+export const generateKafkaStreamRecords = (count = 25) => {
+  const rows = [];
+  const plants = ['P1000', 'Plant-Dallas', 'P2000', 'Plant-Austin', 'P3000'];
+  for (let i = 1; i <= count; i++) {
+    const qty = i === 4 ? -5 : 10 + (i * 7) % 80;
+    const price = 45.5 + (i * 15.2) % 250;
+    const total = i === 7 ? Math.round(qty * price * 0.8) : Math.round(qty * price * 100) / 100;
+    rows.push({
+      EVENT_ID: `EVT-${10000 + i}`,
+      TIMESTAMP: new Date(Date.now() - (count - i) * 60000).toISOString(),
+      PO_NUMBER: `45000${9100 + i}`,
+      QUANTITY: qty,
+      TOTAL_AMOUNT: total,
+      DELIVERY_PLANT: plants[(i - 1) % plants.length],
+      STATUS: qty <= 0 ? 'CRITICAL_ANOMALY' : 'STREAMING_OK'
+    });
+  }
+  return rows;
+};
+
+export const generateSalesforceRecords = (count = 25) => {
+  const rows = [];
+  const cities = ['San Francisco', 'New York', 'Austin', 'Chicago', 'London'];
+  const companies = ['Acme Global', 'Apex Logistics', 'Starlight Data', 'Summit Health', 'Vanguard Retail'];
+  for (let i = 1; i <= count; i++) {
+    const company = `${companies[(i - 1) % companies.length]} ${i > 5 ? i : ''}`.trim();
+    const email = i === 5 ? 'bad_email_at_acme.com' : `contact@${company.toLowerCase().replace(/[^a-z]/g, '')}.com`;
+    const revenue = 150000 + (i * 45000) % 2500000;
+    rows.push({
+      ACCOUNT_ID: `0015g00000${100 + i}AAQ`,
+      NAME: company,
+      EMAIL: email,
+      PHONE: `+1 (555) 019-${1000 + i}`,
+      BILLING_CITY: cities[(i - 1) % cities.length],
+      ANNUAL_REVENUE: revenue,
+      STATUS: email.includes('@') ? 'QUALIFIED' : 'SYNTAX_DRIFT'
+    });
+  }
+  return rows;
+};
+
+export const generateS3LakeRecords = (count = 25) => {
+  const rows = [];
+  for (let i = 1; i <= count; i++) {
+    const qty = i === 3 ? -10 : 2 + (i * 3) % 40;
+    const unitPrice = 25.0 + (i * 8.5) % 180;
+    const total = Math.round(qty * unitPrice * 100) / 100;
+    rows.push({
+      ORDER_ID: `ORD-S3-${8000 + i}`,
+      CUSTOMER_ID: `CUST-${400 + (i % 15)}`,
+      SKU: `SKU-PART-${100 + (i % 20)}`,
+      QUANTITY: qty,
+      UNIT_PRICE: Math.round(unitPrice * 100) / 100,
+      TOTAL_AMOUNT: total,
+      STATUS: qty <= 0 ? 'FATAL_NEGATIVE' : 'LAKE_READY'
+    });
+  }
+  return rows;
+};
+
+export const generateAzureBlobRecords = (count = 25) => {
+  const rows = [];
+  for (let i = 1; i <= count; i++) {
+    rows.push({
+      LOG_ID: `AZ-LOG-${90000 + i}`,
+      TIMESTAMP: new Date(Date.now() - (count - i) * 45000).toISOString(),
+      TENANT_ID: '377abd4b-5fbc-4ac2',
+      SERVICE_NAME: i % 2 === 0 ? 'EnterpriseAuth' : 'DecisionEngine',
+      STATUS: i === 5 ? 'ERROR_401' : 'SUCCESS_200',
+      LATENCY_MS: 15 + (i * 7) % 65
+    });
+  }
+  return rows;
+};
+
 export const getTableCatalog = (engine = 'sap_bw') => {
+  if (engine === 'azure' || engine === 'azure_blob') {
+    return [
+      { name: 'telemetry_logs.parquet', rows: '18,200 rows', rowCount: 18200, domain: 'Azure Blob Parquet Logs' },
+      { name: 'customer_master.json', rows: '4,350 docs', rowCount: 4350, domain: 'Azure JSON Data Lake' },
+      { name: 'financial_extract.csv', rows: '2,100 rows', rowCount: 2100, domain: 'Finance Extract Blob' }
+    ];
+  }
+  if (engine === 'kafka' || engine === 'kinesis') {
+    return [
+      { name: 'orders.procurement.events', rows: '2,850 msgs/sec', rowCount: 2850, domain: 'Real-Time Order Events' },
+      { name: 'inventory.movements.stream', rows: '1,120 msgs/sec', rowCount: 1120, domain: 'Live Stock Ledger CDC' },
+      { name: 'payments.auth.cdc', rows: '890 msgs/sec', rowCount: 890, domain: 'Financial Authorization Stream' }
+    ];
+  }
+  if (engine === 'salesforce' || engine === 'crm') {
+    return [
+      { name: 'Account', rows: '3,450 records', rowCount: 3450, domain: 'Customer Accounts & Billing' },
+      { name: 'Contact', rows: '8,920 records', rowCount: 8920, domain: 'Enterprise Contacts' },
+      { name: 'Opportunity', rows: '1,240 records', rowCount: 1240, domain: 'Sales Pipeline Deals' },
+      { name: 'Lead', rows: '4,110 records', rowCount: 4110, domain: 'Inbound Leads' }
+    ];
+  }
+  if (engine === 's3' || engine === 'azure_blob' || engine === 'storage') {
+    return [
+      { name: 'orders_2026_q1.parquet', rows: '12,400 rows', rowCount: 12400, domain: 'Parquet Snappy Lake' },
+      { name: 'inventory_snapshot.delta', rows: '6,850 rows', rowCount: 6850, domain: 'Delta Lake Table' },
+      { name: 'vendor_master.csv', rows: '940 rows', rowCount: 940, domain: 'Raw Vendor Master File' }
+    ];
+  }
   if (engine === 'mongodb' || engine === 'mongo') {
     return [
       { name: 'raw_users', rows: '1,840 docs', rowCount: 1840, domain: 'Customer & User Master' },
@@ -404,6 +508,46 @@ export const getTableCatalog = (engine = 'sap_bw') => {
 
 export const getTableData = (tableName = '0PUR_C01', engine = 'sap_bw', limit = 50) => {
   const norm = (tableName || '').toUpperCase();
+  if (engine === 'azure' || norm.includes('AZURE') || norm.includes('TELEMETRY') || norm.includes('LOGS')) {
+    const all = generateAzureBlobRecords(Math.max(limit, 25));
+    return {
+      rows: all.slice(0, limit),
+      columns: ['LOG_ID', 'TIMESTAMP', 'TENANT_ID', 'SERVICE_NAME', 'STATUS', 'LATENCY_MS'],
+      rowCount: 18200,
+      rowCountFormatted: '18,200 rows',
+      tableName: tableName || 'telemetry_logs.parquet'
+    };
+  }
+  if (engine === 'kafka' || norm.includes('KAFKA') || norm.includes('STREAM') || norm.includes('EVENTS')) {
+    const all = generateKafkaStreamRecords(Math.max(limit, 25));
+    return {
+      rows: all.slice(0, limit),
+      columns: ['EVENT_ID', 'TIMESTAMP', 'PO_NUMBER', 'QUANTITY', 'TOTAL_AMOUNT', 'DELIVERY_PLANT', 'STATUS'],
+      rowCount: 2850,
+      rowCountFormatted: '2,850 msgs/sec',
+      tableName: tableName || 'orders.procurement.events'
+    };
+  }
+  if (engine === 'salesforce' || norm.includes('ACCOUNT') || norm.includes('CONTACT') || norm.includes('LEAD') || norm.includes('OPPORTUNITY')) {
+    const all = generateSalesforceRecords(Math.max(limit, 25));
+    return {
+      rows: all.slice(0, limit),
+      columns: ['ACCOUNT_ID', 'NAME', 'EMAIL', 'PHONE', 'BILLING_CITY', 'ANNUAL_REVENUE', 'STATUS'],
+      rowCount: 3450,
+      rowCountFormatted: '3,450 records',
+      tableName: tableName || 'Account'
+    };
+  }
+  if (engine === 's3' || norm.includes('PARQUET') || norm.includes('DELTA') || norm.includes('.CSV')) {
+    const all = generateS3LakeRecords(Math.max(limit, 25));
+    return {
+      rows: all.slice(0, limit),
+      columns: ['ORDER_ID', 'CUSTOMER_ID', 'SKU', 'QUANTITY', 'UNIT_PRICE', 'TOTAL_AMOUNT', 'STATUS'],
+      rowCount: 12400,
+      rowCountFormatted: '12,400 rows',
+      tableName: tableName || 'orders_2026_q1.parquet'
+    };
+  }
   if (norm.includes('0IC_C03') || norm.includes('INVENTORY') || norm.includes('MOVEMENT')) {
     const all = generateSapMovementsRecords(Math.max(limit, 25));
     return {

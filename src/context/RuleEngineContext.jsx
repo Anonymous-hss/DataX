@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useUser } from '@clerk/clerk-react';
+import { useUser } from './AuthContext';
 import * as XLSX from 'xlsx';
 import { SAP_BW_PROCUREMENT_DATA, SAP_BW_INVENTORY_DATA, USER_MASTER_DATA } from '../data/sampleDatasets';
 import { ONTOLOGY_GRAPH } from '../data/ontologyGraph';
@@ -580,7 +580,7 @@ export const DEFAULT_CANVAS_EDGES = TEMPLATE_AUTOFILLS.sap_bw_s4hana.edges;
 const RuleEngineContext = createContext(null);
 
 export function RuleEngineProvider({ children }) {
-  // Clerk Authenticated SaaS Tenant & User Identity
+  // PostgreSQL JWT Authenticated SaaS Tenant & User Identity
   const { user } = useUser();
   const userId = user?.id || 'saas_default';
   const userEmail = user?.primaryEmailAddress?.emailAddress || 'user@dataglow.ai';

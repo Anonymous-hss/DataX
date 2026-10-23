@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useUser } from '@clerk/clerk-react';
+import { useAuth, useUser } from '../../context/AuthContext';
 import { NavigationProvider, useNavigation } from '../../context/NavigationContext';
 import { RuleEngineProvider } from '../../context/RuleEngineContext';
 

@@ -350,7 +350,7 @@ export default function ThreadsPage() {
             {/* In-App Notification Center */}
             <NotificationCenter />
 
-            {/* Dynamic Clerk User Profile Section */}
+            {/* Dynamic Enterprise User Profile Section */}
             <DataXUserMenu />
           </div>
         </div>

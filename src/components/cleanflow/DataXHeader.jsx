@@ -185,7 +185,7 @@ export default function DataXHeader({
             {/* In-App Notification Center */}
             <NotificationCenter />
 
-            {/* Dynamic Clerk Profile Avatar & Profile Details */}
+            {/* Dynamic Enterprise Profile Avatar & Profile Details */}
             <div className="flex items-center pl-1 border-l border-slate-200">
               <DataXUserMenu />
             </div>
