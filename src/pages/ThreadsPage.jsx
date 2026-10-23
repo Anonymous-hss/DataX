@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { Link, useNavigation } from '../context/NavigationContext';
 import { useRuleEngine } from '../context/RuleEngineContext';
 import DataXUserMenu from '../components/common/DataXUserMenu';
+import NotificationCenter from '../components/common/NotificationCenter';
+import GlobalSearchModal from '../components/common/GlobalSearchModal';
+import OnboardingWizard from '../components/common/OnboardingWizard';
+import ConfirmDialog from '../components/common/ConfirmDialog';
+import EmptyState from '../components/common/EmptyState';
 
 // --- Figma-Exact Icons & Illustrations with User Brand Logo ---
 
@@ -184,6 +189,20 @@ export default function ThreadsPage() {
 
   const totalRuns = formattedThreads.reduce((acc, t) => acc + (t.runCount || 0), 0);
 
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [threadToDelete, setThreadToDelete] = useState(null);
+
+  const handleConfirmDelete = async () => {
+    if (!threadToDelete) return;
+    try {
+      await fetch(`https://dataglow.ai/datax-api/threads/${threadToDelete.id}`, { method: 'DELETE' });
+    } catch (e) {
+      console.warn("Delete thread API error:", e);
+    }
+    setThreadToDelete(null);
+  };
+
   const filteredThreads = formattedThreads.filter((t) => {
     if (filter === 'live' && t.status !== 'healthy') return false;
     if (filter === 'draft' && t.status !== 'draft') return false;
@@ -258,8 +277,11 @@ export default function ThreadsPage() {
           </div>
 
           {/* Search, Notifications & Avatar */}
-          <div className="flex items-center gap-4">
-            <div className="relative hidden sm:block">
+          <div className="flex items-center gap-3">
+            <div 
+              onClick={() => setSearchModalOpen(true)}
+              className="relative hidden sm:flex items-center cursor-pointer"
+            >
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8E95A9]">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="11" cy="11" r="8" />
@@ -268,17 +290,20 @@ export default function ThreadsPage() {
               </span>
               <input
                 type="text"
-                placeholder="Search workflows, tables..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-64 pl-9 pr-3.5 py-1.5 bg-[#F5F6FA] border border-[#E3E6EE] rounded-full text-xs text-[#0A0F1F] placeholder:text-[#8E95A9] focus:outline-none focus:border-[#2D55F5] focus:bg-white transition-all"
+                readOnly
+                placeholder="Search workflows, tables (⌘K)..."
+                className="w-64 pl-9 pr-10 py-1.5 bg-[#F5F6FA] border border-[#E3E6EE] rounded-full text-xs text-[#0A0F1F] placeholder:text-[#8E95A9] hover:bg-slate-100 cursor-pointer transition-all"
               />
+              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono text-[#8E95A9] bg-[#E3E6EE] px-1 py-0.5 rounded">
+                ⌘K
+              </kbd>
             </div>
 
-            {/* Help Icon */}
+            {/* Help / Onboarding Icon */}
             <button
-              title="Help & Documentation"
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] transition-colors"
+              onClick={() => setOnboardingOpen(true)}
+              title="First-Run Onboarding Guide"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] transition-colors cursor-pointer"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
                 <circle cx="12" cy="12" r="10" />
@@ -287,16 +312,8 @@ export default function ThreadsPage() {
               </svg>
             </button>
 
-            {/* Bell Icon */}
-            <button
-              title="Notifications"
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] transition-colors"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-            </button>
+            {/* In-App Notification Center */}
+            <NotificationCenter />
 
             {/* Dynamic Enterprise User Profile Section */}
             <DataXUserMenu />
@@ -540,15 +557,28 @@ export default function ThreadsPage() {
                     )}
                     <span className="text-[11px] text-[#5F6678] ml-1">{thread.runs}</span>
                   </div>
-                  <button 
-                    onClick={() => {
-                      selectThread(thread.id);
-                      navigateTo('canvas');
-                    }}
-                    className="px-4 py-1 rounded-full border border-[#CDD2DE] bg-white hover:bg-[#EEF2FF] hover:border-[#2D55F5] hover:text-[#2D55F5] text-xs font-semibold text-[#0A0F1F] transition-all cursor-pointer shadow-2xs"
-                  >
-                    Open Canvas
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button 
+                      onClick={() => setThreadToDelete(thread)}
+                      className="p-1 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+                      title="Delete Workflow"
+                      aria-label="Delete Workflow"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                    <button 
+                      onClick={() => {
+                        selectThread(thread.id);
+                        navigateTo('canvas');
+                      }}
+                      className="px-4 py-1 rounded-full border border-[#CDD2DE] bg-white hover:bg-[#EEF2FF] hover:border-[#2D55F5] hover:text-[#2D55F5] text-xs font-semibold text-[#0A0F1F] transition-all cursor-pointer shadow-2xs"
+                    >
+                      Open Canvas
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -570,6 +600,26 @@ export default function ThreadsPage() {
           </Link>
         </section>
       </main>
+
+      {/* Global Command Modals & Dialogs */}
+      <GlobalSearchModal 
+        isOpen={searchModalOpen} 
+        onClose={() => setSearchModalOpen(false)} 
+      />
+      <OnboardingWizard 
+        isOpen={onboardingOpen} 
+        onClose={() => setOnboardingOpen(false)} 
+      />
+      <ConfirmDialog
+        isOpen={!!threadToDelete}
+        title={`Delete Workflow: ${threadToDelete?.name || ''}`}
+        message="Are you sure you want to delete this pipeline workflow? Historical run metrics and validation rules configured for this thread will be permanently removed."
+        confirmLabel="Delete Workflow"
+        confirmTextMatch="DELETE"
+        isDestructive={true}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setThreadToDelete(null)}
+      />
     </div>
   );
 }

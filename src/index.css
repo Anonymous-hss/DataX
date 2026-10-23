@@ -91,3 +91,18 @@
 .radial-glow {
   background: radial-gradient(circle at 50% 0%, rgba(6, 182, 212, 0.18) 0%, rgba(59, 130, 246, 0.08) 35%, transparent 70%);
 }
+
+/* Virtualization and High-Performance DOM Rendering (PRF-05) */
+.virtual-row {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 44px;
+}
+
+.virtual-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 120px;
+}
+
+.virtual-canvas-node {
+  contain: layout style paint;
+}

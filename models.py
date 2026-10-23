@@ -1,0 +1,126 @@
+"""
+DataX Data Models & Schemas
+Contains Pydantic request and response models for all API endpoints.
+"""
+
+from typing import List, Dict, Any, Optional
+from pydantic import BaseModel, Field
+
+
+class RuleItem(BaseModel):
+    id: Optional[str] = "rule"
+    name: Optional[str] = "Validation Rule"
+    column: Optional[str] = "GENERAL"
+    check_type: Optional[str] = "REGEX_FORMAT"
+    condition: Optional[str] = ""
+    code: Optional[str] = ""
+    severity: Optional[str] = "critical"
+    enabled: Optional[bool] = True
+    description: Optional[str] = ""
+
+
+class SourceConfig(BaseModel):
+    engine: Optional[str] = "postgres"
+    connectionUri: Optional[str] = None
+    credentialId: Optional[str] = None
+    database: Optional[str] = None
+    table: Optional[str] = None
+    scopeMode: Optional[str] = "specific"
+    columns: Optional[List[str]] = None
+    filterCondition: Optional[str] = None
+    limit: Optional[int] = 1420
+    selectedTables: Optional[List[str]] = None
+    selectAllTables: Optional[bool] = False
+
+
+class TargetConfig(BaseModel):
+    engine: Optional[str] = "postgres"
+    connectionUri: Optional[str] = None
+    credentialId: Optional[str] = None
+    database: Optional[str] = None
+    table: Optional[str] = "clean_records"
+    quarantineTable: Optional[str] = "quarantined_records"
+    scopeMode: Optional[str] = "specific"
+    writeMode: Optional[str] = "append"
+    targetNamingMode: Optional[str] = "suffix"
+    customTableName: Optional[str] = None
+    selectedTables: Optional[List[str]] = None
+    selectAllTables: Optional[bool] = False
+
+
+class PipelineExecutionRequest(BaseModel):
+    pipelineName: Optional[str] = "DataX Autonomous Pipeline"
+    threadId: Optional[str] = None
+    dryRun: Optional[bool] = False
+    autoFixEnabled: Optional[bool] = True
+    idempotencyKey: Optional[str] = None
+    executionId: Optional[str] = None
+    source: SourceConfig
+    rules: List[RuleItem]
+    target1: TargetConfig
+    target2: Optional[TargetConfig] = None
+
+
+class ThreadCreateRequest(BaseModel):
+    id: Optional[str] = None
+    name: str
+    description: Optional[str] = ""
+    domainPackId: Optional[str] = "custom"
+    category: Optional[str] = "Custom Pipeline"
+    badge: Optional[str] = "Custom"
+    status: Optional[str] = "active"
+    autoFixEnabled: Optional[bool] = True
+    nodes: Optional[List[Dict[str, Any]]] = None
+    edges: Optional[List[Dict[str, Any]]] = None
+    sourceConfig: Optional[Dict[str, Any]] = None
+    targetConfig: Optional[Dict[str, Any]] = None
+    rules: Optional[List[Dict[str, Any]]] = None
+
+
+class QuarantineResolveRequest(BaseModel):
+    quarantineId: Any
+    action: str  # 'approve' | 'edit_and_commit' | 'discard'
+    editedPayload: Optional[Dict[str, Any]] = None
+    resolutionNotes: Optional[str] = None
+
+
+class StoreCredentialRequest(BaseModel):
+    name: Optional[str] = "Database Connection"
+    engine: str
+    connectionUri: Optional[str] = None
+    host: Optional[str] = None
+    port: Optional[str] = None
+    database: Optional[str] = None
+    user: Optional[str] = None
+    password: Optional[str] = None
+
+
+class SampleDataRequest(BaseModel):
+    engine: str
+    connectionUri: Optional[str] = None
+    credentialId: Optional[str] = None
+    host: Optional[str] = None
+    port: Optional[str] = None
+    database: Optional[str] = None
+    table: Optional[str] = None
+    user: Optional[str] = None
+    password: Optional[str] = None
+    limit: Optional[int] = 5
+
+
+class GenerateRulesRequest(BaseModel):
+    tableName: Optional[str] = "MARA"
+    columns: Optional[List[str]] = []
+    prompt: Optional[str] = "Line items must have positive quantities."
+    engine: Optional[str] = "sap_bw"
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: Optional[str] = "admin"
+    role: Optional[str] = None
+
+
+class RuleVerifyRequest(BaseModel):
+    rules: List[Dict[str, Any]]
+    sample_records: Optional[List[Dict[str, Any]]] = None
