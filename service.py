@@ -11,6 +11,7 @@ from typing import Dict, Any, List, Optional
 import time
 
 import shutil
+from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, Depends, Security, Response
 from fastapi.middleware.cors import CORSMiddleware
 from openai import AzureOpenAI
