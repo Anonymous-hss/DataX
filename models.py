@@ -121,6 +121,13 @@ class LoginRequest(BaseModel):
     role: Optional[str] = None
 
 
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    fullName: Optional[str] = None
+    tenantId: Optional[str] = "tenant_enterprise"
+
+
 class RuleVerifyRequest(BaseModel):
     rules: List[Dict[str, Any]]
     sample_records: Optional[List[Dict[str, Any]]] = None

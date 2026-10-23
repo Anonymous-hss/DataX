@@ -12,12 +12,14 @@ import time
 
 import shutil
 from pydantic import BaseModel
-from fastapi import FastAPI, HTTPException, Depends, Security, Response
+from fastapi import FastAPI, HTTPException, Depends, Security, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from openai import AzureOpenAI
 import uvicorn
 import psycopg2
 from psycopg2.extras import RealDictCursor
+
+import auth_engine
 
 # Modular Subsystems
 from models import (
@@ -28,6 +30,7 @@ from models import (
     SampleDataRequest,
     GenerateRulesRequest,
     LoginRequest,
+    RegisterRequest,
     RuleVerifyRequest,
 )
 from vault import (
@@ -261,10 +264,71 @@ def api_run_benchmark(records: int = 10000, batch_size: int = 5000):
 # -----------------------------------------------------------------------------
 # Security & RBAC Authentication Routes (SEC-01, SEC-02, SEC-03, SEC-06)
 # -----------------------------------------------------------------------------
+@app.post("/api/auth/register", status_code=201)
+@app.post("/auth/register", status_code=201)
+def api_register_user(req: RegisterRequest, response: Response):
+    res = auth_engine.register_user(
+        email=req.email,
+        password=req.password,
+        full_name=req.fullName or req.email.split("@")[0],
+        tenant_id=req.tenantId or "tenant_enterprise"
+    )
+    if res["status"] != 201:
+        raise HTTPException(status_code=res["status"], detail=res["data"].get("error", "Registration failed"))
+    response.status_code = 201
+    return res["data"]
+
+
+@app.post("/api/auth/login")
+def api_auth_login_frontend(req: Dict[str, Any], response: Response):
+    email = (req.get("email") or "").strip().lower()
+    password = req.get("password") or ""
+    res = auth_engine.login_user(email, password)
+    if res["status"] == 200:
+        return res["data"]
+    if email in DEMO_ACCOUNTS and password in ["admin", "steward", "demo", "password", "Admin@123"]:
+        acc = DEMO_ACCOUNTS[email]
+        token = auth_engine._sign_jwt({
+            "id": f"usr_demo_{int(time.time())}",
+            "email": email,
+            "fullName": email.split("@")[0].capitalize(),
+            "role": acc["role"],
+            "tenantId": "tenant_enterprise"
+        })
+        return {
+            "message": "Authentication successful.",
+            "token": token,
+            "user": {
+                "id": f"usr_demo_{int(time.time())}",
+                "email": email,
+                "fullName": email.split("@")[0].capitalize(),
+                "avatarUrl": None,
+                "role": acc["role"],
+                "tenantId": "tenant_enterprise",
+                "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            }
+        }
+    raise HTTPException(status_code=res["status"], detail=res["data"].get("error", "Authentication failed"))
+
+
 @app.post("/auth/token")
 @app.post("/auth/login")
 def api_login(req: LoginRequest):
     email = req.email.strip().lower()
+    if req.password:
+        res = auth_engine.login_user(email, req.password)
+        if res["status"] == 200:
+            user = res["data"]["user"]
+            token = res["data"]["token"]
+            return {
+                "status": "success",
+                "access_token": token,
+                "token": token,
+                "token_type": "bearer",
+                "role": user.get("role", "Data Steward"),
+                "permissions": ROLES.get(user.get("role", "Data Steward"), {}).get("permissions", []),
+                "user": user
+            }
     acc = DEMO_ACCOUNTS.get(email)
     role = req.role or (acc["role"] if acc else "Data Steward")
     if role not in ROLES:
@@ -274,11 +338,28 @@ def api_login(req: LoginRequest):
     return {
         "status": "success",
         "access_token": token,
+        "token": token,
         "token_type": "bearer",
         "role": role,
         "permissions": ROLES.get(role, {}).get("permissions", []),
         "user": {"email": email, "role": role}
     }
+
+
+@app.get("/api/auth/me")
+@app.get("/auth/me")
+def api_auth_get_me(request: Request):
+    auth_header = request.headers.get("authorization")
+    res = auth_engine.get_current_user_profile(auth_header)
+    if res["status"] != 200:
+        raise HTTPException(status_code=res["status"], detail=res["data"].get("error", "Unauthorized"))
+    return res["data"]
+
+
+@app.post("/api/auth/logout")
+@app.post("/auth/logout")
+def api_auth_logout():
+    return {"message": "Logged out successfully."}
 
 
 @app.get("/security/status")

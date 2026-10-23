@@ -84,7 +84,7 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Format user object with backwards-compatible getters (for Clerk compatibility)
+  // Standardized enterprise user object with convenient getters
   const user = useMemo(() => {
     if (!rawUser) return null;
     const nameParts = (rawUser.fullName || '').trim().split(' ');

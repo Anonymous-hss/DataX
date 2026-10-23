@@ -1,7 +1,17 @@
 const TOKEN_KEY = 'datax_jwt_token';
 const USER_KEY = 'datax_user_profile';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+export function getApiBase() {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname.includes('dataglow.ai') || window.location.pathname.startsWith('/datax')) {
+      return '/datax-api';
+    }
+  }
+  return '';
+}
 
 export const authStorage = {
   getToken: () => {
@@ -46,27 +56,29 @@ export const authStorage = {
 };
 
 export async function loginApi({ email, password }) {
-  const res = await fetch(`${API_BASE}/api/auth/login`, {
+  const base = getApiBase();
+  const res = await fetch(`${base}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password })
   });
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || 'Failed to authenticate');
+    throw new Error(data.error || data.detail || 'Failed to authenticate');
   }
   return data;
 }
 
 export async function registerApi({ email, password, fullName, tenantId }) {
-  const res = await fetch(`${API_BASE}/api/auth/register`, {
+  const base = getApiBase();
+  const res = await fetch(`${base}/api/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, fullName, tenantId })
   });
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || 'Failed to create account');
+    throw new Error(data.error || data.detail || 'Failed to create account');
   }
   return data;
 }
@@ -75,7 +87,8 @@ export async function getMeApi(token) {
   const authToken = token || authStorage.getToken();
   if (!authToken) throw new Error('No authentication token available');
 
-  const res = await fetch(`${API_BASE}/api/auth/me`, {
+  const base = getApiBase();
+  const res = await fetch(`${base}/api/auth/me`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${authToken}`,
@@ -84,7 +97,7 @@ export async function getMeApi(token) {
   });
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || 'Invalid session');
+    throw new Error(data.error || data.detail || 'Invalid session');
   }
   return data.user;
 }

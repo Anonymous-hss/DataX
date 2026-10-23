@@ -45,6 +45,7 @@ ENV/
 .idempotency_store.json
 .quarantine_dlq.jsonl
 .reconciliation_store.json
+.datax_auth_store.json
 
 # GCP Keys & Credentials
 gcp-service-account.json

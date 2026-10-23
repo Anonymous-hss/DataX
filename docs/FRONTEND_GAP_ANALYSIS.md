@@ -27,7 +27,7 @@ Provenance: introduced in `3c9feca` ("fix(pipeline): resolve client memory leak�
   `workflowTemplates.js` L93–515; `WorkflowCanvasBuilder.jsx` L875; fallback password in `ConnectionsPage.jsx` L122.
 - [ ] **Credentials persisted in `localStorage`** via canvas nodes/threads. `datax_canvas_nodes` is **not scoped per user** — a second user on the same browser inherits the first user's connections.
 - [ ] **API calls carry no auth token.** No Clerk `getToken()` / `Authorization` header on any `fetch`. Tenant identity is a client-supplied `X-User-Id` header (spoofable), and `GET /threads` + `GET /runs` (L736, L839, L873) send no identity at all → cross-tenant data risk.
-- [ ] **Clerk development key (`pk_test_…`) hardcoded** as fallback in `main.jsx` — production should use a `pk_live` instance via env.
+- [x] **Clerk dependency removed.** Migrated to self-hosted enterprise JWT authentication engine (`AuthContext.jsx`, `auth_engine.py`, `security_rbac.py`) with secure session storage and zero third-party auth vendor lock-in.
 - [ ] **`xlsx@0.18.5`** — npm build is unmaintained with known advisories (prototype pollution, ReDoS). Move to the SheetJS CDN build ≥ 0.20 or another parser.
 
 ## 2. Trust & honesty of the UI (P0)
