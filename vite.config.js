@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { authMiddleware } from './server/authMiddleware.js';
 
 export default defineConfig({
   base: '/datax/',
@@ -10,7 +9,14 @@ export default defineConfig({
     {
       name: 'datax-auth-api-plugin',
       configureServer(server) {
-        server.middlewares.use(authMiddleware);
+        server.middlewares.use(async (req, res, next) => {
+          try {
+            const { authMiddleware } = await import('./server/authMiddleware.js');
+            authMiddleware(req, res, next);
+          } catch (err) {
+            next();
+          }
+        });
       }
     }
   ],
