@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from '../context/NavigationContext';
 import { useRuleEngine } from '../context/RuleEngineContext';
 import Button from '../components/ui/Button';

@@ -56,7 +56,8 @@ BACKEND_FILES = [
     "continuity.py",
     "entitlements.py",
     "support_engine.py",
-    "shadow_reconciler.py"
+    "shadow_reconciler.py",
+    "auth_engine.py"
 ]
 
 def deploy():

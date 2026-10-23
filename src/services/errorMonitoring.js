@@ -11,7 +11,8 @@ class ErrorMonitoringService {
     this.maxBreadcrumbs = 30;
     this.maxRecentErrors = 20;
     this.initialized = false;
-    this.endpoint = `${import.meta.env?.VITE_API_BASE || ''}/api/telemetry/errors`;
+    const base = (import.meta.env?.VITE_API_BASE || (typeof window !== 'undefined' && window.location.hostname.includes('dataglow.ai') ? '/datax-api' : '')).replace(/\/+$/, '');
+    this.endpoint = base ? `${base}/feedback` : '';
   }
 
   init() {
