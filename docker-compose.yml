@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  datax-postgres:
+    image: postgres:16-alpine
+    container_name: datax-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-datax_db}
+      POSTGRES_USER: ${POSTGRES_USER:-datax_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-DataX_Secure_Pass_2026!}
+    ports:
+      - "5432:5432"
+    volumes:
+      - datax_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-datax_admin} -d ${POSTGRES_DB:-datax_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - datax-net
+
+  datax-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: datax-backend
+    restart: always
+    depends_on:
+      datax-postgres:
+        condition: service_healthy
+    environment:
+      PORT: 8003
+      DATAX_VAULT_DIR: /app/data
+      DATAX_MASTER_KEY: ${DATAX_MASTER_KEY:-g3Q6M9vP8xK2rT5wY7zB1cE4fH6jL0nS2uV4xZ6aC8=}
+      NEON_DATABASE_URI: postgresql://${POSTGRES_USER:-datax_admin}:${POSTGRES_PASSWORD:-DataX_Secure_Pass_2026!}@datax-postgres:5432/${POSTGRES_DB:-datax_db}
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-https://dataglow-azure-openai.openai.azure.com/}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dx_jwt_secret_production_key_2026_super_secure}
+    ports:
+      - "8003:8003"
+    volumes:
+      - datax_vault_data:/app/data
+      - datax_backups:/app/.backups
+      - datax_exports:/app/.exports
+    networks:
+      - datax-net
+
+  datax-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: datax-frontend
+    restart: always
+    depends_on:
+      - datax-backend
+    ports:
+      - "80:80"
+    networks:
+      - datax-net
+
+volumes:
+  datax_postgres_data:
+    driver: local
+  datax_vault_data:
+    driver: local
+  datax_backups:
+    driver: local
+  datax_exports:
+    driver: local
+
+networks:
+  datax-net:
+    driver: bridge

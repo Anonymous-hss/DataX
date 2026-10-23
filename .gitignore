@@ -43,3 +43,4 @@ ENV/
 .threads_store.json
 .dlq_storage.json
 .idempotency_store.json
+.quarantine_dlq.jsonl

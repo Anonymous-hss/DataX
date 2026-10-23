@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-backend
+  labels:
+    app: {{ .Release.Name }}
+    tier: backend
+spec:
+  replicas: {{ .Values.replicaCount.backend }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+        tier: backend
+    spec:
+      containers:
+        - name: backend
+          image: "{{ .Values.image.backend.repository }}:{{ .Values.image.backend.tag }}"
+          imagePullPolicy: {{ .Values.image.backend.pullPolicy }}
+          ports:
+            - containerPort: 8003
+              name: http
+          env:
+            - name: PORT
+              value: "8003"
+            - name: DATAX_VAULT_DIR
+              value: "/app/data"
+            - name: DATAX_MASTER_KEY
+              value: "{{ .Values.env.DATAX_MASTER_KEY }}"
+            - name: NEON_DATABASE_URI
+              value: "{{ .Values.env.NEON_DATABASE_URI }}"
+            - name: ENVIRONMENT
+              value: "{{ .Values.env.ENVIRONMENT }}"
+          resources:
+            {{- toYaml .Values.resources.backend | nindent 12 }}
+          volumeMounts:
+            - name: vault-data
+              mountPath: /app/data
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: vault-data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-vault-pvc

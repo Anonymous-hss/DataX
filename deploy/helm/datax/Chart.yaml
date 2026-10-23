@@ -1,0 +1,9 @@
+apiVersion: v2
+name: datax
+description: DataX Enterprise Decision Fabric - Helm Chart for Kubernetes Deployment
+type: application
+version: 2.5.0
+appVersion: "2.5.0"
+maintainers:
+  - name: DataX Engineering Team
+    email: support@dataglow.ai

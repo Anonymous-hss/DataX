@@ -1,0 +1,67 @@
+# Default values for DataX Kubernetes deployment
+
+replicaCount:
+  backend: 2
+  frontend: 2
+
+image:
+  backend:
+    repository: ghcr.io/anonymous-hss/datax-backend
+    pullPolicy: IfNotPresent
+    tag: "2.5.0"
+  frontend:
+    repository: ghcr.io/anonymous-hss/datax-frontend
+    pullPolicy: IfNotPresent
+    tag: "2.5.0"
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+  hosts:
+    - host: datax.clientdomain.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+        - path: /datax-api
+          pathType: Prefix
+          service: backend
+  tls:
+    - secretName: datax-tls-cert
+      hosts:
+        - datax.clientdomain.com
+
+persistence:
+  enabled: true
+  storageClass: "default"
+  size: 50Gi
+
+resources:
+  backend:
+    limits:
+      cpu: 2000m
+      memory: 2048Mi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  frontend:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+env:
+  DATAX_MASTER_KEY: "g3Q6M9vP8xK2rT5wY7zB1cE4fH6jL0nS2uV4xZ6aC8="
+  NEON_DATABASE_URI: "postgresql://datax_admin:DataX_Secure_Pass_2026!@postgres-service:5432/datax_db"
+  ENVIRONMENT: "production"
