@@ -20,6 +20,7 @@ import WorkflowCanvasPage from '../../pages/WorkflowCanvasPage';
 import QuarantineWorkbenchPage from '../../pages/QuarantineWorkbenchPage';
 import AuditLogViewerPage from '../../pages/AuditLogViewerPage';
 import SettingsPage from '../../pages/SettingsPage';
+import HelpCenterPage from '../../pages/HelpCenterPage';
 
 function ScreenRenderer({ onBackToWebsite }) {
   const { currentScreen, navigateTo } = useNavigation();
@@ -169,6 +170,16 @@ function ScreenRenderer({ onBackToWebsite }) {
     case 'admin':
       return (
         <SettingsPage 
+          onSwitchToMarketing={onBackToWebsite}
+        />
+      );
+
+    case 'help':
+    case 'docs':
+    case 'knowledge-base':
+    case 'support':
+      return (
+        <HelpCenterPage 
           onSwitchToMarketing={onBackToWebsite}
         />
       );

@@ -33,3 +33,13 @@ __pycache__/
 env/
 venv/
 ENV/
+
+# DataX Backup, Exports & Local Cache
+.backups/
+.exports/
+.feedback_store.json
+.incidents_store.json
+.meter_store.json
+.threads_store.json
+.dlq_storage.json
+.idempotency_store.json

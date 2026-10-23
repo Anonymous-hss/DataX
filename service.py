@@ -64,6 +64,9 @@ from rate_limiter import RateLimitMiddleware, rate_limiter
 from structured_logger import logger
 from metrics import metrics_collector
 from alerts import alert_dispatcher
+from continuity import continuity_manager
+from entitlements import entitlements_engine
+from support_engine import support_engine, FeedbackSubmission
 
 # -----------------------------------------------------------------------------
 # FastAPI Application & Security Middlewares (SEC-01 & SEC-06)
@@ -1272,6 +1275,52 @@ def api_sample_table_data(req: SampleDataRequest):
 @app.post("/pipeline/execute")
 def execute_pipeline(req: PipelineExecutionRequest, user: Dict[str, Any] = Depends(require_roles(["Admin", "Data Steward", "Operator"]))):
     return run_pipeline(req)
+
+
+# -----------------------------------------------------------------------------
+# Section 16: Data Lifecycle & Business Continuity Routes
+# -----------------------------------------------------------------------------
+@app.post("/continuity/backup/create")
+def api_create_backup(trigger: str = "manual"):
+    return continuity_manager.create_backup_snapshot(trigger_source=trigger)
+
+@app.post("/continuity/backup/restore")
+def api_test_restore(snapshot_id: Optional[str] = None):
+    return continuity_manager.test_restore_snapshot(snapshot_id=snapshot_id)
+
+@app.get("/continuity/backup/history")
+def api_backup_history():
+    return {"manifest": continuity_manager._load_manifest(), "sla": continuity_manager.sla.dict()}
+
+@app.post("/continuity/export/{tenant_id}")
+def api_export_tenant(tenant_id: str):
+    return continuity_manager.export_tenant_offboarding_archive(tenant_id)
+
+@app.post("/continuity/erasure/{tenant_id}")
+def api_erase_tenant(tenant_id: str, confirmation_token: str):
+    return continuity_manager.erase_tenant_data_cascade(tenant_id, confirmation_token)
+
+# -----------------------------------------------------------------------------
+# Section 17: Commercial Entitlements & Metering Routes
+# -----------------------------------------------------------------------------
+@app.get("/entitlements/usage/{tenant_id}")
+def api_get_entitlement(tenant_id: str):
+    return entitlements_engine.get_tenant_entitlement(tenant_id)
+
+@app.post("/entitlements/meter")
+def api_record_meter(tenant_id: str, metric_type: str, count: int = 1):
+    return entitlements_engine.record_usage_metric(tenant_id, metric_type, count)
+
+# -----------------------------------------------------------------------------
+# Section 18: Public Status & Support Routes
+# -----------------------------------------------------------------------------
+@app.get("/status/public")
+def api_public_status():
+    return support_engine.get_public_status()
+
+@app.post("/feedback")
+def api_record_feedback(sub: FeedbackSubmission):
+    return support_engine.record_feedback(sub)
 
 
 if __name__ == "__main__":

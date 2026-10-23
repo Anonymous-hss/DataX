@@ -299,6 +299,15 @@ export default function ThreadsPage() {
                 </svg>
                 Settings
               </Link>
+              <Link
+                to="help"
+                className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
+              >
+                <span className="w-3.5 h-3.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-600 font-bold flex items-center justify-center text-[10px]">
+                  ?
+                </span>
+                Help
+              </Link>
             </nav>
           </div>
 
