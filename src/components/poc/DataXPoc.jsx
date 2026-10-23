@@ -8,11 +8,8 @@ import ThreadsPage from '../../pages/ThreadsPage';
 import StartAThreadPage from '../../pages/StartAThreadPage';
 import DomainPacksPage from '../../pages/DomainPacksPage';
 import ConnectionsPage from '../../pages/ConnectionsPage';
-import ConnectSourcePage from '../../pages/ConnectSourcePage';
-import GenerateRulesPage from '../../pages/GenerateRulesPage';
 import RulesPage from '../../pages/RulesPage';
 import CleanFlowStudio from '../../pages/cleanflow/CleanFlowStudio';
-import LiveAutoFixPage from '../../pages/LiveAutoFixPage';
 import RunHistoryPage from '../../pages/RunHistoryPage';
 import SapBwPocDashboard from './SapBwPocDashboard';
 import DataXAuthPage from '../../pages/auth/DataXAuthPage';
@@ -21,6 +18,7 @@ import QuarantineWorkbenchPage from '../../pages/QuarantineWorkbenchPage';
 import AuditLogViewerPage from '../../pages/AuditLogViewerPage';
 import SettingsPage from '../../pages/SettingsPage';
 import HelpCenterPage from '../../pages/HelpCenterPage';
+import NotFoundPage from '../../pages/NotFoundPage';
 
 function ScreenRenderer({ onBackToWebsite }) {
   const { currentScreen, navigateTo } = useNavigation();
@@ -57,6 +55,8 @@ function ScreenRenderer({ onBackToWebsite }) {
       );
     case 'workflows':
     case 'threads':
+    case '':
+    case 'home':
       return (
         <ThreadsPage 
           onOpenLegacyPoc={() => navigateTo('legacy-poc')} 
@@ -203,9 +203,9 @@ function ScreenRenderer({ onBackToWebsite }) {
 
     default:
       return (
-        <ThreadsPage 
-          onOpenLegacyPoc={() => navigateTo('legacy-poc')} 
-          onSwitchToMarketing={onBackToWebsite}
+        <NotFoundPage 
+          attemptedScreen={currentScreen} 
+          onSwitchToMarketing={onBackToWebsite} 
         />
       );
   }

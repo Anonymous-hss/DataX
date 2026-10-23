@@ -192,6 +192,15 @@ export default function ThreadsPage() {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [threadToDelete, setThreadToDelete] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 7;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredThreads.length / pageSize));
+  const pagedThreads = filteredThreads.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const handleConfirmDelete = async () => {
     if (!threadToDelete) return;
@@ -513,7 +522,7 @@ export default function ThreadsPage() {
 
         {/* 4-Column Cards Grid */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-          {filteredThreads.map((thread) => (
+          {pagedThreads.map((thread) => (
             <div
               key={thread.id}
               className="bg-white rounded-[22px] border border-[#E3E6EE] p-5 lg:p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
@@ -634,6 +643,46 @@ export default function ThreadsPage() {
             </button>
           </Link>
         </section>
+
+        {/* Pagination Controls */}
+        {filteredThreads.length > pageSize && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-4 border-t border-[#E3E6EE]">
+            <span className="text-xs text-[#5F6678]">
+              Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, filteredThreads.length)} of {filteredThreads.length} workflows
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-3.5 py-1.5 rounded-xl border border-[#E3E6EE] bg-white text-xs font-semibold text-[#0A0F1F] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#F5F6FA] shadow-2xs transition-all"
+              >
+                Previous
+              </button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }).map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentPage(idx + 1)}
+                    className={`w-8 h-8 rounded-xl text-xs font-bold transition-all ${
+                      currentPage === idx + 1
+                        ? 'bg-[#2D55F5] text-white shadow-2xs'
+                        : 'text-[#5F6678] hover:bg-white hover:text-[#0A0F1F]'
+                    }`}
+                  >
+                    {idx + 1}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3.5 py-1.5 rounded-xl border border-[#E3E6EE] bg-white text-xs font-semibold text-[#0A0F1F] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#F5F6FA] shadow-2xs transition-all"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Global Command Modals & Dialogs */}

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigation } from '../context/NavigationContext';
+import { api, API_BASE_URL } from '../services/apiClient';
 
 const HELP_ARTICLES = [
   {
@@ -85,20 +86,14 @@ export default function HelpCenterPage() {
     e.preventDefault();
     setSubmittingFeedback(true);
     try {
-      const res = await fetch('https://dataglow.ai/datax-api/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tenant_id: 'tenant_default',
-          user_email: feedbackEmail || 'operator@datax.internal',
-          category: feedbackCategory,
-          rating: Number(feedbackRating),
-          comments: feedbackText
-        })
+      await api.post('/feedback', {
+        tenant_id: 'tenant_default',
+        user_email: feedbackEmail || 'operator@datax.internal',
+        category: feedbackCategory,
+        rating: Number(feedbackRating),
+        comments: feedbackText
       });
-      if (res.ok) {
-        setFeedbackSubmitted(true);
-      }
+      setFeedbackSubmitted(true);
     } catch (err) {
       console.warn('Feedback submit error:', err);
       setFeedbackSubmitted(true);
@@ -133,7 +128,7 @@ export default function HelpCenterPage() {
 
           <div className="flex items-center gap-2">
             <a
-              href="https://dataglow.ai/datax-api/status/public"
+              href={`${API_BASE_URL}/status/public`}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors"

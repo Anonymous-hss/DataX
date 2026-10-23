@@ -159,6 +159,38 @@ export default function SettingsPage({ onSwitchToMarketing }) {
                       Production Enterprise v2.5.0
                     </span>
                   </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">User Timezone (Audit & Logs)</label>
+                    <select 
+                      defaultValue={localStorage.getItem('datax_timezone_pref') || 'UTC'}
+                      onChange={(e) => localStorage.setItem('datax_timezone_pref', e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800"
+                    >
+                      <option value="UTC">UTC (Universal Coordinated Time)</option>
+                      <option value="America/New_York">America/New_York (EST / EDT)</option>
+                      <option value="America/Chicago">America/Chicago (CST / CDT)</option>
+                      <option value="America/Los_Angeles">America/Los_Angeles (PST / PDT)</option>
+                      <option value="Europe/London">Europe/London (GMT / BST)</option>
+                      <option value="Europe/Frankfurt">Europe/Frankfurt (CET / CEST)</option>
+                      <option value="Asia/Kolkata">Asia/Kolkata (IST - UTC+5:30)</option>
+                      <option value="Asia/Tokyo">Asia/Tokyo (JST - UTC+9:00)</option>
+                      <option value="Asia/Singapore">Asia/Singapore (SGT - UTC+8:00)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Language & Localization (i18n)</label>
+                    <select 
+                      defaultValue={localStorage.getItem('datax_locale_pref') || 'en-US'}
+                      onChange={(e) => localStorage.setItem('datax_locale_pref', e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800"
+                    >
+                      <option value="en-US">English (United States - en-US)</option>
+                      <option value="en-GB">English (United Kingdom - en-GB)</option>
+                      <option value="de-DE">Deutsch (Germany - de-DE)</option>
+                      <option value="fr-FR">Français (France - fr-FR)</option>
+                      <option value="ja-JP">日本語 (Japan - ja-JP)</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="pt-4 border-t border-slate-100 flex justify-end">

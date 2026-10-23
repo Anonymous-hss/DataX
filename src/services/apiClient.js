@@ -8,8 +8,9 @@
 
 export const API_BASE_URL = (
   import.meta.env.VITE_API_BASE || 
+  import.meta.env.VITE_API_BASE_URL || 
   import.meta.env.VITE_API_URL || 
-  'https://dataglow.ai/datax-api'
+  (typeof window !== 'undefined' && (window.location.hostname.includes('dataglow.ai') || window.location.pathname.startsWith('/datax')) ? '/datax-api' : 'https://dataglow.ai/datax-api')
 ).replace(/\/+$/, '');
 
 export class ApiError extends Error {
@@ -47,8 +48,13 @@ export async function apiRequest(endpoint, options = {}) {
     ...headers
   };
 
-  // Attach auth token if provided or stored in sessionStorage
-  const effectiveToken = token || sessionStorage.getItem('datax_auth_token') || localStorage.getItem('datax_auth_token');
+  // Attach auth token if provided or stored in sessionStorage / localStorage
+  const effectiveToken = 
+    token || 
+    (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('datax_auth_token') : null) || 
+    (typeof localStorage !== 'undefined' ? localStorage.getItem('datax_auth_token') : null) ||
+    (typeof localStorage !== 'undefined' ? localStorage.getItem('datax_jwt_token') : null) ||
+    (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('datax_jwt_token') : null);
   if (effectiveToken) {
     requestHeaders['Authorization'] = `Bearer ${effectiveToken}`;
   }

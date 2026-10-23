@@ -1,10 +1,10 @@
 // =============================================================================
 // DataX Autonomous Intelligence Engine Client
-// Connected to Live Azure OpenAI (gpt-5-mini / GPT-4o) on https://dataglow.ai/datax-api/rules/generate
+// Connected to Live Azure OpenAI (gpt-5-mini / GPT-4o) on /rules/generate
 // Performs genuine generative synthesis of executable data quality rules.
 // =============================================================================
 
-const API_BASE = 'https://dataglow.ai/datax-api';
+import { api } from '../services/apiClient';
 
 /**
  * Generate rules dynamically using the live Azure OpenAI Intelligence Engine.
@@ -22,22 +22,14 @@ export async function callAiRuleEngine({
   engine = 'sap_bw'
 }) {
   try {
-    const res = await fetch(`${API_BASE}/rules/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        tableName: tableName || 'source_table',
-        columns: columns || [],
-        prompt: prompt || 'Validate required fields and logical constraints.',
-        engine: engine || 'sap_bw'
-      })
+    const data = await api.post('/rules/generate', {
+      tableName: tableName || 'source_table',
+      columns: columns || [],
+      prompt: prompt || 'Validate required fields and logical constraints.',
+      engine: engine || 'sap_bw'
     });
 
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success && Array.isArray(data.rules) && data.rules.length > 0) {
+    if (data && data.success && Array.isArray(data.rules) && data.rules.length > 0) {
         return data.rules.map((r, idx) => ({
           id: r.id || `r_ai_${idx + 1}`,
           name: r.name || `Rule ${idx + 1}`,
@@ -50,7 +42,6 @@ export async function callAiRuleEngine({
           badge: data.engine || 'Azure OpenAI (gpt-5-mini)'
         }));
       }
-    }
   } catch (err) {
     console.warn('Live Intelligence Engine call failed, utilizing local semantic synthesizer:', err);
   }

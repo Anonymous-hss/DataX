@@ -3,7 +3,7 @@ import { Link, useNavigation } from '../context/NavigationContext';
 import { useRuleEngine } from '../context/RuleEngineContext';
 import DataXUserMenu from '../components/common/DataXUserMenu';
 import { DataXLogo } from './ThreadsPage';
-import { API_BASE_URL } from '../services/apiClient';
+import { api, API_BASE_URL } from '../services/apiClient';
 
 const INITIAL_CONNECTIONS = [
   {
@@ -123,14 +123,8 @@ export default function ConnectionsPage() {
         password: conn.password || ''
       };
 
-      const res = await fetch(`${API_BASE_URL}/test-connection`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.status === 'success') {
+      const data = await api.post('/test-connection', payload);
+      if (data && data.status === 'success') {
         setTestResult(prev => ({
           ...prev,
           [conn.id]: {

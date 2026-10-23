@@ -1,4 +1,5 @@
 import React from 'react';
+import { errorMonitoring } from '../../services/errorMonitoring';
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -13,6 +14,13 @@ export default class ErrorBoundary extends React.Component {
   componentDidCatch(error, errorInfo) {
     console.error('DataX Error Boundary caught an unhandled exception:', error, errorInfo);
     this.setState({ errorInfo });
+    try {
+      errorMonitoring.captureException(error, {
+        componentStack: errorInfo?.componentStack
+      });
+    } catch {
+      // safe fallback
+    }
   }
 
   handleReload = () => {

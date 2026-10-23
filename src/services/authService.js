@@ -1,16 +1,10 @@
+import { API_BASE_URL } from './apiClient';
+
 const TOKEN_KEY = 'datax_jwt_token';
 const USER_KEY = 'datax_user_profile';
 
 export function getApiBase() {
-  if (import.meta.env.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '');
-  }
-  if (typeof window !== 'undefined') {
-    if (window.location.hostname.includes('dataglow.ai') || window.location.pathname.startsWith('/datax')) {
-      return '/datax-api';
-    }
-  }
-  return '';
+  return API_BASE_URL;
 }
 
 export const authStorage = {

@@ -5,7 +5,7 @@ import { SAP_BW_PROCUREMENT_DATA, SAP_BW_INVENTORY_DATA, USER_MASTER_DATA } from
 import { ONTOLOGY_GRAPH } from '../data/ontologyGraph';
 import { TEMPLATE_AUTOFILLS, getWorkflowTemplate } from '../data/workflowTemplates';
 
-import { API_BASE_URL as API_BASE } from '../services/apiClient';
+import { api, API_BASE_URL as API_BASE } from '../services/apiClient';
 
 // Helper: Live Row Evaluation & Auto-Fix Transformation with Strict Rule Checking
 export const evaluateRow = (row, rules = [], isAutoFix = true, allRows = []) => {
@@ -633,11 +633,16 @@ export function RuleEngineProvider({ children }) {
     }
   }, [threads, user?.id]);
 
-  // Persistent Canvas State (In-Memory Session & LocalStorage Sync)
+  // Persistent Canvas State (Multi-tenant scoped per user to prevent cross-user leakage)
+  const getScopedKey = useCallback((key) => {
+    return user?.id ? `datax_${user.id}_${key}` : `datax_guest_${key}`;
+  }, [user?.id]);
+
   const [workflowNodes, setWorkflowNodesState] = useState(() => {
     try {
       if (typeof window !== 'undefined') {
-        const stored = localStorage.getItem('datax_canvas_nodes');
+        const scopedKey = user?.id ? `datax_${user.id}_canvas_nodes` : 'datax_guest_canvas_nodes';
+        const stored = localStorage.getItem(scopedKey) || localStorage.getItem('datax_canvas_nodes');
         if (stored) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed) && parsed.length >= 2) return parsed;
@@ -652,7 +657,8 @@ export function RuleEngineProvider({ children }) {
   const [workflowEdges, setWorkflowEdgesState] = useState(() => {
     try {
       if (typeof window !== 'undefined') {
-        const stored = localStorage.getItem('datax_canvas_edges');
+        const scopedKey = user?.id ? `datax_${user.id}_canvas_edges` : 'datax_guest_canvas_edges';
+        const stored = localStorage.getItem(scopedKey) || localStorage.getItem('datax_canvas_edges');
         if (stored) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed) && parsed.length >= 1) return parsed;
@@ -667,10 +673,13 @@ export function RuleEngineProvider({ children }) {
   const [activeWorkflowMeta, setActiveWorkflowMetaState] = useState(() => {
     try {
       if (typeof window !== 'undefined') {
-        const stored = localStorage.getItem('datax_active_workflow_meta');
+        const scopedKey = user?.id ? `datax_${user.id}_active_workflow_meta` : 'datax_guest_active_workflow_meta';
+        const stored = localStorage.getItem(scopedKey) || localStorage.getItem('datax_active_workflow_meta');
         if (stored) return JSON.parse(stored);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Could not read active workflow meta:', e);
+    }
     return {
       id: 'thread_sap_s4hana',
       name: 'SAP BW → S/4HANA Clean Core Modernizer',
@@ -684,84 +693,93 @@ export function RuleEngineProvider({ children }) {
   const [lastSavedWorkflowTime, setLastSavedWorkflowTime] = useState(() => {
     try {
       if (typeof window !== 'undefined') {
-        return localStorage.getItem('datax_last_saved_time') || null;
+        const scopedKey = user?.id ? `datax_${user.id}_last_saved_time` : 'datax_guest_last_saved_time';
+        return localStorage.getItem(scopedKey) || localStorage.getItem('datax_last_saved_time') || null;
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Could not read last saved workflow time:', e);
+    }
     return null;
   });
 
-  // State setters that automatically synchronize with localStorage
+  // State setters that automatically synchronize with user-scoped localStorage
   const setWorkflowNodes = useCallback((newNodes) => {
     setWorkflowNodesState(prev => {
       const resolved = typeof newNodes === 'function' ? newNodes(prev) : newNodes;
       try {
         if (typeof window !== 'undefined') {
-          localStorage.setItem('datax_canvas_nodes', JSON.stringify(resolved));
+          const key = user?.id ? `datax_${user.id}_canvas_nodes` : 'datax_guest_canvas_nodes';
+          localStorage.setItem(key, JSON.stringify(resolved));
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn('Failed saving user-scoped canvas nodes:', e);
+      }
       return resolved;
     });
-  }, []);
+  }, [user?.id]);
 
   const setWorkflowEdges = useCallback((newEdges) => {
     setWorkflowEdgesState(prev => {
       const resolved = typeof newEdges === 'function' ? newEdges(prev) : newEdges;
       try {
         if (typeof window !== 'undefined') {
-          localStorage.setItem('datax_canvas_edges', JSON.stringify(resolved));
+          const key = user?.id ? `datax_${user.id}_canvas_edges` : 'datax_guest_canvas_edges';
+          localStorage.setItem(key, JSON.stringify(resolved));
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn('Failed saving user-scoped canvas edges:', e);
+      }
       return resolved;
     });
-  }, []);
+  }, [user?.id]);
 
   const setActiveWorkflowMeta = useCallback((newMeta) => {
     setActiveWorkflowMetaState(prev => {
       const resolved = typeof newMeta === 'function' ? newMeta(prev) : newMeta;
       try {
         if (typeof window !== 'undefined') {
-          localStorage.setItem('datax_active_workflow_meta', JSON.stringify(resolved));
+          const key = user?.id ? `datax_${user.id}_active_workflow_meta` : 'datax_guest_active_workflow_meta';
+          localStorage.setItem(key, JSON.stringify(resolved));
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn('Failed saving user-scoped workflow meta:', e);
+      }
       return resolved;
     });
-  }, []);
+  }, [user?.id]);
 
   // Fetch threads from backend server on initial mount to sync database state
   useEffect(() => {
     const fetchServerThreads = async () => {
       try {
-        const res = await fetch(`${API_BASE}/threads`);
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data.threads) && data.threads.length > 0) {
-            setThreads(prev => {
-              const map = new Map();
-              prev.forEach(t => map.set(t.id, t));
-              data.threads.forEach(t => {
-                const tmpl = getWorkflowTemplate(t);
-                const hasFullNodes = Array.isArray(t.nodes) && t.nodes.length >= 2;
-                const existing = map.get(t.id) || {};
-                map.set(t.id, {
-                  ...existing,
-                  ...t,
-                  nodes: hasFullNodes ? t.nodes : (existing.nodes && existing.nodes.length >= 2 ? existing.nodes : tmpl.nodes),
-                  edges: (Array.isArray(t.edges) && t.edges.length >= 1) ? t.edges : (existing.edges && existing.edges.length >= 1 ? existing.edges : tmpl.edges),
-                  sourceConfig: t.sourceConfig || existing.sourceConfig || tmpl.sourceConfig,
-                  targetConfig: t.targetConfig || existing.targetConfig || tmpl.targetConfig,
-                  rules: t.rules || existing.rules || tmpl.rules
-                });
+        const data = await api.get('/threads', { tenantId });
+        if (data && Array.isArray(data.threads) && data.threads.length > 0) {
+          setThreads(prev => {
+            const map = new Map();
+            prev.forEach(t => map.set(t.id, t));
+            data.threads.forEach(t => {
+              const tmpl = getWorkflowTemplate(t);
+              const hasFullNodes = Array.isArray(t.nodes) && t.nodes.length >= 2;
+              const existing = map.get(t.id) || {};
+              map.set(t.id, {
+                ...existing,
+                ...t,
+                nodes: hasFullNodes ? t.nodes : (existing.nodes && existing.nodes.length >= 2 ? existing.nodes : tmpl.nodes),
+                edges: (Array.isArray(t.edges) && t.edges.length >= 1) ? t.edges : (existing.edges && existing.edges.length >= 1 ? existing.edges : tmpl.edges),
+                sourceConfig: t.sourceConfig || existing.sourceConfig || tmpl.sourceConfig,
+                targetConfig: t.targetConfig || existing.targetConfig || tmpl.targetConfig,
+                rules: t.rules || existing.rules || tmpl.rules
               });
-              return Array.from(map.values());
             });
-          }
+            return Array.from(map.values());
+          });
         }
       } catch (e) {
-        console.warn('Could not sync threads from server:', e);
+        console.warn('Could not sync threads from server, using local tenant catalog:', e.message);
       }
     };
     fetchServerThreads();
-  }, []);
+  }, [tenantId]);
 
   // Active Thread Selection
   const [activeThread, setActiveThread] = useState(PREBUILT_DOMAIN_PACKS.sap_bw_s4hana);
@@ -834,51 +852,45 @@ export function RuleEngineProvider({ children }) {
   // Sync with Server Threads and Runs APIs
   const fetchServerThreads = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/threads`);
-      if (res.ok) {
-        const data = await res.json();
-        const serverThreads = data.threads || data || [];
-        if (Array.isArray(serverThreads) && serverThreads.length > 0) {
-          setThreads(prev => {
-            return prev.map(pt => {
-              const match = serverThreads.find(st => 
-                st.id === pt.id || st.domainPackId === pt.id || st.domainPackId === pt.domainPackId || st.id === `thread_${pt.id}` || st.id?.replace('thread_', '') === pt.id?.replace('thread_', '')
-              );
-              if (match) {
-                return {
-                  ...pt,
-                  runCount: match.runCount ?? pt.runCount,
-                  lastRun: match.lastRun ?? pt.lastRun,
-                  healthScore: match.healthScore ?? pt.healthScore,
-                  healthGrade: match.healthGrade ?? pt.healthGrade,
-                  driftScore: match.driftScore ?? pt.driftScore,
-                  driftStatus: match.driftStatus ?? pt.driftStatus,
-                  status: match.status ?? pt.status
-                };
-              }
-              return pt;
-            });
+      const data = await api.get('/threads', { tenantId });
+      const serverThreads = data?.threads || data || [];
+      if (Array.isArray(serverThreads) && serverThreads.length > 0) {
+        setThreads(prev => {
+          return prev.map(pt => {
+            const match = serverThreads.find(st => 
+              st.id === pt.id || st.domainPackId === pt.id || st.domainPackId === pt.domainPackId || st.id === `thread_${pt.id}` || st.id?.replace('thread_', '') === pt.id?.replace('thread_', '')
+            );
+            if (match) {
+              return {
+                ...pt,
+                runCount: match.runCount ?? pt.runCount,
+                lastRun: match.lastRun ?? pt.lastRun,
+                healthScore: match.healthScore ?? pt.healthScore,
+                healthGrade: match.healthGrade ?? pt.healthGrade,
+                driftScore: match.driftScore ?? pt.driftScore,
+                driftStatus: match.driftStatus ?? pt.driftStatus,
+                status: match.status ?? pt.status
+              };
+            }
+            return pt;
           });
-        }
+        });
       }
     } catch (err) {
-      console.warn('Could not fetch server threads:', err);
+      console.warn('Could not fetch server threads:', err.message);
     }
-  }, []);
+  }, [tenantId]);
 
   const fetchServerRuns = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/runs`);
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data.runs)) {
-          setRunHistory(data.runs);
-        }
+      const data = await api.get('/runs', { tenantId });
+      if (data && Array.isArray(data.runs)) {
+        setRunHistory(data.runs);
       }
     } catch (err) {
-      console.warn('Could not fetch server runs:', err);
+      console.warn('Could not fetch server runs:', err.message);
     }
-  }, []);
+  }, [tenantId]);
 
   useEffect(() => {
     fetchServerThreads();
@@ -1195,43 +1207,29 @@ export function RuleEngineProvider({ children }) {
         password: (config.password || '').trim()
       };
 
-      const res = await fetch(`${API_BASE}/test-connection`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
+      const data = await api.post('/test-connection', payload, {
+        tenantId,
+        headers: {
           'X-User-Id': userId,
-          'X-User-Email': userEmail,
-          'X-Tenant-Id': tenantId
-        },
-        body: JSON.stringify(payload)
+          'X-User-Email': userEmail
+        }
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success === false) {
-          return {
-            success: false,
-            latencyMs: 0,
-            error: data.error || data.message || 'Connection test failed',
-            message: data.message || data.error || 'Connection failed: Please check credentials.'
-          };
-        }
-        return {
-          success: true,
-          latencyMs: data.latencyMs || 42,
-          tables: data.tables || [],
-          tableCount: data.tableCount || (data.tables ? data.tables.length : 0),
-          message: data.message || `Successfully connected! Discovered ${data.tableCount || (data.tables ? data.tables.length : 0)} tables.`
-        };
-      } else {
-        const errData = await res.json().catch(() => ({}));
+      if (data && data.success === false) {
         return {
           success: false,
           latencyMs: 0,
-          error: errData.detail || errData.message || 'Connection failed: Server returned an error.',
-          message: errData.detail || errData.message || 'Connection failed: Server returned an error.'
+          error: data.error || data.message || 'Connection test failed',
+          message: data.message || data.error || 'Connection failed: Please check credentials.'
         };
       }
+      return {
+        success: true,
+        latencyMs: data?.latencyMs || data?.latency_ms || 42,
+        tables: data?.tables || data?.availableTables || [],
+        tableCount: data?.tableCount || (data?.tables ? data.tables.length : 0),
+        message: data?.message || `Successfully connected! Discovered ${data?.tableCount || (data?.tables ? data.tables.length : 0)} tables.`
+      };
     } catch (err) {
       console.warn('API test connection call network error:', err.message);
       return {
@@ -1268,44 +1266,37 @@ export function RuleEngineProvider({ children }) {
         }
       }
 
-      const res = await fetch(`${API_BASE}/vault/sample`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
+      const data = await api.post('/vault/sample', {
+        engine: sourceConfig.engine || 'sap_bw',
+        connectionUri: resolvedUri,
+        host: sourceConfig.host || undefined,
+        port: sourceConfig.port ? String(sourceConfig.port) : undefined,
+        database: sourceConfig.database || undefined,
+        user: sourceConfig.user || sourceConfig.username || undefined,
+        password: sourceConfig.password || undefined,
+        table: tableName || sourceConfig.table,
+        limit
+      }, {
+        tenantId,
+        headers: {
           'X-User-Id': userId,
-          'X-User-Email': userEmail,
-          'X-Tenant-Id': tenantId
-        },
-        body: JSON.stringify({
-          engine: sourceConfig.engine || 'sap_bw',
-          connectionUri: resolvedUri,
-          host: sourceConfig.host || undefined,
-          port: sourceConfig.port ? String(sourceConfig.port) : undefined,
-          database: sourceConfig.database || undefined,
-          user: sourceConfig.user || sourceConfig.username || undefined,
-          password: sourceConfig.password || undefined,
-          table: tableName || sourceConfig.table,
-          limit
-        })
+          'X-User-Email': userEmail
+        }
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.rows && data.rows.length > 0) {
-          rawRecordsRef.current = data.rows;
-          setPreviewRows(data.rows.slice(0, 5));
-          if (data.columns) {
-            setSourceConfig(prev => ({
-              ...prev,
-              table: tableName,
-              connectionUri: activeUri || prev.connectionUri,
-              discoveredColumns: data.columns
-            }));
-          }
-          const evaluated = data.rows.map(r => evaluateRow(r, activeRules, autoFixEnabled, data.rows));
-          setSampleData(evaluated);
-          return { success: true, count: data.rows.length, columns: data.columns, rows: data.rows };
+      if (data && data.rows && data.rows.length > 0) {
+        rawRecordsRef.current = data.rows;
+        setPreviewRows(data.rows.slice(0, 5));
+        if (data.columns) {
+          setSourceConfig(prev => ({
+            ...prev,
+            table: tableName,
+            discoveredColumns: data.columns
+          }));
         }
+        const evaluated = data.rows.map(r => evaluateRow(r, activeRules, autoFixEnabled, data.rows));
+        setSampleData(evaluated);
+        return { success: true, count: data.rows.length, columns: data.columns, rows: data.rows };
       }
     } catch (err) {
       console.warn('API sampling failed:', err.message);
@@ -1367,8 +1358,7 @@ export function RuleEngineProvider({ children }) {
     const selectedActiveRules = (activeRules || []).filter(r => r.selected !== false && r.enabled !== false);
 
     // Call backend API if available
-    try {
-      const payload = {
+    const payload = {
         pipelineName: activeThread?.name || 'DataX CleanFlow Pipeline',
         threadId: activeThread?.id || activeThread?.threadId || undefined,
         dryRun: true,
@@ -1406,20 +1396,17 @@ export function RuleEngineProvider({ children }) {
         }))
       };
 
-      const res = await fetch(`${API_BASE}/pipeline/execute`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-User-Id': userId,
-          'X-User-Email': userEmail,
-          'X-Tenant-Id': tenantId
-        },
-        body: JSON.stringify(payload)
-      });
+      let backendErrorMsg = null;
+      try {
+        const data = await api.post('/pipeline/execute', payload, {
+          tenantId,
+          headers: {
+            'X-User-Id': userId,
+            'X-User-Email': userEmail
+          }
+        });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.counts !== undefined || data.validCount !== undefined || data.summary !== undefined || data.totalChecked !== undefined) {
+        if (data && (data.counts !== undefined || data.validCount !== undefined || data.summary !== undefined || data.totalChecked !== undefined)) {
           const sum = data.summary || {};
           const totalCount = sum.sourceExtracted ?? sum.totalChecked ?? sum.total_records ?? data.totalChecked ?? data.counts?.totalChecked ?? 1420;
           const valid = sum.compliantValid ?? sum.cleanCount ?? sum.valid_records_count ?? data.validCount ?? data.counts?.valid ?? 0;
@@ -1449,6 +1436,8 @@ export function RuleEngineProvider({ children }) {
             autoFixedCount: fixed,
             quarantinedCount: quarantined,
             passRate,
+            isSimulationFallback: false,
+            backendStatus: 'CONNECTED',
             ruleOutcomes: outcomes,
             sampleQuarantinedRecords: data.sampleQuarantinedRecords || [],
             sampleValidRecords: data.sampleValidRecords || [],
@@ -1466,17 +1455,14 @@ export function RuleEngineProvider({ children }) {
 
           return outcome;
         }
-      } else {
-        const errJson = await res.json().catch(() => ({}));
-        console.warn('Pipeline execute API returned non-OK status:', res.status, errJson);
+      } catch (err) {
+        console.warn('Pipeline execute API call failed, using live evaluated simulation:', err.message);
+        backendErrorMsg = err.message || 'DataX Live Pipeline Backend is currently unreachable';
+      } finally {
+        isExecutingDryRunRef.current = false;
       }
-    } catch (err) {
-      console.warn('Pipeline execute API call failed, using live evaluated simulation:', err.message);
-    } finally {
-      isExecutingDryRunRef.current = false;
-    }
 
-    // Dynamic Record Evaluation Fallback
+    // Dynamic Record Evaluation Fallback (with transparent honest notification to user)
     const totalCount = sampleData.length;
     const cleanCount = sampleData.filter(r => r._status === 'clean').length;
     const autoFixedCount = sampleData.filter(r => r._status === 'fixed').length;
@@ -1488,7 +1474,11 @@ export function RuleEngineProvider({ children }) {
       cleanCount,
       autoFixedCount,
       quarantinedCount,
-      passRate
+      passRate,
+      isSimulationFallback: true,
+      backendStatus: 'UNAVAILABLE',
+      backendError: backendErrorMsg || 'Live execution server could not be reached. Evaluated against local semantic simulation rules.',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     };
 
     setDryRunResult(prev => ({
@@ -1544,19 +1534,15 @@ export function RuleEngineProvider({ children }) {
         }))
       };
 
-      const res = await fetch(`${API_BASE}/pipeline/execute`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
+      const data = await api.post('/pipeline/execute', payload, {
+        tenantId,
+        headers: {
           'X-User-Id': userId,
-          'X-User-Email': userEmail,
-          'X-Tenant-Id': tenantId
-        },
-        body: JSON.stringify(payload)
+          'X-User-Email': userEmail
+        }
       });
 
-      if (res.ok) {
-        const data = await res.json();
+      if (data) {
         const totalCount = data.summary?.sourceExtracted ?? data.summary?.totalChecked ?? data.summary?.total_records ?? data.counts?.totalChecked ?? 0;
         const valid = data.summary?.compliantValid ?? data.summary?.cleanCount ?? data.summary?.valid_records_count ?? data.counts?.valid ?? 0;
         const fixed = data.summary?.autoFixedCount ?? data.summary?.remediated_count ?? data.counts?.autofixed ?? 0;

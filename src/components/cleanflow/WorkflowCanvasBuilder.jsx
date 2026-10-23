@@ -206,8 +206,11 @@ const sanitizeNode = (n) => {
     nodesRef.current = nodes;
   }, [nodes]);
 
+  const [isDirty, setIsDirty] = useState(false);
+
   // Synchronized state setters that immediately update context & localStorage session
   const setNodes = useCallback((updater) => {
+    setIsDirty(true);
     setNodesState(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
       nodesRef.current = next;
@@ -217,12 +220,26 @@ const sanitizeNode = (n) => {
   }, [setWorkflowNodes]);
 
   const setEdges = useCallback((updater) => {
+    setIsDirty(true);
     setEdgesState(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
       setWorkflowEdges(next);
       return next;
     });
   }, [setWorkflowEdges]);
+
+  // Window beforeunload prompt when unsaved changes exist
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes in your workflow canvas. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
 
   // Synchronize when switching workflows from catalog or domain pack
   const lastActiveThreadIdRef = useRef(activeThread?.id);
@@ -251,6 +268,7 @@ const sanitizeNode = (n) => {
       setWorkflowNodes(resolvedNodes);
       setEdgesState(resolvedEdges);
       setWorkflowEdges(resolvedEdges);
+      setIsDirty(false);
     }
   }, [activeThread, setWorkflowNodes, setWorkflowEdges]);
 
@@ -296,7 +314,7 @@ const sanitizeNode = (n) => {
   const [srcPort, setSrcPort] = useState(sourceConfig?.port || '443');
   const [srcDbName, setSrcDbName] = useState(sourceConfig?.database || 'SAP_BW');
   const [srcUser, setSrcUser] = useState(sourceConfig?.user || 'bwp_rfc_user');
-  const [srcPass, setSrcPass] = useState('CleanCore2026!');
+  const [srcPass, setSrcPass] = useState(sourceConfig?.password || '');
   const [showPassword, setShowPassword] = useState(false);
   const [srcTable, setSrcTable] = useState(sourceConfig?.table || '0PUR_C01');
   const [readScope, setReadScope] = useState('selected'); // 'selected' | 'all'
@@ -310,7 +328,7 @@ const sanitizeNode = (n) => {
     const norm = (engineName || '').toLowerCase();
     if (norm.includes('azure') || norm.includes('blob')) {
       setSrcDbType('Azure');
-      setSrcHost(import.meta.env.VITE_AZURE_STORAGE_ACCOUNT || import.meta.env.AZURE_STORAGE_ACCOUNT || 'irepazurestorage');
+      setSrcHost(import.meta.env.VITE_AZURE_STORAGE_ACCOUNT || import.meta.env.AZURE_STORAGE_ACCOUNT || 'azure-storage.blob.core.windows.net');
       setSrcPort(import.meta.env.VITE_AZURE_STORAGE_CONTAINER || import.meta.env.AZURE_STORAGE_CONTAINER || 'telemetry-container');
       setSrcDbName(import.meta.env.VITE_AZURE_TENANT_ID || import.meta.env.AZURE_TENANT_ID || '');
       setSrcUser(import.meta.env.VITE_AZURE_CLIENT_ID || import.meta.env.AZURE_CLIENT_ID || '');
@@ -335,34 +353,34 @@ const sanitizeNode = (n) => {
     } else if (norm.includes('mongo')) {
       setSrcDbType('MongoDB');
       setSrcPort('27017');
-      setSrcHost('cluster0.mongodb.net');
+      setSrcHost(import.meta.env.VITE_MONGO_HOST || 'cluster0.mongodb.net');
       setSrcDbName('enterprise_raw');
-      setSrcUser('mongo_reader');
-      setSrcPass('CleanCore2026!');
+      setSrcUser(import.meta.env.VITE_MONGO_USER || 'mongo_reader');
+      setSrcPass(import.meta.env.VITE_MONGO_PASSWORD || '');
       setSrcTable(tableName || 'raw_users');
     } else if (norm.includes('postgres')) {
       setSrcDbType('PostgreSQL');
       setSrcPort('5432');
-      setSrcHost('irep.postgres.database.azure.com');
+      setSrcHost(import.meta.env.VITE_POSTGRES_HOST || 'postgres.internal.net');
       setSrcDbName('ruleengine');
-      setSrcUser('ruleengineadmin');
-      setSrcPass('WelcomeSDH@2026');
+      setSrcUser(import.meta.env.VITE_POSTGRES_USER || 'ruleengineadmin');
+      setSrcPass(import.meta.env.VITE_POSTGRES_PASSWORD || '');
       setSrcTable(tableName || 'users');
     } else if (norm.includes('snowflake')) {
       setSrcDbType('Snowflake');
       setSrcPort('443');
-      setSrcHost('xy12345.us-east-1.snowflakecomputing.com');
+      setSrcHost(import.meta.env.VITE_SNOWFLAKE_HOST || 'xy12345.us-east-1.snowflakecomputing.com');
       setSrcDbName('ANALYTICS_LANDING');
-      setSrcUser('datax_svc');
-      setSrcPass('SnowflakeSecret2026!');
+      setSrcUser(import.meta.env.VITE_SNOWFLAKE_USER || 'datax_svc');
+      setSrcPass(import.meta.env.VITE_SNOWFLAKE_PASSWORD || '');
       setSrcTable(tableName || '0PUR_C01');
     } else {
       setSrcDbType('SAP BW');
       setSrcPort('443');
-      setSrcHost('hana.corp.ondemand.com');
+      setSrcHost(import.meta.env.VITE_SAP_HOST || 'hana.corp.ondemand.com');
       setSrcDbName('SAP_BW');
-      setSrcUser('bwp_rfc_user');
-      setSrcPass('CleanCore2026!');
+      setSrcUser(import.meta.env.VITE_SAP_USER || 'bwp_rfc_user');
+      setSrcPass(import.meta.env.VITE_SAP_PASSWORD || '');
       setSrcTable(tableName || '0PUR_C01');
     }
   };
@@ -759,6 +777,7 @@ const sanitizeNode = (n) => {
         }
       });
       if (res && res.success) {
+        setIsDirty(false);
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 2500);
       }
@@ -1333,23 +1352,25 @@ const sanitizeNode = (n) => {
             className={`px-3.5 py-2 rounded-xl border text-xs font-semibold shadow-xs transition-all cursor-pointer flex items-center gap-1.5 ${
               saveSuccess
                 ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                : isDirty
+                ? 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-800'
                 : isSavingWorkflow
                 ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
                 : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
             }`}
-            title={lastSavedWorkflowTime ? `Last saved at ${lastSavedWorkflowTime} (Persisted to Cloud & Local State)` : 'Save workflow graph configuration to backend database'}
+            title={isDirty ? 'Unsaved changes (Save to persist to backend)' : (lastSavedWorkflowTime ? `Last saved at ${lastSavedWorkflowTime}` : 'Save workflow')}
           >
             {isSavingWorkflow ? (
               <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-600" />
             ) : saveSuccess ? (
               <Check className="w-3.5 h-3.5 text-emerald-600" />
             ) : (
-              <Save className="w-3.5 h-3.5 text-slate-500" />
+              <Save className={`w-3.5 h-3.5 ${isDirty ? 'text-amber-600' : 'text-slate-500'}`} />
             )}
             <span>
-              {isSavingWorkflow ? 'Saving...' : saveSuccess ? 'Saved' : 'Save'}
+              {isSavingWorkflow ? 'Saving...' : saveSuccess ? 'Saved' : isDirty ? 'Save *' : 'Save'}
             </span>
-            {lastSavedWorkflowTime && !isSavingWorkflow && !saveSuccess && (
+            {lastSavedWorkflowTime && !isSavingWorkflow && !saveSuccess && !isDirty && (
               <span className="text-[10px] text-slate-400 font-normal ml-0.5">({lastSavedWorkflowTime})</span>
             )}
           </button>

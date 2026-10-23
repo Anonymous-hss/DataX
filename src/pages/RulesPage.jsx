@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { GitBranch } from 'lucide-react';
 import { Link, useNavigation } from '../context/NavigationContext';
 import { useRuleEngine } from '../context/RuleEngineContext';
 import DataXUserMenu from '../components/common/DataXUserMenu';
+import RuleVersioningModal from '../components/rules/RuleVersioningModal';
 
 // --- Figma-Exact Icons ---
 
@@ -96,6 +98,7 @@ export default function RulesPage() {
 
   // Top Subheader state
   const [saveStatus, setSaveStatus] = useState('saved just now');
+  const [versioningModalOpen, setVersioningModalOpen] = useState(false);
 
   // Columns to Check
   const [columns, setColumns] = useState([
@@ -441,6 +444,13 @@ export default function RulesPage() {
 
           {/* Action Buttons: Save, Dry run, Run live */}
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setVersioningModalOpen(true)}
+              className="px-3.5 py-1.5 rounded-full border border-blue-200 bg-blue-50/50 hover:bg-blue-100 text-xs font-semibold text-blue-700 flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+            >
+              <GitBranch className="w-3.5 h-3.5 text-blue-600" />
+              Version History
+            </button>
             <button
               onClick={handleSaveThread}
               className="px-3.5 py-1.5 rounded-full border border-[#CDD2DE] bg-white hover:bg-[#F5F6FA] active:bg-[#EBEFF5] text-xs font-semibold text-[#0A0F1F] flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
@@ -1072,6 +1082,12 @@ export default function RulesPage() {
           </form>
         </div>
       )}
+
+      {/* Audited Version History & Rollback Modal */}
+      <RuleVersioningModal
+        isOpen={versioningModalOpen}
+        onClose={() => setVersioningModalOpen(false)}
+      />
     </div>
   );
 }
