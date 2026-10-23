@@ -6,17 +6,17 @@ import { Database, Key, CheckCircle2, RefreshCw } from 'lucide-react';
  * Destination data warehouse for analytical writebacks and Gold Lakehouse tables.
  */
 export default function BigQueryModalPanel({
-  projectId = 'datax-enterprise-analytics',
+  projectId = import.meta.env.VITE_BIGQUERY_PROJECT_ID || import.meta.env.BIGQUERY_PROJECT_ID || '',
   onProjectIdChange,
-  datasetId = 'cleanflow_analytics_gold',
+  datasetId = import.meta.env.VITE_BIGQUERY_DATASET_ID || import.meta.env.BIGQUERY_DATASET_ID || '',
   onDatasetIdChange,
-  tableName = '0PUR_C01_clean',
+  tableName = import.meta.env.VITE_BIGQUERY_TABLE || import.meta.env.BIGQUERY_TABLE || '0PUR_C01_clean',
   onTableNameChange,
-  location = 'US',
+  location = import.meta.env.VITE_BIGQUERY_LOCATION || import.meta.env.BIGQUERY_LOCATION || 'US',
   onLocationChange,
-  clientEmail = 'datax-bigquery-writer@datax-enterprise-analytics.iam.gserviceaccount.com',
+  clientEmail = import.meta.env.VITE_BIGQUERY_CLIENT_EMAIL || import.meta.env.BIGQUERY_CLIENT_EMAIL || '',
   onClientEmailChange,
-  privateKeyId = 'd82f7190c4b2a890123ef',
+  privateKeyId = import.meta.env.VITE_BIGQUERY_PRIVATE_KEY_ID || import.meta.env.BIGQUERY_PRIVATE_KEY_ID || '',
   onPrivateKeyIdChange,
   writeMode = 'append',
   onWriteModeChange

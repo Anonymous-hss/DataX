@@ -76,7 +76,7 @@ const OPERATIONAL_CATALOG = [
     items: [
       { type: 'rules', name: 'Intelligence Engine (Azure OpenAI)', desc: 'Natural language business rule synthesizer', system: 'gpt-5-mini', icon: FileCode2, variant: 'indigo' },
       { type: 'vector_matcher', name: 'Semantic Vector Matcher', desc: 'Finds fuzzy-matching records using AI similarity (e.g. "IBM Corp" ↔ "International Business Machines")', system: 'text-embedding-3-small', icon: Layers, variant: 'indigo' },
-      { type: 'rag', name: 'RAG Context Enricher', desc: 'Searches your company knowledge library and attaches relevant context to each data record', system: 'RAG Enricher', icon: BookOpen, variant: 'purple' },
+      { type: 'rag', name: 'RAG Context Enricher', desc: 'Searches your company knowledge library and attaches relevant context to each data record', system: 'RAG', icon: BookOpen, variant: 'purple' },
       { type: 'rules', name: 'RFC-5322 Email Normalizer', desc: 'Auto-repairs syntax, trims whitespace, lowercases domains', system: 'Rule Pack', icon: ShieldCheck, variant: 'green' },
       { type: 'rules', name: 'SAP Plant Ontology Resolver', desc: 'Maps Plant-Dallas string into S/4HANA code P1000', system: 'Ontology Graph', icon: Zap, variant: 'blue' },
       { type: 'rules', name: 'SOX 404 Financial Balancer', desc: 'Strict Debits = Credits balance validation', system: 'SOX Pack', icon: Sliders, variant: 'orange' }
@@ -86,7 +86,7 @@ const OPERATIONAL_CATALOG = [
     category: '3. In-Flight Routing & Execution',
     items: [
       { type: 'router', name: 'CleanFlow In-Flight Router', desc: 'Autonomous 3-way split: Compliant, Auto-Fixed, Quarantined', system: 'Parallel Router', icon: GitBranch, variant: 'purple' },
-      { type: 'conditional', name: 'Conditional (If-Else)', desc: 'Routes records to a TRUE or FALSE path based on one condition you define', system: 'If-Else Router', icon: GitBranch, variant: 'purple' },
+      { type: 'conditional', name: 'Conditional Router (If / Else)', desc: 'Routes records to a TRUE or FALSE path based on one condition you define', system: 'If-Else Router', icon: GitBranch, variant: 'purple' },
       { type: 'hitl', name: 'Human in Loop', desc: 'Pauses the pipeline for a human reviewer to Approve or Reject before records continue', system: 'Approval Gate', icon: UserCheck, variant: 'orange' }
     ]
   },
@@ -142,7 +142,36 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const panStartRef = useRef({ x: 0, y: 0 });
   const canvasRef = useRef(null);
 
-  // Workflow Graph State: Nodes & Edges (backed by persistent memory & localStorage session)
+  // Helper: Sanitize & normalize canvas nodes to eliminate legacy hardcoded strings or redundant duplicate titles
+const sanitizeNode = (n) => {
+  if (!n) return n;
+  const node = { ...n };
+  if (node.title === 'AI Rules Engine' || node.title === 'AI Rule Engine') {
+    node.title = 'Intelligence Engine';
+  }
+  if (node.type === 'rag' || (node.title && node.title.toLowerCase().includes('rag'))) {
+    node.type = 'rag';
+    node.title = 'RAG Context Enricher';
+    node.system = 'RAG';
+    if (node.table && node.table.toLowerCase().includes('hybrid')) {
+      node.table = 'Knowledge Store';
+    }
+  }
+  if (node.type === 'conditional' || (node.title && (node.title.includes('Conditional') || node.title.includes('Switch')))) {
+    node.type = 'conditional';
+    node.title = 'Conditional Router (If / Else)';
+    node.system = 'If-Else Router';
+    if (node.system && node.system.includes('TOTAL_AMOUNT')) {
+      node.system = 'If-Else Router';
+    }
+    if (node.table && node.table.includes('50000200')) {
+      node.table = 'Configured';
+    }
+  }
+  return node;
+};
+
+// Workflow Graph State: Nodes & Edges (backed by persistent memory & localStorage session)
   const tmpl = getWorkflowTemplate(activeThread || defaultTemplateKey);
   const initialSetup = isScratchInitial ? { nodes: [], edges: [] } : tmpl;
   
@@ -150,7 +179,18 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
     const rawNodes = (Array.isArray(workflowNodes) && workflowNodes.length >= 2)
       ? workflowNodes
       : initialSetup.nodes;
-    return rawNodes.map(n => (n.title === 'AI Rules Engine' || n.title === 'AI Rule Engine') ? { ...n, title: 'Intelligence Engine' } : n);
+    const sanitized = (rawNodes || []).map(sanitizeNode);
+    // Deduplicate identical type + title nodes that were duplicated in local storage
+    const seen = new Set();
+    const deduped = [];
+    for (const n of sanitized) {
+      const key = `${n.type}__${n.title}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        deduped.push(n);
+      }
+    }
+    return deduped;
   });
 
   const [edges, setEdgesState] = useState(() => {
@@ -193,7 +233,16 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       const rawThreadNodes = (Array.isArray(activeThread.nodes) && activeThread.nodes.length >= 2)
         ? activeThread.nodes
         : matchingTmpl.nodes;
-      const resolvedNodes = rawThreadNodes.map(n => (n.title === 'AI Rules Engine' || n.title === 'AI Rule Engine') ? { ...n, title: 'Intelligence Engine' } : n);
+      const sanitizedThreadNodes = (rawThreadNodes || []).map(sanitizeNode);
+      const seenThread = new Set();
+      const resolvedNodes = [];
+      for (const n of sanitizedThreadNodes) {
+        const key = `${n.type}__${n.title}`;
+        if (!seenThread.has(key)) {
+          seenThread.add(key);
+          resolvedNodes.push(n);
+        }
+      }
       const resolvedEdges = (Array.isArray(activeThread.edges) && activeThread.edges.length >= 1)
         ? activeThread.edges
         : matchingTmpl.edges;
@@ -261,27 +310,27 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
     const norm = (engineName || '').toLowerCase();
     if (norm.includes('azure') || norm.includes('blob')) {
       setSrcDbType('Azure');
-      setSrcHost('irepazurestorage');
-      setSrcPort('telemetry-container');
-      setSrcDbName('377abd4b-5fbc-4ac2-9b30-f3c03892d087');
-      setSrcUser('f366a6c8-ae64-4d0b-87cd-dc8fd919997a');
-      setSrcPass('FwJ8Q~1CCNBeMWDkibK6wyvVPisSpEKLtO~Ua9b');
+      setSrcHost(import.meta.env.VITE_AZURE_STORAGE_ACCOUNT || import.meta.env.AZURE_STORAGE_ACCOUNT || 'irepazurestorage');
+      setSrcPort(import.meta.env.VITE_AZURE_STORAGE_CONTAINER || import.meta.env.AZURE_STORAGE_CONTAINER || 'telemetry-container');
+      setSrcDbName(import.meta.env.VITE_AZURE_TENANT_ID || import.meta.env.AZURE_TENANT_ID || '');
+      setSrcUser(import.meta.env.VITE_AZURE_CLIENT_ID || import.meta.env.AZURE_CLIENT_ID || '');
+      setSrcPass(import.meta.env.VITE_AZURE_STORAGE_KEY || import.meta.env.AZURE_STORAGE_KEY || '');
       setSrcTable(tableName || 'telemetry_logs.parquet');
     } else if (norm.includes('s3') || norm.includes('aws')) {
       setSrcDbType('AWS S3');
-      setSrcPort('us-east-1');
-      setSrcHost('s3://datax-enterprise-lake/raw-landing/');
+      setSrcPort(import.meta.env.VITE_AWS_DEFAULT_REGION || import.meta.env.AWS_DEFAULT_REGION || 'us-east-1');
+      setSrcHost(import.meta.env.VITE_AWS_S3_BUCKET_URI || import.meta.env.AWS_S3_BUCKET_URI || 's3://datax-enterprise-lake/raw-landing/');
       setSrcDbName('Parquet (Snappy)');
-      setSrcUser('AKIAIOSFODNN7EXAMPLE');
-      setSrcPass('wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY');
+      setSrcUser(import.meta.env.VITE_AWS_ACCESS_KEY_ID || import.meta.env.AWS_ACCESS_KEY_ID || '');
+      setSrcPass(import.meta.env.VITE_AWS_SECRET_ACCESS_KEY || import.meta.env.AWS_SECRET_ACCESS_KEY || '');
       setSrcTable(tableName || 'orders_2026_q1.parquet');
     } else if (norm.includes('salesforce') || norm.includes('crm')) {
       setSrcDbType('Salesforce');
       setSrcPort('443');
-      setSrcHost('sweetdesignhub.my.salesforce.com');
-      setSrcDbName('3MVG9f366a6c84d0b87cddc8fd919997a');
-      setSrcUser('sweetdesignhub@gmail.com');
-      setSrcPass('FwJ8Q~1CCNBeMWDkibK6wyvVPis');
+      setSrcHost(import.meta.env.VITE_SALESFORCE_INSTANCE_URL || import.meta.env.SALESFORCE_INSTANCE_URL || 'login.salesforce.com');
+      setSrcDbName(import.meta.env.VITE_SALESFORCE_CLIENT_ID || import.meta.env.SALESFORCE_CLIENT_ID || '');
+      setSrcUser(import.meta.env.VITE_SALESFORCE_USERNAME || import.meta.env.SALESFORCE_USERNAME || '');
+      setSrcPass(import.meta.env.VITE_SALESFORCE_PASSWORD || import.meta.env.SALESFORCE_PASSWORD || '');
       setSrcTable(tableName || 'Account');
     } else if (norm.includes('mongo')) {
       setSrcDbType('MongoDB');
@@ -375,21 +424,21 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const [hitlWebhook, setHitlWebhook] = useState('');
   const [hitlActionMode, setHitlActionMode] = useState('approve_reject');
 
-  // Pinecone Vector DB states
-  const [pineconeIndex, setPineconeIndex] = useState('enterprise-knowledge-base');
-  const [pineconeHost, setPineconeHost] = useState('https://enterprise-knowledge-base-d7e2.svc.aped-4627-b74a.pinecone.io');
-  const [pineconeApiKey, setPineconeApiKey] = useState('pcsk_67b841a_9x2A8KzP4L019mNqQweR_sec');
-  const [pineconeNamespace, setPineconeNamespace] = useState('production');
-  const [pineconeDimension, setPineconeDimension] = useState('1536');
+  // Pinecone Vector DB states (loaded securely from .env)
+  const [pineconeIndex, setPineconeIndex] = useState(import.meta.env.VITE_PINECONE_INDEX || import.meta.env.PINECONE_INDEX || 'enterprise-knowledge-base');
+  const [pineconeHost, setPineconeHost] = useState(import.meta.env.VITE_PINECONE_HOST || import.meta.env.PINECONE_HOST || '');
+  const [pineconeApiKey, setPineconeApiKey] = useState(import.meta.env.VITE_PINECONE_API_KEY || import.meta.env.PINECONE_API_KEY || '');
+  const [pineconeNamespace, setPineconeNamespace] = useState(import.meta.env.VITE_PINECONE_NAMESPACE || import.meta.env.PINECONE_NAMESPACE || 'production');
+  const [pineconeDimension, setPineconeDimension] = useState(import.meta.env.VITE_PINECONE_DIMENSION || import.meta.env.PINECONE_DIMENSION || '1024');
   const [pineconeMetric, setPineconeMetric] = useState('cosine');
 
-  // Google BigQuery states
-  const [bqProject, setBqProject] = useState('datax-enterprise-analytics');
-  const [bqDataset, setBqDataset] = useState('cleanflow_analytics_gold');
+  // Google BigQuery states (loaded securely from .env)
+  const [bqProject, setBqProject] = useState(import.meta.env.VITE_BIGQUERY_PROJECT_ID || import.meta.env.BIGQUERY_PROJECT_ID || '');
+  const [bqDataset, setBqDataset] = useState(import.meta.env.VITE_BIGQUERY_DATASET_ID || import.meta.env.BIGQUERY_DATASET_ID || '');
   const [bqTable, setBqTable] = useState('0PUR_C01_clean');
-  const [bqLocation, setBqLocation] = useState('US');
-  const [bqEmail, setBqEmail] = useState('datax-bigquery-writer@datax-enterprise-analytics.iam.gserviceaccount.com');
-  const [bqKeyId, setBqKeyId] = useState('d82f7190c4b2a890123ef');
+  const [bqLocation, setBqLocation] = useState(import.meta.env.VITE_BIGQUERY_LOCATION || import.meta.env.BIGQUERY_LOCATION || 'US');
+  const [bqEmail, setBqEmail] = useState(import.meta.env.VITE_BIGQUERY_CLIENT_EMAIL || import.meta.env.BIGQUERY_CLIENT_EMAIL || '');
+  const [bqKeyId, setBqKeyId] = useState(import.meta.env.VITE_BIGQUERY_PRIVATE_KEY_ID || import.meta.env.BIGQUERY_PRIVATE_KEY_ID || '');
   const [bqWriteMode, setBqWriteMode] = useState('append');
 
   // Target Modal states
@@ -913,26 +962,26 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       height: 135,
       status: isAzure ? 'Connected' : isSalesforce ? 'Connected' : isS3 ? 'Discovered' 
         : isVectorMatcher ? 'Similarity 85%'
-        : isRag ? 'Top-3 RAG Active'
-        : isConditional ? '3-Way Active'
-        : isHitl ? 'Gate Armed (>$50k)'
-        : isPinecone ? 'Vector Store (1536)'
+        : isRag ? 'RAG Active'
+        : isConditional ? 'If / Else Active'
+        : isHitl ? 'Gate Armed'
+        : isPinecone ? 'Vector Store (1024)'
         : isBigQuery ? 'BigQuery Write API'
         : 'Configured',
       table: isAzure ? 'telemetry_logs.parquet' : isSalesforce ? 'Account' : isS3 ? 'orders_2026_q1.parquet' 
         : isVectorMatcher ? 'VENDOR_NAME'
-        : isRag ? 'RAG_METADATA'
-        : isConditional ? 'TOTAL_AMOUNT'
+        : isRag ? 'Knowledge Store'
+        : isConditional ? 'Configured'
         : isHitl ? 'APPROVAL_GATE'
         : isPinecone ? 'enterprise-knowledge-base'
         : isBigQuery ? '0PUR_C01_clean'
         : undefined,
       rowCount: isAzure ? '18,200 rows' : isSalesforce ? '3,450 records' : isS3 ? '12,400 rows' 
         : isVectorMatcher ? 'Cosine Similarity'
-        : isRag ? 'Top-K Knowledge'
-        : isConditional ? 'Multi-Branch'
+        : isRag ? 'Reference Docs'
+        : isConditional ? 'TRUE / FALSE'
         : isHitl ? 'Human Sign-off'
-        : isPinecone ? '14,250 vectors'
+        : isPinecone ? '1024 Dim'
         : isBigQuery ? 'Gold Dataset'
         : undefined,
       variant: item.variant || 'blue'
@@ -1089,10 +1138,11 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const handleSaveRagConfig = () => {
     setNodes(prev => prev.map(n => n.id === selectedNodeId ? {
       ...n,
-      system: `Top-${ragTopK} Chunks`,
-      table: ragTargetField,
-      status: 'RAG Armed',
-      rowCount: 'Knowledge Store'
+      title: 'RAG Context Enricher',
+      system: 'RAG',
+      table: ragTargetField || 'Knowledge Store',
+      status: 'RAG Active',
+      rowCount: Top- Chunks
     } : n));
     setIsPropertyModalOpen(false);
   };
@@ -1100,8 +1150,9 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const handleSaveConditionalConfig = () => {
     setNodes(prev => prev.map(n => n.id === selectedNodeId ? {
       ...n,
+      title: 'Conditional Router (If / Else)',
       system: 'If-Else Router',
-      table: `IF ${conditionField} ${conditionOp} ${conditionVal}`,
+      table: conditionField ? `${conditionField} ${conditionOp} ${conditionVal}` : 'Dynamic Predicate',
       status: 'Configured',
       rowCount: 'TRUE / FALSE'
     } : n));
@@ -3108,6 +3159,9 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                 <div className="space-y-1.5">
                   {nodes.filter(n => n.id !== selectedNode.id).map((other) => {
                     const isConnected = edges.some(e => e.from === selectedNode.id && e.to === other.id);
+                    const titleText = other.title || other.name || 'Target Node';
+                    const isDupeSystem = other.system && titleText.toLowerCase().includes(other.system.toLowerCase());
+                    const systemText = other.system && !isDupeSystem ? ` (${other.system})` : '';
 
                     return (
                       <div
@@ -3134,7 +3188,8 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                       >
                         <span className="flex items-center gap-2">
                           <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-blue-600' : 'bg-slate-400'}`} />
-                          {other.title || other.name} ({other.system})
+                          <span className="font-semibold text-slate-900">{titleText}</span>
+                          {systemText && <span className="text-[11px] text-slate-500 font-normal">{systemText}</span>}
                         </span>
                         <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
                           isConnected ? 'bg-blue-200 text-blue-800' : 'bg-slate-200 text-slate-600'

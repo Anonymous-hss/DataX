@@ -33,3 +33,7 @@ __pycache__/
 env/
 venv/
 ENV/
+
+# GCP Keys
+gcp-service-account.json
+*-key.json
