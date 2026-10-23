@@ -5,9 +5,7 @@ import { SAP_BW_PROCUREMENT_DATA, SAP_BW_INVENTORY_DATA, USER_MASTER_DATA } from
 import { ONTOLOGY_GRAPH } from '../data/ontologyGraph';
 import { TEMPLATE_AUTOFILLS, getWorkflowTemplate } from '../data/workflowTemplates';
 
-const API_BASE = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? '/datax-api'
-  : 'https://dataglow.ai/datax-api';
+import { API_BASE_URL as API_BASE } from '../services/apiClient';
 
 // Helper: Live Row Evaluation & Auto-Fix Transformation with Strict Rule Checking
 export const evaluateRow = (row, rules = [], isAutoFix = true, allRows = []) => {
@@ -301,12 +299,12 @@ export const PREBUILT_DOMAIN_PACKS = {
     runs: '0 runs',
     source: {
       engine: 'sap_bw',
-      connectionUri: 'jdbc:sap://858c7198-93db-4af0-8a9a-5efad6023014.hana.prod-ap21.hanacloud.ondemand.com:443?encrypt=true&validateCertificate=false&user=DATAX_AGENT&password=DataX_Hana_2026!&databaseName=SAP_BW',
+      connectionUri: 'jdbc:sap://858c7198-93db-4af0-8a9a-5efad6023014.hana.prod-ap21.hanacloud.ondemand.com:443?encrypt=true&validateCertificate=false&user=DATAX_AGENT&databaseName=SAP_BW',
       host: '858c7198-93db-4af0-8a9a-5efad6023014.hana.prod-ap21.hanacloud.ondemand.com',
       port: '443',
       database: 'SAP_BW',
       user: 'DATAX_AGENT',
-      password: 'DataX_Hana_2026!',
+      password: '••••••••',
       table: '0PUR_C01',
       totalRows: 1420,
       rowCount: 1420,
@@ -320,7 +318,7 @@ export const PREBUILT_DOMAIN_PACKS = {
       port: '443',
       database: 'S4HANA_PRD',
       user: 'bapi_comm_user',
-      password: 'S4HanaSecure2026!',
+      password: '••••••••',
       table: '0PUR_C01_clean',
       quarantineTable: '0PUR_C01_quarantine',
       writeMode: 'append',
@@ -390,12 +388,12 @@ export const PREBUILT_DOMAIN_PACKS = {
     runs: '0 runs',
     source: {
       engine: 'mongodb',
-      connectionUri: 'mongodb+srv://harshal:harshal@cluster0.tb6bhff.mongodb.net/?appName=Cluster0',
+      connectionUri: 'mongodb+srv://harshal:••••••••@cluster0.tb6bhff.mongodb.net/?appName=Cluster0',
       host: 'cluster0.tb6bhff.mongodb.net',
       port: '27017',
       database: 'datax_staging',
       user: 'harshal',
-      password: 'harshal',
+      password: '••••••••',
       table: 'raw_users',
       totalRows: 1000,
       rowCount: 1000,
@@ -404,12 +402,12 @@ export const PREBUILT_DOMAIN_PACKS = {
     },
     target: {
       engine: 'postgres',
-      connectionUri: 'postgresql://analyser%20_owner:npg_mWphq7u0eLHr@ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech/analyser%20?sslmode=require&channel_binding=require',
+      connectionUri: 'postgresql://analyser_owner:••••••••@ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech/analyser?sslmode=require&channel_binding=require',
       host: 'ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech',
       port: '5432',
       database: 'analyser ',
       user: 'analyser _owner',
-      password: 'npg_mWphq7u0eLHr',
+      password: '••••••••',
       table: 'validated_users',
       quarantineTable: 'quarantined_records',
       writeMode: 'overwrite',
@@ -494,12 +492,12 @@ export const PREBUILT_DOMAIN_PACKS = {
     runs: '0 runs',
     source: {
       engine: 'postgres',
-      connectionUri: 'postgresql://analyser%20_owner:npg_mWphq7u0eLHr@ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech/analyser%20?sslmode=require&channel_binding=require',
+      connectionUri: 'postgresql://analyser_owner:••••••••@ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech/analyser?sslmode=require&channel_binding=require',
       host: 'ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech',
       port: '5432',
       database: 'analyser ',
       user: 'analyser _owner',
-      password: 'npg_mWphq7u0eLHr',
+      password: '••••••••',
       table: 'gl_staging_entries',
       totalRows: 850,
       rowCount: 850,
@@ -508,12 +506,12 @@ export const PREBUILT_DOMAIN_PACKS = {
     },
     target: {
       engine: 'postgres',
-      connectionUri: 'postgresql://analyser%20_owner:npg_mWphq7u0eLHr@ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech/analyser%20?sslmode=require&channel_binding=require',
+      connectionUri: 'postgresql://analyser_owner:••••••••@ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech/analyser?sslmode=require&channel_binding=require',
       host: 'ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech',
       port: '5432',
       database: 'analyser ',
       user: 'analyser _owner',
-      password: 'npg_mWphq7u0eLHr',
+      password: '••••••••',
       table: 'financial_gl_clean',
       quarantineTable: 'financial_gl_quarantine',
       writeMode: 'append',
@@ -542,12 +540,12 @@ export const PREBUILT_DOMAIN_PACKS = {
     runs: '0 runs',
     source: {
       engine: 'postgres',
-      connectionUri: 'postgresql://analyser%20_owner:npg_mWphq7u0eLHr@ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech/analyser%20?sslmode=require&channel_binding=require',
+      connectionUri: 'postgresql://analyser_owner:••••••••@ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech/analyser?sslmode=require&channel_binding=require',
       host: 'ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech',
       port: '5432',
       database: 'analyser ',
       user: 'analyser _owner',
-      password: 'npg_mWphq7u0eLHr',
+      password: '••••••••',
       table: 'patient_staging_records',
       totalRows: 620,
       rowCount: 620,
@@ -556,12 +554,12 @@ export const PREBUILT_DOMAIN_PACKS = {
     },
     target: {
       engine: 'postgres',
-      connectionUri: 'postgresql://analyser%20_owner:npg_mWphq7u0eLHr@ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech/analyser%20?sslmode=require&channel_binding=require',
+      connectionUri: 'postgresql://analyser_owner:••••••••@ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech/analyser?sslmode=require&channel_binding=require',
       host: 'ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech',
       port: '5432',
       database: 'analyser ',
       user: 'analyser _owner',
-      password: 'npg_mWphq7u0eLHr',
+      password: '••••••••',
       table: 'patient_master_clean',
       quarantineTable: 'patient_master_quarantine',
       writeMode: 'append',
@@ -1064,6 +1062,24 @@ export function RuleEngineProvider({ children }) {
     setPreviewRows([]);
     setSampleData([]);
   };
+
+  // Action: Delete Thread from Backend and Local State
+  const deleteThread = useCallback(async (threadId) => {
+    try {
+      await fetch(`${API_BASE}/threads/${threadId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': userId,
+          'X-Tenant-Id': tenantId,
+          'Authorization': `Bearer ${sessionStorage.getItem('datax_auth_token') || 'local_session_token'}`
+        }
+      });
+    } catch (e) {
+      console.warn('Backend deleteThread error:', e);
+    }
+    setThreads(prev => prev.filter(t => t.id !== threadId && t.threadId !== threadId));
+  }, [userId, tenantId]);
 
   // Action: Save Workflow Graph to Backend API & In-Memory / Local Storage Session
   const saveWorkflow = useCallback(async (overrideData = {}) => {
@@ -1605,6 +1621,7 @@ export function RuleEngineProvider({ children }) {
     dynamicHealthScore,
     selectThread,
     setActiveThread,
+    deleteThread,
 
     // Canvas Workflow State & Cloud Persistence
     workflowNodes,

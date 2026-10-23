@@ -17,6 +17,9 @@ import RunHistoryPage from '../../pages/RunHistoryPage';
 import SapBwPocDashboard from './SapBwPocDashboard';
 import DataXAuthPage from '../../pages/auth/DataXAuthPage';
 import WorkflowCanvasPage from '../../pages/WorkflowCanvasPage';
+import QuarantineWorkbenchPage from '../../pages/QuarantineWorkbenchPage';
+import AuditLogViewerPage from '../../pages/AuditLogViewerPage';
+import SettingsPage from '../../pages/SettingsPage';
 
 function ScreenRenderer({ onBackToWebsite }) {
   const { currentScreen, navigateTo } = useNavigation();
@@ -139,6 +142,34 @@ function ScreenRenderer({ onBackToWebsite }) {
           initialPage="08" 
           onSwitchToMarketing={onBackToWebsite} 
           onBackToRules={() => navigateTo('generate-rules')}
+        />
+      );
+
+    case 'quarantine':
+    case 'dlq':
+    case 'quarantine-workbench':
+      return (
+        <QuarantineWorkbenchPage 
+          onSwitchToMarketing={onBackToWebsite}
+        />
+      );
+
+    case 'audit':
+    case 'audit-trail':
+    case 'audit-logs':
+    case 'lineage':
+      return (
+        <AuditLogViewerPage 
+          onSwitchToMarketing={onBackToWebsite}
+        />
+      );
+
+    case 'settings':
+    case 'configuration':
+    case 'admin':
+      return (
+        <SettingsPage 
+          onSwitchToMarketing={onBackToWebsite}
         />
       );
 

@@ -7,6 +7,7 @@ import ExpertiseSection from './components/website/ExpertiseSection';
 import ArchitecturePipeline from './components/website/ArchitecturePipeline';
 import CaseStudiesSection from './components/website/CaseStudiesSection';
 import BookDemoModal from './components/website/BookDemoModal';
+import ErrorBoundary from './components/common/ErrorBoundary';
 const DataXPoc = React.lazy(() => import('./components/poc/DataXPoc'));
 
 export default function App() {
@@ -81,31 +82,33 @@ export default function App() {
       )}
 
       <main className="flex-1">
-        {activeView === 'poc' ? (
-          <React.Suspense fallback={
-            <div className="min-h-screen bg-[#0A0F1F] flex items-center justify-center">
-              <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
-            </div>
-          }>
-            <DataXPoc onBackToWebsite={() => handleViewChange('website')} />
-          </React.Suspense>
-        ) : (
-          <>
-            <Hero 
-              setActiveView={handleViewChange} 
-              onOpenDemo={() => setDemoModalOpen(true)} 
-            />
-            <ProductsSection 
-              setActiveView={handleViewChange} 
-              onOpenDemo={() => setDemoModalOpen(true)} 
-            />
-            <ExpertiseSection />
-            <ArchitecturePipeline 
-              setActiveView={handleViewChange} 
-            />
-            <CaseStudiesSection />
-          </>
-        )}
+        <ErrorBoundary>
+          {activeView === 'poc' ? (
+            <React.Suspense fallback={
+              <div className="min-h-screen bg-[#0A0F1F] flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+              </div>
+            }>
+              <DataXPoc onBackToWebsite={() => handleViewChange('website')} />
+            </React.Suspense>
+          ) : (
+            <>
+              <Hero 
+                setActiveView={handleViewChange} 
+                onOpenDemo={() => setDemoModalOpen(true)} 
+              />
+              <ProductsSection 
+                setActiveView={handleViewChange} 
+                onOpenDemo={() => setDemoModalOpen(true)} 
+              />
+              <ExpertiseSection />
+              <ArchitecturePipeline 
+                setActiveView={handleViewChange} 
+              />
+              <CaseStudiesSection />
+            </>
+          )}
+        </ErrorBoundary>
       </main>
 
       {/* Universal Footer (Only on website view) */}

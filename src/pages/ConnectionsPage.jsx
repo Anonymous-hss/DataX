@@ -3,6 +3,7 @@ import { Link, useNavigation } from '../context/NavigationContext';
 import { useRuleEngine } from '../context/RuleEngineContext';
 import DataXUserMenu from '../components/common/DataXUserMenu';
 import { DataXLogo } from './ThreadsPage';
+import { API_BASE_URL } from '../services/apiClient';
 
 const INITIAL_CONNECTIONS = [
   {
@@ -119,16 +120,16 @@ export default function ConnectionsPage() {
         port: conn.port,
         database: conn.database,
         user: conn.username,
-        password: conn.password || 'AAV1L9Z029!'
+        password: conn.password || ''
       };
 
-      const res = await fetch('https://dataglow.ai/datax-api/test-connection', {
+      const res = await fetch(`${API_BASE_URL}/test-connection`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok && data.status === 'success') {
         setTestResult(prev => ({
           ...prev,
@@ -141,8 +142,8 @@ export default function ConnectionsPage() {
         setTestResult(prev => ({
           ...prev,
           [conn.id]: {
-            status: 'success', // fallback graceful response
-            message: `Endpoint active: Ping succeeded (${Math.floor(Math.random() * 40 + 85)} ms)`
+            status: 'error',
+            message: data.detail || data.message || `Connection failed (HTTP ${res.status}): Server rejected authentication`
           }
         }));
       }
@@ -150,8 +151,8 @@ export default function ConnectionsPage() {
       setTestResult(prev => ({
         ...prev,
         [conn.id]: {
-          status: 'success',
-          message: `Endpoint verified and reachable (~95 ms)`
+          status: 'error',
+          message: err.message || `Network error connecting to ${conn.host}`
         }
       }));
     } finally {

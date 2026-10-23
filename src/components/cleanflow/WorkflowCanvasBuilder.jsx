@@ -872,7 +872,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       host: tgtEndpoint.includes('//') ? tgtEndpoint.split('//')[1].split('/')[0] : 's4h.corp.ondemand.com',
       database: 'reconciled_db',
       user: 'cleanflow_writer',
-      password: 'TargetSecurePass2026!'
+      password: ''
     }));
     setNodes(prev => prev.map(n => n.type === 'target' ? {
       ...n,

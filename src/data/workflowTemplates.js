@@ -90,9 +90,9 @@ export const TEMPLATE_AUTOFILLS = {
       port: '443',
       database: 'SAP_BW',
       user: 'bwp_rfc_user',
-      password: 'CleanCore2026!',
+      password: '••••••••',
       table: '0PUR_C01',
-      connectionUri: 'jdbc:sap://hana.corp.ondemand.com:443?encrypt=true&validateCertificate=false&user=bwp_rfc_user&password=CleanCore2026!&databaseName=SAP_BW'
+      connectionUri: 'jdbc:sap://hana.corp.ondemand.com:443?encrypt=true&validateCertificate=false&user=bwp_rfc_user&databaseName=SAP_BW'
     },
     targetConfig: {
       engine: 's4_hana',
@@ -100,7 +100,7 @@ export const TEMPLATE_AUTOFILLS = {
       port: '443',
       database: 'S4HANA_PRD',
       user: 'bapi_comm_user',
-      password: 'S4HanaSecure2026!',
+      password: '••••••••',
       table: '0PUR_C01_clean',
       quarantineTable: '0PUR_C01_quarantine',
       writeMode: 'append',
@@ -193,9 +193,9 @@ export const TEMPLATE_AUTOFILLS = {
       port: '27017',
       database: 'crm_master',
       user: 'atlas_admin',
-      password: 'AtlasSecurePass2026',
+      password: '••••••••',
       table: 'customers_raw',
-      connectionUri: 'mongodb+srv://atlas_admin:AtlasSecurePass2026@atlas-cluster0.mongodb.net/crm_master?retryWrites=true&w=majority'
+      connectionUri: 'mongodb+srv://atlas_admin:••••••••@atlas-cluster0.mongodb.net/crm_master?retryWrites=true&w=majority'
     },
     targetConfig: {
       engine: 'postgres',
@@ -203,11 +203,11 @@ export const TEMPLATE_AUTOFILLS = {
       port: '5432',
       database: 'reconciled_db',
       user: 'neon_postgres',
-      password: 'NeonSecurePass2026',
+      password: '••••••••',
       table: 'customers_gold',
       quarantineTable: 'customers_unresolved',
       writeMode: 'append',
-      connectionUri: 'postgresql://neon_postgres:NeonSecurePass2026@ep-neon-datax.us-east-2.aws.neon.tech:5432/reconciled_db?sslmode=require'
+      connectionUri: 'postgresql://neon_postgres:••••••••@ep-neon-datax.us-east-2.aws.neon.tech:5432/reconciled_db?sslmode=require'
     }
   },
 
@@ -296,9 +296,9 @@ export const TEMPLATE_AUTOFILLS = {
       port: '5432',
       database: 'erp_finance',
       user: 'sox_audit_user',
-      password: 'SOXAuditPass2026!',
+      password: '••••••••',
       table: 'gl_journal_entries',
-      connectionUri: 'postgresql://sox_audit_user:SOXAuditPass2026!@ep-neon-fin.us-east-2.aws.neon.tech:5432/erp_finance?sslmode=require'
+      connectionUri: 'postgresql://sox_audit_user:••••••••@ep-neon-fin.us-east-2.aws.neon.tech:5432/erp_finance?sslmode=require'
     },
     targetConfig: {
       engine: 'postgres',
@@ -306,11 +306,11 @@ export const TEMPLATE_AUTOFILLS = {
       port: '5432',
       database: 'erp_finance',
       user: 'sox_audit_user',
-      password: 'SOXAuditPass2026!',
+      password: '••••••••',
       table: 'gl_ledger_gold',
       quarantineTable: 'gl_suspense_quarantine',
       writeMode: 'append',
-      connectionUri: 'postgresql://sox_audit_user:SOXAuditPass2026!@ep-neon-fin.us-east-2.aws.neon.tech:5432/erp_finance?sslmode=require'
+      connectionUri: 'postgresql://sox_audit_user:••••••••@ep-neon-fin.us-east-2.aws.neon.tech:5432/erp_finance?sslmode=require'
     }
   },
 
@@ -399,9 +399,9 @@ export const TEMPLATE_AUTOFILLS = {
       port: '5432',
       database: 'clinical_raw',
       user: 'ehr_sync_agent',
-      password: 'HIPAASecurePass2026!',
+      password: '••••••••',
       table: 'patients_raw',
-      connectionUri: 'postgresql://ehr_sync_agent:HIPAASecurePass2026!@hipaa-vault.internal.net:5432/clinical_raw?sslmode=require'
+      connectionUri: 'postgresql://ehr_sync_agent:••••••••@hipaa-vault.internal.net:5432/clinical_raw?sslmode=require'
     },
     targetConfig: {
       engine: 'postgres',
@@ -409,11 +409,11 @@ export const TEMPLATE_AUTOFILLS = {
       port: '5432',
       database: 'clinical_sanitized',
       user: 'ehr_sync_agent',
-      password: 'HIPAASecurePass2026!',
+      password: '••••••••',
       table: 'patients_gold',
       quarantineTable: 'patients_quarantine',
       writeMode: 'append',
-      connectionUri: 'postgresql://ehr_sync_agent:HIPAASecurePass2026!@hipaa-vault.internal.net:5432/clinical_sanitized?sslmode=require'
+      connectionUri: 'postgresql://ehr_sync_agent:••••••••@hipaa-vault.internal.net:5432/clinical_sanitized?sslmode=require'
     }
   },
 
@@ -502,9 +502,9 @@ export const TEMPLATE_AUTOFILLS = {
       port: '5432',
       database: 'wms_inventory',
       user: 'wms_reader',
-      password: 'WmsPassword2026!',
+      password: '••••••••',
       table: 'inventory_counts_raw',
-      connectionUri: 'postgresql://wms_reader:WmsPassword2026!@wms.supplychain.internal:5432/wms_inventory?sslmode=require'
+      connectionUri: 'postgresql://wms_reader:••••••••@wms.supplychain.internal:5432/wms_inventory?sslmode=require'
     },
     targetConfig: {
       engine: 's4_hana',
@@ -512,7 +512,7 @@ export const TEMPLATE_AUTOFILLS = {
       port: '443',
       database: 'S4HANA_PRD',
       user: 'bapi_comm_user',
-      password: 'S4HanaSecure2026!',
+      password: '••••••••',
       table: 'inventory_reconciled',
       quarantineTable: 'inventory_variance_quarantine',
       writeMode: 'append',
