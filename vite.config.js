@@ -4,6 +4,7 @@ import { authMiddleware } from './server/authMiddleware.js';
 
 export default defineConfig({
   base: '/datax/',
+  envPrefix: ['VITE_', 'PINECONE_', 'AZURE_', 'BIGQUERY_', 'DATABRICKS_', 'SALESFORCE_', 'AWS_'],
   plugins: [
     react(),
     {
