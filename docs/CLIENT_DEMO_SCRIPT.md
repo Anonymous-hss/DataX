@@ -74,9 +74,16 @@ You will be asked "is this real?" Know the answer before you walk in. Never clai
 
 ---
 
-## 4. Product in One Sentence (30 sec)
+## 4. Product in One Sentence & Architectural Positioning (45 sec)
 
-> "DataX is a no-code data-quality and governance pipeline. You connect a source, apply business rules (written by you or suggested by AI), and DataX automatically sends each record down one of three paths: **clean, auto-fixed or quarantined for review**. Humans approve the high-risk ones, and there's a full audit trail."
+> "DataX is **not** a single-point tool, and it is **not** just an ERP migration utility. 
+> 
+> DataX is a **universal, composable enterprise data intelligence and governance platform**.
+> 
+> Think of it as a visual operating system for your enterprise data estate:
+> You connect any source (relational, NoSQL, ERP, cloud storage), wire up business validation and **specialized AI nodes** (DuckDB rule engines, Semantic Vector Matchers, RAG Context Enrichers, PII Maskers), route records through **Human-in-the-Loop governance gates**, and dispatch clean data to any target warehouse or vector database—while isolating bad records into an audited quarantine workbench.
+> 
+> One platform, infinite topologies, zero unvetted data in production."
 
 ---
 
@@ -148,6 +155,26 @@ Point at each node as you name it:
 
 **Save** → point at the node card now showing the condition.
 
+### 6d. Beyond a Single Pipeline: The Composable Node Library & AI Systems (+ Add Node) (2 min)
+**Click** the blue **+ Add Node** button in the canvas top-right toolbar.
+
+> "A crucial architectural point: DataX is **not hardwired to this one SAP pipeline**.
+> Look at this node library. Every node here is a composable enterprise building block you can drag and connect:
+> 
+> * **Data Sources:** Relational (PostgreSQL, MySQL), Document (MongoDB Atlas), Enterprise ERP (SAP BW), Cloud Warehouses (Snowflake), Object Storage (AWS S3, Azure Blob), CRMs (Salesforce), and Streaming (Kafka).
+> * **Specialized AI & Transformation Nodes:**
+>   - **Intelligence Engine:** DuckDB AST compiler executing SQL and Boolean rules at microsecond latency with AI rule synthesis.
+>   - **Semantic Vector Matcher:** Generates vector embeddings (`text-embedding-3-small`) and calculates cosine similarity thresholds (e.g. ≥ 85%) for customer entity resolution, fuzzy matching, and deduplication.
+>   - **RAG Context Enricher:** Dynamically injects legal policies, corporate ontologies, and regulatory standards into streaming records before decisions are made.
+>   - **Conditional Router (If / Else):** Dynamic business routing based on any field predicate.
+>   - **CleanFlow 3-Way Splitter:** Simultaneously partitions streams into clean, remediated, and isolated quarantine queues.
+> * **Human Governance Gate:**
+>   - **Human in the Loop (HITL):** SLA-governed human approvals with multi-channel webhooks (Slack/Teams).
+> * **Storage & Lakehouse Targets:**
+>   - **PostgreSQL, MySQL, Google BigQuery, Snowflake, and Pinecone Vector DB**.
+>
+> You are never constrained by rigid pipeline architectures. You can start with an empty canvas, drag any combination of nodes, and solve literally any data engineering, governance, or GenAI workflow."
+
 ---
 
 ## 7. Demo Act 3 — Dry Run, Zero Risk (3 min)
@@ -209,21 +236,29 @@ Click a record → **Record Inspector** → **Rule Violation Details**.
 
 ---
 
-## 10. Demo Act 6 — "Here's One Built for You" (2 min)
+## 10. Demo Act 6 — "Not Just One Use Case: Cross-Department Enterprise Scale" (3 min)
 
-Go back to the canvas → **All Templates (10)** dropdown → load the template that matches the client:
+> "A common misconception when executives see our SAP demo is: *'Is this just an SAP migration tool?'*
+>
+> **Absolutely not.**
+>
+> In fact, treating data quality as a one-off tool for one department is why enterprises end up with 15 different fragmented point solutions.
+>
+> DataX is built to be your enterprise-wide data governance and AI transformation backbone. The exact same platform and modular node architecture solves completely different business problems across your entire company:"
 
-| Client is… | Load this template | One-line pitch |
-| :--- | :--- | :--- |
-| SAP shop / ERP migration | SAP BW → S/4HANA Clean Core | "Migrate only clean, mapped data. No garbage in your new ERP." |
-| CFO / Controller / Audit | Financial GL & SOX 404 | "Zero-imbalance checks plus CFO sign-off over $100K, all audited." |
-| Marketing / CRM / Identity | Customer 360 & Entity Resolution | "One golden customer record, duplicates resolved with vector matching." |
-| Legal / Procurement | Enterprise Policy RAG & Legal Contracts | "High-risk indemnity clauses routed to General Counsel." |
-| Healthcare | Healthcare Clinical HIPAA Vault | "PHI de-identified before it reaches analytics." |
-| Sales Ops | Salesforce CRM → BigQuery | "Revenue pipeline you can trust in the board deck." |
-| Supply chain | Multi-Echelon Supply Chain | "Stock and movement data reconciled across warehouses." |
+**Action:** Go to the canvas → click **All Templates (10)** dropdown → open and show the rich variety:
 
-> "Same platform, same governance, different business problem. That's why this scales across departments."
+| Department / Problem | Load Template | Specialized AI & Node Topology | The Business Outcome |
+| :--- | :--- | :--- | :--- |
+| **Enterprise ERP Modernization** | `SAP BW → S/4HANA Clean Core` | Ingestion → Rule Engine → Conditional → HITL Gate → S/4HANA + DLQ | Zero bad transactions in the new S/4HANA ERP. |
+| **Corporate Finance & SOX Audit** | `Financial GL & SOX 404 Audit` | ERP GL → Zero Imbalance Check → CFO Gate → BigQuery Gold Ledger | 100% balanced journals, audited CFO sign-off on >$100K entries. |
+| **Customer Experience & RevOps** | `Customer 360 & Vector Harmonizer` | MongoDB → **Semantic Vector Matcher** (Cosine ≥ 85%) → Rule Engine → Golden DB | Eliminates duplicate customer profiles across CRM and ERP. |
+| **Legal Counsel & Procurement** | `Enterprise Policy RAG & Contracts` | AWS S3 → **RAG Context Enricher** → **Vector Matcher** → General Counsel Gate → **Pinecone Vector DB** | High-risk indemnity clauses flagged and reviewed before contract execution. |
+| **DevOps & Cloud SRE** | `SRE Telemetry & Vector Copilot` | Azure Blob → PII Anonymizer → **Semantic Vector Matcher** → **Pinecone Vector DB** | Sanitize system telemetry and route incident embeddings to AI copilot. |
+| **Healthcare & Life Sciences** | `Healthcare HIPAA Safe Harbor Vault` | Clinical EHR → Safe Harbor De-identifier → BigQuery HIPAA Vault | 18 HIPAA identifiers scrubbed before analytics and research use. |
+| **Global Supply Chain** | `Multi-Echelon Supply Chain` | SAP Movements → Balance Engine → Warehouse Reconciler | Reconciles stock discrepancies between central distribution and retail hubs. |
+
+> "Your IT team doesn't have to procure one tool for finance, another for customer deduplication, and another for vector search. You adopt DataX once, and your engineers and business stewards can compose solutions for any department."
 
 ---
 
@@ -251,6 +286,8 @@ Write the numbers live on a whiteboard or slide. Clients believe their own numbe
 
 | They say… | You say… |
 | :--- | :--- |
+| "Is this tool only for ERP migrations or one specific use case?" | "No. That's a common initial thought because our SAP template is so visual. But notice the node catalog: we have Semantic Vector Matchers, Pinecone Vector DB, RAG Context Enrichers, and BigQuery connectors. The exact same engine powers customer identity, legal contract compliance, and telemetry copilot. You buy the platform once and scale it across all data initiatives." |
+| "Can our team build completely custom pipelines from scratch?" | "Yes. You can click 'Empty Canvas' or 'Start from Scratch' in the creation wizard. You have full freedom to drag, connect, branch, and configure any combination of sources, AI engines, human gates, and targets." |
 | "We already have dbt / Great Expectations / custom SQL." | "Those are great for engineers. DataX adds what they don't: auto-fix, a quarantine workbench for business stewards, human approval gates and an audit trail. Many teams run both." |
 | "Is our data safe? Where does it go?" | "Credentials are encrypted at rest in a vault. In the pilot we can run inside your network or VPC so data never leaves your environment." *(Confirm the deployment option before promising it.)* |
 | "Does it work with SAP / Snowflake / BigQuery?" | "Postgres and MongoDB are live today, as you saw. The SAP, Snowflake and BigQuery connectors are designed in the canvas, and we build and certify the one you need against your sandbox during the pilot." |
