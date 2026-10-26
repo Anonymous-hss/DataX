@@ -14,7 +14,8 @@ from fastapi import HTTPException, Security, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 # Secret key for JWT signing (derived from environment or secure fallback)
-JWT_SECRET = os.environ.get("DATAX_JWT_SECRET", "datax-enterprise-hmac-sha256-signing-secret-key-2026")
+from jwt_config import JWT_SECRET
+
 JWT_ALGORITHM = "HS256"
 TOKEN_EXPIRY_SECONDS = 86400 * 7  # 7 days
 

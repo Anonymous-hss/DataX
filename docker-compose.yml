@@ -37,7 +37,7 @@ services:
       NEON_DATABASE_URI: postgresql://${POSTGRES_USER:-datax_admin}:${POSTGRES_PASSWORD:-DataX_Secure_Pass_2026!}@datax-postgres:5432/${POSTGRES_DB:-datax_db}
       AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
       AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-https://dataglow-azure-openai.openai.azure.com/}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dx_jwt_secret_production_key_2026_super_secure}
+      DATAX_JWT_SECRET: "${DATAX_JWT_SECRET:-${JWT_SECRET:-${JWT_SECRET_KEY:-}}}"
     ports:
       - "8003:8003"
     volumes:

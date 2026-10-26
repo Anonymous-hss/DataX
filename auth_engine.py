@@ -13,6 +13,8 @@ import hashlib
 import logging
 from typing import Optional, Dict, Any
 
+from jwt_config import JWT_SECRET
+
 try:
     import jwt
 except ImportError:
@@ -31,7 +33,6 @@ except ImportError:
 
 logger = logging.getLogger("DataX.AuthEngine")
 
-JWT_SECRET = os.getenv("JWT_SECRET") or os.getenv("JWT_SECRET_KEY") or "dx_jwt_secret_production_key_2026_super_secure"
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24 * 7  # 7 days
 

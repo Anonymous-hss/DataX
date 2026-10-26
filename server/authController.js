@@ -5,7 +5,10 @@ import { getUserByEmail, getUserById, createUser } from './db.js';
 
 dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'datax_enterprise_jwt_super_secret_key_2026_secure';
+const JWT_SECRET = process.env.DATAX_JWT_SECRET || process.env.JWT_SECRET || process.env.JWT_SECRET_KEY;
+if (!JWT_SECRET) {
+  throw new Error('JWT signing key is not configured. Set DATAX_JWT_SECRET in the server environment.');
+}
 const JWT_EXPIRES_IN = '7d';
 
 export function signToken(user) {
