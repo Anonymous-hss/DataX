@@ -43,7 +43,8 @@ import {
   Cloud,
   FolderTree,
   UserCheck,
-  BookOpen
+  BookOpen,
+  ChevronDown
 } from 'lucide-react';
 import VectorMatcherModalPanel from './nodes/VectorMatcherModalPanel';
 import RagModalPanel from './nodes/RagModalPanel';
@@ -298,6 +299,7 @@ const sanitizeNode = (n) => {
 
   // Modals State
   const [isAddNodeModalOpen, setIsAddNodeModalOpen] = useState(false);
+  const [isTemplatesDropdownOpen, setIsTemplatesDropdownOpen] = useState(false);
   const [addNodeSearch, setAddNodeSearch] = useState('');
   const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
@@ -582,18 +584,44 @@ const sanitizeNode = (n) => {
       if (selectThread) selectThread(templateKey);
       if (template.sourceConfig) {
         setSourceConfig(template.sourceConfig);
-        setSrcDbType(template.sourceConfig.engine === 'sap_bw' ? 'SAP BW' : template.sourceConfig.engine === 'mongodb' ? 'MongoDB' : 'PostgreSQL');
-        setSrcHost(template.sourceConfig.host);
-        setSrcPort(template.sourceConfig.port);
-        setSrcDbName(template.sourceConfig.database);
-        setSrcUser(template.sourceConfig.user);
-        setSrcTable(template.sourceConfig.table);
+        const engineMap = {
+          sap_bw: 'SAP BW',
+          mongodb: 'MongoDB',
+          postgres: 'PostgreSQL',
+          aws_s3: 'AWS S3',
+          s3: 'AWS S3',
+          salesforce: 'Salesforce CRM',
+          azure: 'Azure Blob',
+          snowflake: 'Snowflake Data Cloud'
+        };
+        setSrcDbType(engineMap[template.sourceConfig.engine] || 'PostgreSQL');
+        setSrcHost(template.sourceConfig.host || '');
+        setSrcPort(template.sourceConfig.port || '5432');
+        setSrcDbName(template.sourceConfig.database || '');
+        setSrcUser(template.sourceConfig.user || '');
+        setSrcTable(template.sourceConfig.table || '');
       }
       if (template.targetConfig) {
         setTargetConfig(template.targetConfig);
-        setTgtDbType(template.targetConfig.engine === 's4_hana' ? 'SAP S/4HANA' : 'PostgreSQL');
-        setTgtTable(template.targetConfig.table);
+        const tgtEngineMap = {
+          s4_hana: 'SAP S/4HANA',
+          postgres: 'PostgreSQL',
+          bigquery: 'Google BigQuery',
+          pinecone: 'Pinecone Vector DB',
+          databricks: 'Databricks Lakehouse'
+        };
+        setTgtDbType(tgtEngineMap[template.targetConfig.engine] || 'PostgreSQL');
+        setTgtTable(template.targetConfig.table || '');
       }
+      if (template.rules && template.rules.length > 0) {
+        setActiveRules(template.rules);
+        setRulesList(template.rules);
+      }
+
+      // Auto-fit to viewport after template loads
+      setTimeout(() => {
+        handleFitToWindow();
+      }, 100);
     }
   };
 
@@ -1303,7 +1331,7 @@ const sanitizeNode = (n) => {
       {/* Top Template Autofill & Reset Bar */}
       <div className="absolute top-3.5 inset-x-5 flex items-center justify-between z-30 pointer-events-none">
         {/* Template Quick Switcher */}
-        <div className="pointer-events-auto bg-white/95 backdrop-blur-md rounded-xl border border-slate-200/90 shadow-sm p-1.5 flex items-center gap-1.5">
+        <div className="relative pointer-events-auto bg-white/95 backdrop-blur-md rounded-xl border border-slate-200/90 shadow-sm p-1.5 flex items-center gap-1.5">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-2 pr-1 flex items-center gap-1">
             <Zap className="w-3.5 h-3.5 text-blue-600" />
             Template:
@@ -1315,23 +1343,93 @@ const sanitizeNode = (n) => {
             SAP Clean Core
           </button>
           <button
-            onClick={() => handleAutofillTemplate('customer_master_reconciliation')}
-            className="px-2.5 py-1 rounded-lg text-xs font-semibold hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
-          >
-            Customer 360
-          </button>
-          <button
             onClick={() => handleAutofillTemplate('financial_gl_ledger')}
             className="px-2.5 py-1 rounded-lg text-xs font-semibold hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
           >
             Financial SOX
           </button>
           <button
-            onClick={() => handleAutofillTemplate('healthcare_hipaa')}
+            onClick={() => handleAutofillTemplate('customer_master_reconciliation')}
             className="px-2.5 py-1 rounded-lg text-xs font-semibold hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
           >
-            Healthcare HIPAA
+            Customer 360
           </button>
+          <button
+            onClick={() => handleAutofillTemplate('enterprise_rag_knowledge')}
+            className="px-2.5 py-1 rounded-lg text-xs font-semibold hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
+          >
+            Legal RAG
+          </button>
+
+          {/* All 10 Templates Dropdown Trigger */}
+          <div className="relative">
+            <button
+              onClick={() => setIsTemplatesDropdownOpen(prev => !prev)}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer flex items-center gap-1"
+            >
+              <span>All Templates (10)</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isTemplatesDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Dropdown Popover */}
+            {isTemplatesDropdownOpen && (
+              <div 
+                className="absolute left-0 mt-2 w-96 max-h-[460px] overflow-y-auto bg-white rounded-xl shadow-xl border border-slate-200 z-50 p-2 scrollbar-thin"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="px-2 py-1.5 border-b border-slate-100 flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Enterprise Catalog (10)</span>
+                  <button 
+                    onClick={() => setIsTemplatesDropdownOpen(false)}
+                    className="text-xs text-slate-400 hover:text-slate-600"
+                  >
+                    Close
+                  </button>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {Object.values(TEMPLATE_AUTOFILLS).slice(0, 10).map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => {
+                        handleAutofillTemplate(t.id);
+                        setIsTemplatesDropdownOpen(false);
+                      }}
+                      className="w-full text-left p-2.5 hover:bg-slate-50 rounded-lg transition-colors flex items-start gap-2.5 cursor-pointer group"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs">
+                        {t.priority?.includes('Tier 1') ? 'T1' :
+                         t.priority?.includes('Tier 2') ? 'T2' :
+                         t.priority?.includes('Tier 3') ? 'T3' :
+                         t.priority?.includes('Tier 4') ? 'T4' : 'T5'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-xs font-bold text-slate-800 truncate group-hover:text-blue-600">
+                            {t.name}
+                          </span>
+                          <span className="text-[10px] text-slate-400 shrink-0">
+                            {t.nodes?.length} nodes
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                          {t.desc}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
+                            {t.category}
+                          </span>
+                          <span className="text-[10px] font-semibold text-emerald-600">
+                            {t.rules?.length || 4} rules
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           <span className="h-4 w-px bg-slate-200 mx-0.5" />
           <button
             onClick={handleClearCanvas}

@@ -1040,9 +1040,32 @@ export function RuleEngineProvider({ children }) {
 
   // Action: Switch Active Thread & Load Associated Canvas Nodes
   const selectThread = (threadIdOrPackKey) => {
-    const found = threads.find(t => t.id === threadIdOrPackKey || t.threadId === threadIdOrPackKey) 
-      || PREBUILT_DOMAIN_PACKS[threadIdOrPackKey] 
-      || PREBUILT_DOMAIN_PACKS.sap_bw_s4hana;
+    let found = threads.find(t => t.id === threadIdOrPackKey || t.threadId === threadIdOrPackKey) 
+      || PREBUILT_DOMAIN_PACKS[threadIdOrPackKey];
+
+    if (!found && TEMPLATE_AUTOFILLS[threadIdOrPackKey]) {
+      const tmplItem = TEMPLATE_AUTOFILLS[threadIdOrPackKey];
+      found = {
+        id: tmplItem.id,
+        threadId: `TH-${tmplItem.id.slice(0, 4).toUpperCase()}`,
+        name: tmplItem.name,
+        domain: tmplItem.category,
+        desc: tmplItem.desc,
+        source: tmplItem.sourceConfig,
+        target: tmplItem.targetConfig,
+        rules: tmplItem.rules || [],
+        nodes: tmplItem.nodes,
+        edges: tmplItem.edges,
+        packKey: tmplItem.id,
+        runs: '0 runs',
+        status: 'draft',
+        statusLabel: 'Ready'
+      };
+    }
+
+    if (!found) {
+      found = PREBUILT_DOMAIN_PACKS.sap_bw_s4hana;
+    }
 
     setActiveThread(found);
     setActiveWorkflowMeta(found);

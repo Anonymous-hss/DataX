@@ -37,6 +37,21 @@ const LedgerIcon = () => (
   </svg>
 );
 
+// Brain Icon for RAG starter
+const BrainDocIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D55F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.04z" />
+    <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-2.04z" />
+  </svg>
+);
+
+// Salesforce Icon for CRM starter
+const SalesforceDocIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D55F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+  </svg>
+);
+
 export default function StartAThreadPage() {
   const { navigateTo } = useNavigation();
   const { selectThread, setActiveThread } = useRuleEngine();
@@ -48,27 +63,45 @@ export default function StartAThreadPage() {
     {
       id: 'scratch',
       title: 'Start from scratch',
-      desc: 'Start empty, or pick a domain. All empty steps.',
+      desc: 'Start empty canvas or connect bespoke sources.',
       icon: <CanvasDocIcon />,
-    },
-    {
-      id: 'customer',
-      title: 'Customer Master 360',
-      desc: 'MongoDB → PostgreSQL · 6 rules',
-      icon: <MongoLogo size={22} />,
+      badge: 'Custom'
     },
     {
       id: 'sap',
       title: 'SAP BW → S/4HANA Clean Core',
-      desc: 'InfoCube → S/4HANA · 5 rules',
+      desc: 'InfoCube → S/4HANA BAPI · 5 rules',
       icon: <SapLogo size={26} />,
+      badge: 'Tier 1'
     },
     {
       id: 'ledger',
-      title: 'Financial GL & AP Ledger',
-      desc: 'Ledger and payables · 4 rules',
+      title: 'Financial GL & SOX 404 Audit',
+      desc: 'Debits = Credits → BigQuery · 4 rules',
       icon: <LedgerIcon />,
+      badge: 'Tier 1'
     },
+    {
+      id: 'customer',
+      title: 'Customer Master 360 & Vector',
+      desc: 'MongoDB → Vector Matcher → Neon · 4 rules',
+      icon: <MongoLogo size={22} />,
+      badge: 'Tier 2'
+    },
+    {
+      id: 'rag',
+      title: 'Policy RAG & Legal Contracts',
+      desc: 'AWS S3 → RAG Enricher → Pinecone · 4 rules',
+      icon: <BrainDocIcon />,
+      badge: 'Tier 2'
+    },
+    {
+      id: 'sfdc',
+      title: 'Salesforce CRM → BigQuery',
+      desc: 'Salesforce Leads → BigQuery API · 4 rules',
+      icon: <SalesforceDocIcon />,
+      badge: 'Tier 3'
+    }
   ];
 
   const handleSelectPack = (pack) => {
@@ -76,15 +109,21 @@ export default function StartAThreadPage() {
     if (pack.id === 'sap') {
       setThreadName('SAP BW → S/4HANA Clean Core');
       setDescription('Extract InfoCube purchasing lines, fix legacy plant codes and stage clean orders.');
-    } else if (pack.id === 'customer') {
-      setThreadName('Customer Master & Identity');
-      setDescription('Merge duplicate customers from CRM and ERP into one golden record.');
     } else if (pack.id === 'ledger') {
-      setThreadName('Financial GL & AP Ledger');
-      setDescription('Standardise invoice payments and ledger accounts before reconciliation.');
+      setThreadName('Financial General Ledger & SOX 404 Audit');
+      setDescription('Audit general ledger journal entries, enforce Debits = Credits zero balance, and stage audited entries.');
+    } else if (pack.id === 'customer') {
+      setThreadName('Customer Master & Identity Harmonizer');
+      setDescription('Harmonize duplicate customer accounts using cosine vector embeddings and write golden records.');
+    } else if (pack.id === 'rag') {
+      setThreadName('Enterprise Policy RAG & Legal Contracts');
+      setDescription('Ingest contracts from AWS S3, retrieve compliance policy context, and index vector embeddings to Pinecone.');
+    } else if (pack.id === 'sfdc') {
+      setThreadName('Salesforce CRM → BigQuery Revenue Pipeline');
+      setDescription('Cleanse corporate lead emails, route enterprise deals, and stream pipeline records to BigQuery.');
     } else {
-      setThreadName('User records clean-up');
-      setDescription('Check user records from production_db (email, name, role, status) and write clean rows to reconciled_db.');
+      setThreadName('Custom Data Pipeline');
+      setDescription('Connect bespoke database endpoints, configure custom LLM transformation rules, and define target mappings.');
     }
   };
 
@@ -93,6 +132,8 @@ export default function StartAThreadPage() {
     let packKey = 'sap_bw_s4hana';
     if (selectedPack === 'customer') packKey = 'customer_master_reconciliation';
     else if (selectedPack === 'ledger') packKey = 'financial_gl_ledger';
+    else if (selectedPack === 'rag') packKey = 'enterprise_rag_knowledge';
+    else if (selectedPack === 'sfdc') packKey = 'salesforce_crm_bigquery';
     else if (selectedPack === 'scratch') packKey = 'customer_master_reconciliation';
 
     selectThread(packKey);
@@ -266,9 +307,16 @@ export default function StartAThreadPage() {
                           {pack.icon}
                         </div>
                         <div className="min-w-0">
-                          <h4 className="text-xs font-bold text-[#0A0F1F] leading-tight truncate">
-                            {pack.title}
-                          </h4>
+                          <div className="flex items-center gap-1.5">
+                            <h4 className="text-xs font-bold text-[#0A0F1F] leading-tight truncate">
+                              {pack.title}
+                            </h4>
+                            {pack.badge && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-blue-50 text-blue-600 border border-blue-200 shrink-0">
+                                {pack.badge}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[11px] text-[#5F6678] mt-1 leading-snug">
                             {pack.desc}
                           </p>
