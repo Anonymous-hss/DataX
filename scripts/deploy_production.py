@@ -123,7 +123,7 @@ def deploy():
     # 3b. Verify Backend Integrity on VM Before Restarting
     print("\n[3b] Verifying backend Python integrity on remote VM using PM2 venv...")
     remote_py = "/home/azureuserSDH/Production/nexlayer-backend/venv/bin/python3"
-    verify_cmd = f"{remote_py} -c \"import sys; sys.path.insert(0, '/home/azureuserSDH/Production/datax-service'); import service; print('✓ Remote import verified! Route count:', len(service.app.routes))\""
+    verify_cmd = f"export DATAX_JWT_SECRET=f56ec733b0d04065616a8b79712fea38978b471f268ef4997b533088e59f36e7 && {remote_py} -c \"import sys; sys.path.insert(0, '/home/azureuserSDH/Production/datax-service'); import service; print('✓ Remote import verified! Route count:', len(service.app.routes))\""
     stdin, stdout, stderr = client.exec_command(verify_cmd)
     out = stdout.read().decode('utf-8', errors='replace').strip()
     err = stderr.read().decode('utf-8', errors='replace').strip()
