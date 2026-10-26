@@ -1219,15 +1219,33 @@ export function RuleEngineProvider({ children }) {
   // Action: Test Database Connection (calls live backend API with tenant headers)
   const testConnection = async (config, isTarget = false) => {
     try {
+      let resolvedUri = (config.connectionUri || '').trim();
+      const eng = (config.engine || '').toLowerCase();
+      const h = (config.host || '').trim();
+      const u = (config.user || config.username || '').trim();
+      const p = (config.password || '').trim();
+      const db = (config.database || '').trim();
+      const prt = config.port ? String(config.port) : '';
+
+      if (!resolvedUri && h) {
+        if (eng.includes('salesforce')) {
+          resolvedUri = `${h}/services/data/v58.0/sobjects/${db || 'Account'}?user=${encodeURIComponent(u)}`;
+        } else if (eng.includes('azure')) {
+          resolvedUri = `https://${h}.blob.core.windows.net/${prt || 'container'}/${db || 'data'}`;
+        } else if (eng.includes('s3') || eng.includes('aws')) {
+          resolvedUri = h.startsWith('s3://') ? h : `s3://${h}/${db || 'landing'}`;
+        }
+      }
+
       const payload = {
         name: config.name || 'Database Connection',
         engine: config.engine || (isTarget ? 'postgres' : 'sap_bw'),
-        connectionUri: (config.connectionUri || '').trim(),
-        host: (config.host || '').trim(),
-        port: config.port ? String(config.port) : '',
-        database: (config.database || '').trim(),
-        user: (config.user || config.username || '').trim(),
-        password: (config.password || '').trim()
+        connectionUri: resolvedUri,
+        host: h,
+        port: prt,
+        database: db,
+        user: u,
+        password: p
       };
 
       const data = await api.post('/test-connection', payload, {

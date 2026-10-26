@@ -323,6 +323,7 @@ const sanitizeNode = (n) => {
   const [tableSearch, setTableSearch] = useState('');
   const [srcTesting, setSrcTesting] = useState(false);
   const [srcTestMeta, setSrcTestMeta] = useState(null);
+  const sourceTestRunIdRef = useRef(0);
   const [previewRows, setPreviewRows] = useState([]);
   const [discoveredColumns, setDiscoveredColumns] = useState([]);
 
@@ -330,7 +331,7 @@ const sanitizeNode = (n) => {
     const norm = (engineName || '').toLowerCase();
     if (norm.includes('azure') || norm.includes('blob')) {
       setSrcDbType('Azure');
-      setSrcHost(import.meta.env.VITE_AZURE_STORAGE_ACCOUNT || import.meta.env.AZURE_STORAGE_ACCOUNT || 'azure-storage.blob.core.windows.net');
+      setSrcHost(import.meta.env.VITE_AZURE_STORAGE_ACCOUNT || import.meta.env.AZURE_STORAGE_ACCOUNT || 'irepazurestorage');
       setSrcPort(import.meta.env.VITE_AZURE_STORAGE_CONTAINER || import.meta.env.AZURE_STORAGE_CONTAINER || 'telemetry-container');
       setSrcDbName(import.meta.env.VITE_AZURE_TENANT_ID || import.meta.env.AZURE_TENANT_ID || '');
       setSrcUser(import.meta.env.VITE_AZURE_CLIENT_ID || import.meta.env.AZURE_CLIENT_ID || '');
@@ -390,12 +391,18 @@ const sanitizeNode = (n) => {
   const openNodeSettings = (node) => {
     setSelectedNodeId(node.id);
     if (node.type === 'source') {
+      sourceTestRunIdRef.current += 1;
+      setSrcTesting(false);
+      setSrcTestMeta(null);
       applyEngineCredentials(node.system || node.title, node.table);
     }
     setIsPropertyModalOpen(true);
   };
 
   useEffect(() => {
+    sourceTestRunIdRef.current += 1;
+    setSrcTesting(false);
+    setSrcTestMeta(null);
     if (selectedNode && selectedNode.type === 'source') {
       applyEngineCredentials(selectedNode.system || selectedNode.title, selectedNode.table);
     }
@@ -1051,6 +1058,8 @@ const sanitizeNode = (n) => {
 
   // Test Connection inside Source Modal
   const handleTestSourceConnection = async () => {
+    const testedNodeId = selectedNodeId;
+    const testRunId = ++sourceTestRunIdRef.current;
     setSrcTesting(true);
     setSrcTestMeta(null);
     const engineKey = srcDbType.includes('SAP') ? 'sap_bw' 
@@ -1060,6 +1069,38 @@ const sanitizeNode = (n) => {
       : (srcDbType.includes('S3') || srcDbType.includes('AWS')) ? 's3' 
       : 'postgres';
     const isCustomCloudEngine = engineKey === 'azure' || engineKey === 'salesforce' || engineKey === 's3';
+
+    // Validate required credentials before connecting
+    const missing = [];
+    if (engineKey === 'salesforce') {
+      if (!srcHost) missing.push('Salesforce Instance URL');
+      if (!srcDbName) missing.push('Client ID');
+      if (!srcUser) missing.push('Username / Email');
+      if (!srcPass) missing.push('Client Secret');
+    } else if (engineKey === 'azure') {
+      if (!srcHost) missing.push('Storage Account Name');
+      if (!srcPort) missing.push('Container Name');
+      if (!srcPass) missing.push('Account Key');
+    } else if (engineKey === 's3') {
+      if (!srcHost) missing.push('S3 Bucket URI');
+      if (!srcUser) missing.push('AWS Access Key ID');
+      if (!srcPass) missing.push('AWS Secret Access Key');
+    } else if (engineKey !== 'sap_bw') {
+      if (!srcHost) missing.push('Host');
+      if (!srcUser) missing.push('User');
+    }
+
+    if (missing.length > 0) {
+      setSrcTesting(false);
+      setSrcTestMeta({
+        nodeId: testedNodeId,
+        success: false,
+        latencyMs: 0,
+        error: `Missing required credentials: ${missing.join(', ')}`,
+        message: `Missing required credentials: ${missing.join(', ')}`
+      });
+      return;
+    }
 
     try {
       const res = await testConnection({
@@ -1071,46 +1112,35 @@ const sanitizeNode = (n) => {
         password: srcPass,
         connectionUri: connectMethod === 'string' ? connString : undefined
       });
+      if (sourceTestRunIdRef.current !== testRunId) return;
       setSrcTesting(false);
       if (res && res.success) {
         setSrcTestMeta({
+          nodeId: testedNodeId,
           success: true,
           latencyMs: res.latencyMs || 34,
           tableCount: res.tableCount || (res.tables ? res.tables.length : 3),
           message: res.message || `Connected successfully to ${srcDbType} endpoint.`
         });
-      } else if (isCustomCloudEngine) {
-        setSrcTestMeta({
-          success: true,
-          latencyMs: 34,
-          tableCount: engineKey === 'azure' ? 3 : engineKey === 'salesforce' ? 4 : 3,
-          message: `Verified connection to ${srcDbType} (${srcHost}) — Authenticated successfully in 34ms.`
-        });
       } else {
         setSrcTestMeta({
+          nodeId: testedNodeId,
           success: false,
           latencyMs: res?.latencyMs || 0,
           error: res?.error || res?.message || 'Connection failed: Unable to connect to database.',
           message: res?.message || res?.error || 'Connection failed'
         });
       }
-    } catch {
+    } catch (err) {
+      if (sourceTestRunIdRef.current !== testRunId) return;
       setSrcTesting(false);
-      if (isCustomCloudEngine) {
-        setSrcTestMeta({
-          success: true,
-          latencyMs: 34,
-          tableCount: 3,
-          message: `Verified connection to ${srcDbType} (${srcHost}) — Authenticated successfully in 34ms.`
-        });
-      } else {
-        setSrcTestMeta({
-          success: false,
-          latencyMs: 0,
-          error: 'Connection request timeout',
-          message: 'Connection failed'
-        });
-      }
+      setSrcTestMeta({
+        nodeId: testedNodeId,
+        success: false,
+        latencyMs: 0,
+        error: err?.message || 'Connection request failed',
+        message: 'Connection request failed'
+      });
     }
   };
 
@@ -2698,20 +2728,24 @@ const sanitizeNode = (n) => {
                       <span className="text-[11px] text-slate-500">Pings endpoint via backend API</span>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      {srcTestMeta && (
+                    <div className="min-w-0 flex items-center gap-3">
+                      {srcTestMeta && srcTestMeta.nodeId === selectedNode.id && (
                         srcTestMeta.success ? (
-                          <span className="text-xs font-bold text-emerald-700 flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                            <Check className="w-3.5 h-3.5" />
+                          <span className="text-xs font-bold text-emerald-700 flex items-center gap-1 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200 shadow-xs animate-in fade-in">
+                            <Check className="w-4 h-4 text-emerald-600" />
                             Connected ({srcTestMeta.latencyMs}ms)
                           </span>
                         ) : (
                           <span 
-                            className="text-xs font-bold text-rose-700 flex items-center gap-1.5 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200 max-w-[280px] truncate"
+                            className="min-w-0 max-w-[340px] text-xs font-bold text-rose-700 flex items-center gap-1.5 bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-200 shadow-xs animate-in fade-in whitespace-nowrap"
                             title={srcTestMeta.error || srcTestMeta.message}
                           >
-                            <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
-                            <span className="truncate">{srcTestMeta.error || srcTestMeta.message || 'Connection Failed'}</span>
+                            <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500" />
+                            <span className="truncate">
+                              {(srcTestMeta.error || srcTestMeta.message || '').toLowerCase().startsWith('missing required credentials')
+                                ? 'Missing credentials'
+                                : srcTestMeta.error || srcTestMeta.message || 'Connection failed'}
+                            </span>
                           </span>
                         )
                       )}
@@ -2719,10 +2753,10 @@ const sanitizeNode = (n) => {
                         type="button"
                         onClick={handleTestSourceConnection}
                         disabled={srcTesting}
-                        className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        className="shrink-0 whitespace-nowrap px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
                       >
                         <RefreshCw className={`w-3.5 h-3.5 ${srcTesting ? 'animate-spin' : ''}`} />
-                        {srcTesting ? 'Pinging Database...' : 'Test Connection'}
+                        {srcTesting ? 'Testing...' : 'Test Connection'}
                       </button>
                     </div>
                   </div>
