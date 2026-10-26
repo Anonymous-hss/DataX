@@ -331,7 +331,7 @@ const sanitizeNode = (n) => {
     const norm = (engineName || '').toLowerCase();
     if (norm.includes('azure') || norm.includes('blob')) {
       setSrcDbType('Azure');
-      setSrcHost(import.meta.env.VITE_AZURE_STORAGE_ACCOUNT || import.meta.env.AZURE_STORAGE_ACCOUNT || 'azure-storage.blob.core.windows.net');
+      setSrcHost(import.meta.env.VITE_AZURE_STORAGE_ACCOUNT || import.meta.env.AZURE_STORAGE_ACCOUNT || 'irepazurestorage');
       setSrcPort(import.meta.env.VITE_AZURE_STORAGE_CONTAINER || import.meta.env.AZURE_STORAGE_CONTAINER || 'telemetry-container');
       setSrcDbName(import.meta.env.VITE_AZURE_TENANT_ID || import.meta.env.AZURE_TENANT_ID || '');
       setSrcUser(import.meta.env.VITE_AZURE_CLIENT_ID || import.meta.env.AZURE_CLIENT_ID || '');
