@@ -7,7 +7,9 @@ export default function DataXUserMenu({ compact = false }) {
   const { user, isLoaded, isSignedIn, logout } = useAuth();
   const { navigateTo } = useNavigation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState(null);
   const menuRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     const handleOutsideClick = (e) => {
@@ -18,6 +20,32 @@ export default function DataXUserMenu({ compact = false }) {
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
+
+  useEffect(() => {
+    if (!dropdownOpen) return undefined;
+
+    const updateDropdownPosition = () => {
+      const anchor = menuRef.current?.getBoundingClientRect();
+      if (!anchor) return;
+
+      const width = Math.min(288, Math.max(0, window.innerWidth - 32));
+      const height = dropdownRef.current?.offsetHeight || 260;
+      setDropdownPosition({
+        top: Math.max(16, Math.min(anchor.bottom + 8, window.innerHeight - height - 16)),
+        right: Math.max(16, window.innerWidth - anchor.right),
+        width,
+        maxHeight: Math.max(0, window.innerHeight - 32)
+      });
+    };
+
+    updateDropdownPosition();
+    window.addEventListener('resize', updateDropdownPosition);
+    window.addEventListener('scroll', updateDropdownPosition, true);
+    return () => {
+      window.removeEventListener('resize', updateDropdownPosition);
+      window.removeEventListener('scroll', updateDropdownPosition, true);
+    };
+  }, [dropdownOpen]);
 
   if (!isLoaded) {
     return (
@@ -31,15 +59,16 @@ export default function DataXUserMenu({ compact = false }) {
   const initials = (fullName || 'U').slice(0, 2).toUpperCase();
 
   return (
-    <div className="relative" ref={menuRef}>
+    <div className="relative shrink-0" ref={menuRef}>
       {isSignedIn ? (
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           {/* Detailed user profile pill */}
           {!compact && (
             <button
               type="button"
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 transition-colors text-left cursor-pointer shadow-2xs"
+              aria-expanded={dropdownOpen}
+              className="hidden lg:flex min-w-0 max-w-[calc(100vw-2rem)] items-center gap-2 px-2.5 py-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 transition-colors text-left cursor-pointer shadow-2xs"
             >
               <div className="w-6 h-6 rounded-full overflow-hidden border border-slate-200 bg-blue-50 text-blue-600 text-[10px] font-bold flex items-center justify-center shrink-0">
                 {user?.imageUrl ? (
@@ -48,19 +77,20 @@ export default function DataXUserMenu({ compact = false }) {
                   <span>{initials}</span>
                 )}
               </div>
-              <div className="leading-tight">
-                <p className="text-[11px] font-semibold text-slate-800 line-clamp-1 max-w-[110px]">{fullName}</p>
-                <p className="text-[10px] text-slate-400 font-mono line-clamp-1 max-w-[110px]">{email}</p>
+              <div className="w-48 min-w-0 leading-tight">
+                <p className="truncate text-[11px] font-semibold text-slate-800">{fullName}</p>
+                <p className="truncate text-[10px] text-slate-400 font-mono" title={email}>{email}</p>
               </div>
               <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
             </button>
           )}
 
           {/* User Button / Avatar */}
-          <div className="shrink-0 flex items-center">
+          <div className={`shrink-0 flex items-center ${compact ? '' : 'lg:hidden'}`}>
             <button
               type="button"
               onClick={() => setDropdownOpen(!dropdownOpen)}
+              aria-expanded={dropdownOpen}
               className="w-8 h-8 rounded-full border border-slate-300 ring-2 ring-transparent hover:ring-blue-400 transition-all cursor-pointer flex items-center justify-center bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-xs shadow-xs"
             >
               {user?.imageUrl ? (
@@ -86,7 +116,16 @@ export default function DataXUserMenu({ compact = false }) {
 
       {/* Custom SaaS User Details Dropdown */}
       {isSignedIn && dropdownOpen && (
-        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-xl p-3 z-50 text-slate-700 animate-in fade-in zoom-in-95 duration-100">
+        <div
+          ref={dropdownRef}
+          className="fixed w-72 max-w-[calc(100vw-2rem)] overflow-y-auto bg-white rounded-2xl border border-slate-200 shadow-xl p-3 z-50 text-slate-700 animate-in fade-in zoom-in-95 duration-100"
+          style={{
+            top: dropdownPosition?.top ?? 88,
+            right: dropdownPosition?.right ?? 16,
+            width: dropdownPosition?.width ?? 'min(18rem, calc(100vw - 2rem))',
+            maxHeight: dropdownPosition?.maxHeight ?? 'calc(100vh - 2rem)'
+          }}
+        >
           {/* Header / Identity */}
           <div className="flex items-center gap-3 pb-3 border-b border-slate-100 px-1">
             <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 bg-blue-50 text-blue-600 text-sm font-bold flex items-center justify-center shrink-0">
