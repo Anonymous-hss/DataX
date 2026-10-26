@@ -32,6 +32,14 @@ def test_database_connection(req: StoreCredentialRequest) -> Dict[str, Any]:
             uri = f"mongodb://{req.user or ''}:{req.password or ''}@{req.host}:{req.port or 27017}/{req.database or ''}"
         elif engine in ["sap_bw", "s4_hana", "sap"]:
             uri = f"jdbc:sap://{req.host}:{req.port or 443}?encrypt=true&validateCertificate=false&user={req.user or ''}&password={req.password or ''}"
+        elif engine in ["salesforce"]:
+            uri = f"salesforce://{req.user or ''}:{req.password or ''}@{req.host or ''}"
+        elif engine in ["azure", "azure_blob"]:
+            uri = f"azure://{req.user or ''}:{req.password or ''}@{req.host or ''}"
+        elif engine in ["s3", "aws_s3"]:
+            uri = f"s3://{req.user or ''}:{req.password or ''}@{req.host or ''}"
+        else:
+            uri = f"{engine}://{req.user or ''}:{req.password or ''}@{req.host or ''}"
 
     if not uri or "<" in uri or "user:password" in uri or "••••" in uri or "target-db.internal" in uri or "ep-sweet-neon" in uri:
         return {

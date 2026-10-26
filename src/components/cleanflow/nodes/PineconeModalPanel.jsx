@@ -1,20 +1,25 @@
 import React, { useState } from 'react';
-import { Database, Key, CheckCircle2, RefreshCw, Layers } from 'lucide-react';
+import { Database, Key, CheckCircle2, RefreshCw, Layers, Info } from 'lucide-react';
 
 /**
  * Pinecone Vector Database — Settings Panel
  * Destination vector store for high-dimensional embeddings and metadata.
- * Credentials and endpoints are securely loaded from .env variables.
+ * Credentials and endpoints are securely loaded from .env variables when available.
+ * In production or when env vars are absent, all credential fields remain empty
+ * and must be filled in manually by the user.
  */
 export default function PineconeModalPanel({
-  indexName = import.meta.env.VITE_PINECONE_INDEX || import.meta.env.PINECONE_INDEX || 'enterprise-knowledge-base',
+  // Only auto-fill from .env — no hardcoded fallbacks for credential/identity fields.
+  // Empty string means the field shows its placeholder and stays blank until the user types.
+  indexName = import.meta.env.VITE_PINECONE_INDEX || import.meta.env.PINECONE_INDEX || '',
   onIndexNameChange,
   host = import.meta.env.VITE_PINECONE_HOST || import.meta.env.PINECONE_HOST || '',
   onHostChange,
   apiKey = import.meta.env.VITE_PINECONE_API_KEY || import.meta.env.PINECONE_API_KEY || '',
   onApiKeyChange,
-  namespace = import.meta.env.VITE_PINECONE_NAMESPACE || import.meta.env.PINECONE_NAMESPACE || 'production',
+  namespace = import.meta.env.VITE_PINECONE_NAMESPACE || import.meta.env.PINECONE_NAMESPACE || '',
   onNamespaceChange,
+  // dimension has a sensible technical default (not a credential)
   dimension = import.meta.env.VITE_PINECONE_DIMENSION || import.meta.env.PINECONE_DIMENSION || '1024',
   onDimensionChange,
   metric = 'cosine',
@@ -28,44 +33,56 @@ export default function PineconeModalPanel({
     setTesting(true);
     setTestResult(null);
 
-    try {
-      const cleanHost = (host || '').replace(/\/$/, '');
-      if (cleanHost && apiKey) {
-        const res = await fetch(`${cleanHost}/describe_index_stats`, {
-          headers: {
-            'Api-Key': apiKey,
-            'Accept': 'application/json'
-          }
+    // Guard: index name, host, and API key are all mandatory before attempting any connection
+    const cleanHost = (host || '').replace(/\/$/, '');
+    const missing = [];
+    if (!indexName) missing.push('Index Name');
+    if (!cleanHost)  missing.push('Pinecone Host URL');
+    if (!apiKey)     missing.push('API Key');
+
+    if (missing.length > 0) {
+      setTimeout(() => {
+        setTesting(false);
+        setTestResult({
+          status: 'ERROR',
+          error: `Missing required credentials: ${missing.join(', ')}.`,
         });
-        if (res.ok) {
-          const data = await res.json();
-          setTesting(false);
-          setTestResult({
-            status: 'CONNECTED',
-            index: indexName || 'enterprise-knowledge-base',
-            dimension: data.dimension || Number(dimension) || 1024,
-            vectorCount: data.totalVectorCount ?? 0,
-            latencyMs: 19,
-            cloud: 'AWS Serverless (us-east-1)'
-          });
-          return;
-        }
-      }
-    } catch {
-      // Direct browser fetch blocked by CORS or network; fallback to client verification
+      }, 200);
+      return;
     }
 
-    setTimeout(() => {
+    try {
+      const res = await fetch(`${cleanHost}/describe_index_stats`, {
+        headers: {
+          'Api-Key': apiKey,
+          'Accept': 'application/json'
+        }
+      });
+      setTesting(false);
+      if (res.ok) {
+        const data = await res.json();
+        setTestResult({
+          status: 'CONNECTED',
+          index: indexName,
+          dimension: data.dimension || Number(dimension) || 1024,
+          vectorCount: data.totalVectorCount ?? 0,
+          latencyMs: 19,
+          cloud: 'AWS Serverless (us-east-1)'
+        });
+      } else {
+        setTestResult({
+          status: 'ERROR',
+          error: `Connection failed: Server responded with ${res.status} ${res.statusText}. Check your API Key and Host URL.`,
+        });
+      }
+    } catch {
+      // CORS or network error — credentials were present but connection was blocked
       setTesting(false);
       setTestResult({
-        status: apiKey ? 'CONNECTED' : 'CONFIGURED',
-        index: indexName || 'enterprise-knowledge-base',
-        dimension: Number(dimension) || 1024,
-        vectorCount: 0,
-        latencyMs: 22,
-        cloud: 'AWS Serverless (us-east-1)'
+        status: 'ERROR',
+        error: 'Connection failed: Could not reach Pinecone endpoint. Verify your Host URL and API Key, or check network/CORS settings.',
       });
-    }, 450);
+    }
   };
 
   return (
@@ -82,6 +99,23 @@ export default function PineconeModalPanel({
           </p>
         </div>
       </div>
+
+      {/* Credential source notice */}
+      {apiKey ? (
+        <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+          <Info className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+          <span className="text-[11px] text-blue-700 font-medium">
+            Credentials loaded from <code className="font-mono bg-blue-100 px-1 rounded">.env</code>. Editing a field below will override the env value for this session.
+          </span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+          <Info className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+          <span className="text-[11px] text-amber-700 font-medium">
+            No credentials detected from environment. Please fill in all fields below to connect your Pinecone index.
+          </span>
+        </div>
+      )}
 
       {/* Index Name & Host */}
       <div className="grid grid-cols-2 gap-3">
@@ -184,20 +218,30 @@ export default function PineconeModalPanel({
         </div>
 
         {testResult && (
-          <div className="p-3 rounded-lg bg-white border border-emerald-200 text-xs space-y-1 animate-in fade-in">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-emerald-900 flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                Index Online: {testResult.index}
-              </span>
-              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-mono font-bold px-2 py-0.5 rounded">
-                {testResult.status} ({testResult.latencyMs}ms)
-              </span>
+          testResult.status === 'ERROR' ? (
+            <div className="p-3 rounded-lg bg-white border border-red-200 text-xs space-y-1 animate-in fade-in">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-red-700">✗ Connection Failed</span>
+                <span className="text-[10px] bg-red-100 text-red-800 font-mono font-bold px-2 py-0.5 rounded ml-auto">ERROR</span>
+              </div>
+              <p className="text-[11px] text-red-600">{testResult.error}</p>
             </div>
-            <p className="text-[11px] text-slate-600 font-mono">
-              Dimension: {testResult.dimension} | Vectors: {testResult.vectorCount.toLocaleString()} | Region: {testResult.cloud}
-            </p>
-          </div>
+          ) : (
+            <div className="p-3 rounded-lg bg-white border border-emerald-200 text-xs space-y-1 animate-in fade-in">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-emerald-900 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  Index Online: {testResult.index}
+                </span>
+                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-mono font-bold px-2 py-0.5 rounded">
+                  {testResult.status} ({testResult.latencyMs}ms)
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 font-mono">
+                Dimension: {testResult.dimension} | Vectors: {testResult.vectorCount.toLocaleString()} | Region: {testResult.cloud}
+              </p>
+            </div>
+          )
         )}
       </div>
     </div>
