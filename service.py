@@ -1356,7 +1356,7 @@ def api_sample_table_data(req: SampleDataRequest):
 # Pipeline Execution Engine (Orchestrated in pipeline.py)
 # -----------------------------------------------------------------------------
 @app.post("/pipeline/execute")
-def execute_pipeline(req: PipelineExecutionRequest, user: Dict[str, Any] = Depends(require_roles(["Admin", "Data Steward", "Operator"]))):
+def execute_pipeline(req: PipelineExecutionRequest, user: Dict[str, Any] = Depends(require_roles(["Admin", "Data Steward", "Operator", "data_engineer"]))):
     return run_pipeline(req)
 
 

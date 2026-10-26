@@ -100,7 +100,7 @@ export function AuthProvider({ children }) {
       },
       email: rawUser.email,
       imageUrl: rawUser.avatarUrl || null,
-      role: rawUser.role || 'data_engineer',
+      role: rawUser.role || 'Admin',
       tenantId: rawUser.tenantId || 'tenant_enterprise',
       createdAt: rawUser.createdAt
     };

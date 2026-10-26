@@ -19,10 +19,18 @@ from jwt_config import JWT_SECRET
 JWT_ALGORITHM = "HS256"
 TOKEN_EXPIRY_SECONDS = 86400 * 7  # 7 days
 
-# 4 Enterprise Permission Tiers
+# Enterprise Permission Tiers
 ROLES = {
     "Admin": {
         "description": "Full administrative access: pipelines, rules, credentials, and settings.",
+        "permissions": ["all:manage", "rules:write", "quarantine:resolve", "pipeline:execute", "logs:read"]
+    },
+    "data_engineer": {
+        "description": "Data Engineer: full access to create, edit, test, and execute pipelines and rules.",
+        "permissions": ["all:manage", "rules:write", "quarantine:resolve", "pipeline:execute", "logs:read"]
+    },
+    "Data Engineer": {
+        "description": "Data Engineer: full access to create, edit, test, and execute pipelines and rules.",
         "permissions": ["all:manage", "rules:write", "quarantine:resolve", "pipeline:execute", "logs:read"]
     },
     "Data Steward": {
@@ -127,11 +135,16 @@ def get_current_user(auth: Optional[HTTPAuthorizationCredentials] = Security(sec
 def require_roles(allowed_roles: List[str]):
     """FastAPI endpoint dependency enforcing role-based authorization."""
     def _role_checker(user: Dict[str, Any] = Depends(get_current_user)):
-        user_role = user.get("role", "Auditor")
-        if user_role not in allowed_roles and user_role != "Admin":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access Denied: Role '{user_role}' lacks permissions for this operation. Allowed: {', '.join(allowed_roles)}"
-            )
-        return user
+        user_role = str(user.get("role", "Auditor"))
+        norm_role = user_role.lower().replace(" ", "_")
+        allowed_norms = [str(r).lower().replace(" ", "_") for r in allowed_roles]
+
+        # Admin and data_engineer have full operational execution permissions
+        if norm_role in ["admin", "data_engineer"] or norm_role in allowed_norms or user_role in allowed_roles or "Admin" in allowed_roles:
+            return user
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access Denied: Role '{user_role}' lacks permissions for this operation. Allowed: {', '.join(allowed_roles)}"
+        )
     return _role_checker

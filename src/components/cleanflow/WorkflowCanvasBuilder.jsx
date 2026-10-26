@@ -450,6 +450,11 @@ const sanitizeNode = (n) => {
   const [hitlSlaTimeout, setHitlSlaTimeout] = useState('8');
   const [hitlWebhook, setHitlWebhook] = useState('');
   const [hitlActionMode, setHitlActionMode] = useState('approve_reject');
+  const [hitlConditionType, setHitlConditionType] = useState('preset');
+  const [hitlCustomField, setHitlCustomField] = useState('TOTAL_AMOUNT');
+  const [hitlCustomOp, setHitlCustomOp] = useState('>');
+  const [hitlCustomVal, setHitlCustomVal] = useState('50000');
+  const [hitlCustomExpression, setHitlCustomExpression] = useState('TOTAL_AMOUNT > 50000');
 
   // Pinecone Vector DB states (loaded securely from .env)
   const [pineconeIndex, setPineconeIndex] = useState(import.meta.env.VITE_PINECONE_INDEX || import.meta.env.PINECONE_INDEX || 'enterprise-knowledge-base');
@@ -1239,14 +1244,23 @@ const sanitizeNode = (n) => {
   const handleSaveHitlConfig = () => {
     const triggerLabels = {
       amount_threshold: 'Amount > $50k',
+      balance_threshold: 'Balance > $10k',
       confidence_threshold: 'Low AI Confidence',
       sox_discrepancy: 'SOX Mismatch',
+      unverified_vendor: 'Unverified Vendor',
+      risk_threshold: 'Clause Risk > 80',
+      stockout_risk: 'Stockout Breach',
       critical_anomaly: 'Critical Anomaly'
     };
+
+    const conditionText = hitlConditionType === 'custom'
+      ? (hitlCustomExpression || `${hitlCustomField || 'FIELD'} ${hitlCustomOp || '>'} ${hitlCustomVal || '0'}`)
+      : (triggerLabels[hitlTriggerPolicy] || 'Condition Check');
+
     setNodes(prev => prev.map(n => n.id === selectedNodeId ? {
       ...n,
       system: hitlReviewerRole,
-      table: triggerLabels[hitlTriggerPolicy] || 'Condition Check',
+      table: conditionText,
       status: hitlSlaTimeout === 'indefinite' ? 'No Deadline' : `SLA ${hitlSlaTimeout}h`,
       rowCount: 'Human Review'
     } : n));
@@ -2703,20 +2717,39 @@ const sanitizeNode = (n) => {
 
                   {/* Table / Object / Blob Catalog */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      {srcDbType === 'AWS S3' || srcDbType === 'Azure' ? 'Designated Object / Blob File' : srcDbType === 'Salesforce' ? 'Designated Salesforce Object' : 'Designated Source Table'}
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-bold text-slate-700">
+                        {srcDbType === 'AWS S3' || srcDbType === 'Azure' ? 'Designated Object / Blob File' : srcDbType === 'Salesforce' ? 'Designated Salesforce Object' : 'Designated Source Table'}
+                      </label>
+                      <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                        📦 Demo Sandbox Tables Active
+                      </span>
+                    </div>
                     <select
                       value={srcTable}
                       onChange={(e) => setSrcTable(e.target.value)}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 cursor-pointer"
                     >
-                      {getTableCatalog(activeEngineKey).map((t) => (
-                        <option key={t.name} value={t.name}>
-                          {t.name} — ({t.rows})
-                        </option>
-                      ))}
+                      {srcTestMeta?.tables && srcTestMeta.tables.length > 0 && (
+                        <optgroup label="⚡ Live Discovered Tables (From Connected Database)">
+                          {srcTestMeta.tables.map((tbl) => (
+                            <option key={tbl} value={tbl}>
+                              [Live] {tbl}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      <optgroup label="📦 Pre-Loaded Demo Tables (Sandbox Testing & Prototyping)">
+                        {getTableCatalog(activeEngineKey).map((t) => (
+                          <option key={t.name} value={t.name}>
+                            [Demo Table] {t.name} — ({t.rows})
+                          </option>
+                        ))}
+                      </optgroup>
                     </select>
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      ℹ️ <strong>Demo Datasets:</strong> These pre-configured sample tables are loaded for immediate offline testing. When you configure and test your own database connection, your live tables will appear under <em>Live Discovered Tables</em>.
+                    </p>
                   </div>
 
                   {/* Test Connection Button with Live Ping Diagnostics */}
@@ -3253,6 +3286,18 @@ const sanitizeNode = (n) => {
                   onWebhookChange={setHitlWebhook}
                   actionMode={hitlActionMode}
                   onActionModeChange={setHitlActionMode}
+                  sourceTable={srcTable || sourceConfig?.table || '0PUR_C01'}
+                  availableColumns={sourceConfig?.discoveredColumns || []}
+                  conditionType={hitlConditionType}
+                  onConditionTypeChange={setHitlConditionType}
+                  customField={hitlCustomField}
+                  onCustomFieldChange={setHitlCustomField}
+                  customOp={hitlCustomOp}
+                  onCustomOpChange={setHitlCustomOp}
+                  customVal={hitlCustomVal}
+                  onCustomValChange={setHitlCustomVal}
+                  customExpression={hitlCustomExpression}
+                  onCustomExpressionChange={setHitlCustomExpression}
                 />
               )}
 
@@ -3299,60 +3344,103 @@ const sanitizeNode = (n) => {
               )}
 
               {/* =========================================================
-                  CONNECT WITH EDGES OPTION (UI Dropdown Connectors)
+                  PIPELINE CONNECTIONS STATUS (Auto-Wired by DAG Topology)
                  ========================================================= */}
-              <div className="pt-3 border-t border-slate-200 space-y-2">
-                <label className="block text-xs font-bold text-slate-900">
-                  Connect to Target Nodes (Edges):
-                </label>
+              <div className="pt-3 border-t border-slate-200 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-900">
+                    Pipeline Flow Connections
+                  </label>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                    <Check className="w-3 h-3 text-emerald-600" /> Auto-Wired in Template
+                  </span>
+                </div>
+
                 <p className="text-[11px] text-slate-500">
-                  Select nodes to draw edges from this node, or drag from the port directly on the canvas.
+                  This node is automatically connected to your workflow pipeline. You do not need to manually configure connections. You can also drag ports on the canvas to rewire.
                 </p>
 
+                {/* Show existing incoming & outgoing connections */}
                 <div className="space-y-1.5">
-                  {nodes.filter(n => n.id !== selectedNode.id).map((other) => {
-                    const isConnected = edges.some(e => e.from === selectedNode.id && e.to === other.id);
-                    const titleText = other.title || other.name || 'Target Node';
-                    const isDupeSystem = other.system && titleText.toLowerCase().includes(other.system.toLowerCase());
-                    const systemText = other.system && !isDupeSystem ? ` (${other.system})` : '';
-
+                  {edges.filter(e => e.to === selectedNode.id).map(e => {
+                    const fromNode = nodes.find(n => n.id === e.from);
                     return (
-                      <div
-                        key={other.id}
-                        onClick={() => {
-                          if (isConnected) {
-                            setEdges(prev => prev.filter(e => !(e.from === selectedNode.id && e.to === other.id)));
-                          } else {
-                            setEdges(prev => [
-                              ...prev,
-                              {
-                                id: `edge-${selectedNode.id}-${other.id}`,
-                                from: selectedNode.id,
-                                to: other.id,
-                                label: other.type === 'quarantine' ? 'Violations' : 'Connected',
-                                variant: other.type === 'quarantine' ? 'orange' : 'blue'
-                              }
-                            ]);
-                          }
-                        }}
-                        className={`p-2.5 rounded-xl border flex items-center justify-between text-xs cursor-pointer transition-colors ${
-                          isConnected ? 'bg-blue-50 border-blue-300 text-blue-900 font-bold' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                        }`}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-blue-600' : 'bg-slate-400'}`} />
-                          <span className="font-semibold text-slate-900">{titleText}</span>
-                          {systemText && <span className="text-[11px] text-slate-500 font-normal">{systemText}</span>}
+                      <div key={e.id} className="p-2 rounded-lg bg-emerald-50/70 border border-emerald-200 flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-1.5 text-emerald-950 font-medium">
+                          <span className="text-[10px] uppercase font-bold text-emerald-700 bg-white px-1.5 py-0.5 rounded border border-emerald-200">Incoming</span>
+                          <span>From: <strong>{fromNode?.title || e.from}</strong></span>
+                          {e.label && <span className="text-slate-400 font-mono text-[10px]">({e.label})</span>}
                         </span>
-                        <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
-                          isConnected ? 'bg-blue-200 text-blue-800' : 'bg-slate-200 text-slate-600'
-                        }`}>
-                          {isConnected ? 'Connected' : 'Click to Link'}
+                        <span className="text-[10px] font-bold text-emerald-700">✓ Connected</span>
+                      </div>
+                    );
+                  })}
+
+                  {edges.filter(e => e.from === selectedNode.id).map(e => {
+                    const toNode = nodes.find(n => n.id === e.to);
+                    return (
+                      <div key={e.id} className="p-2 rounded-lg bg-blue-50/70 border border-blue-200 flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-1.5 text-blue-950 font-medium">
+                          <span className="text-[10px] uppercase font-bold text-blue-700 bg-white px-1.5 py-0.5 rounded border border-blue-200">Outgoing</span>
+                          <span>To: <strong>{toNode?.title || e.to}</strong></span>
+                          {e.label && <span className="text-slate-400 font-mono text-[10px]">({e.label})</span>}
                         </span>
+                        <span className="text-[10px] font-bold text-blue-700">✓ Connected</span>
                       </div>
                     );
                   })}
                 </div>
+
+                {/* Collapsible toggle for custom rewiring */}
+                <details className="mt-2 text-xs group">
+                  <summary className="font-semibold text-slate-500 hover:text-slate-800 cursor-pointer list-none flex items-center gap-1 py-1">
+                    <span className="text-[11px] text-blue-600 underline">⚙️ Advanced: Manually Link / Unlink Other Nodes (Optional)</span>
+                  </summary>
+                  <div className="pt-2 space-y-1.5">
+                    {nodes.filter(n => n.id !== selectedNode.id).map((other) => {
+                      const isConnected = edges.some(e => e.from === selectedNode.id && e.to === other.id);
+                      const titleText = other.title || other.name || 'Target Node';
+                      const isDupeSystem = other.system && titleText.toLowerCase().includes(other.system.toLowerCase());
+                      const systemText = other.system && !isDupeSystem ? ` (${other.system})` : '';
+
+                      return (
+                        <div
+                          key={other.id}
+                          onClick={() => {
+                            if (isConnected) {
+                              setEdges(prev => prev.filter(e => !(e.from === selectedNode.id && e.to === other.id)));
+                            } else {
+                              setEdges(prev => [
+                                ...prev,
+                                {
+                                  id: `edge-${selectedNode.id}-${other.id}`,
+                                  from: selectedNode.id,
+                                  to: other.id,
+                                  label: other.type === 'quarantine' ? 'Violations' : 'Connected',
+                                  variant: other.type === 'quarantine' ? 'orange' : 'blue'
+                                }
+                              ]);
+                            }
+                          }}
+                          className={`p-2.5 rounded-xl border flex items-center justify-between text-xs cursor-pointer transition-colors ${
+                            isConnected ? 'bg-blue-50 border-blue-300 text-blue-900 font-bold' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-blue-600' : 'bg-slate-400'}`} />
+                            <span className="font-semibold text-slate-900">{titleText}</span>
+                            {systemText && <span className="text-[11px] text-slate-500 font-normal">{systemText}</span>}
+                          </span>
+                          <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
+                            isConnected ? 'bg-blue-200 text-blue-800' : 'bg-slate-200 text-slate-600'
+                          }`}>
+                            {isConnected ? 'Connected' : 'Click to Link'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </details>
               </div>
 
             </div>
