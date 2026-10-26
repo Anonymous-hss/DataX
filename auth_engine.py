@@ -36,8 +36,7 @@ logger = logging.getLogger("DataX.AuthEngine")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24 * 7  # 7 days
 
-NEON_POSTGRES_URL = os.getenv("DATABASE_URL") or os.getenv("NEON_DATABASE_URI") or \
-    "postgresql://analyser%20_owner:npg_mWphq7u0eLHr@ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech/analyser%20?sslmode=require"
+NEON_POSTGRES_URL = os.getenv("DATABASE_URL") or os.getenv("DATAX_DATABASE_URI") or os.getenv("NEON_DATABASE_URI") or ""
 
 LOCAL_STORE_PATH = os.path.join(os.getcwd(), ".datax_auth_store.json")
 

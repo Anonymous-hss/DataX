@@ -5,10 +5,9 @@ dotenv.config();
 
 const { Pool } = pg;
 
-const connectionString = process.env.DATABASE_URL || 
-  'postgresql://analyser%20_owner:npg_mWphq7u0eLHr@ep-solitary-cake-a5vcih0r-pooler.us-east-2.aws.neon.tech/analyser%20?sslmode=require';
+const connectionString = process.env.DATABASE_URL || process.env.DATAX_DATABASE_URI || '';
 
-export const pool = new Pool({
+export const pool = connectionString ? new Pool({
   connectionString,
   ssl: {
     rejectUnauthorized: false
@@ -16,7 +15,7 @@ export const pool = new Pool({
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
-});
+}) : null;
 
 let dbInitialized = false;
 
@@ -24,7 +23,7 @@ let dbInitialized = false;
  * Initializes the required auth tables if they don't already exist.
  */
 export async function initAuthDb() {
-  if (dbInitialized) return;
+  if (!pool || dbInitialized) return;
   const client = await pool.connect();
   try {
     await client.query(`
@@ -65,6 +64,7 @@ export async function initAuthDb() {
 }
 
 export async function getUserByEmail(email) {
+  if (!pool) return null;
   await initAuthDb();
   const normalized = String(email || '').trim().toLowerCase();
   const res = await pool.query(
@@ -75,6 +75,7 @@ export async function getUserByEmail(email) {
 }
 
 export async function getUserById(id) {
+  if (!pool) return null;
   await initAuthDb();
   const res = await pool.query(
     'SELECT id, tenant_id, email, full_name, avatar_url, role, is_active, created_at FROM datax_users WHERE id = $1 LIMIT 1',
@@ -84,6 +85,7 @@ export async function getUserById(id) {
 }
 
 export async function createUser({ email, passwordHash, fullName, role = 'data_engineer', tenantId = 'tenant_enterprise', avatarUrl = null }) {
+  if (!pool) return null;
   await initAuthDb();
   const normalizedEmail = String(email || '').trim().toLowerCase();
   const res = await pool.query(

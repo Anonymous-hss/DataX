@@ -72,8 +72,12 @@ jobs:
         with:
           host: ${{ secrets.AZURE_VM_HOST }}
           username: ${{ secrets.AZURE_VM_USER }}
+          password: ${{ secrets.AZURE_VM_PASSWORD }}
           key: ${{ secrets.AZURE_VM_SSH_KEY }}
           script: |
-            cd /home/azureuserSDH/Production/datax-service
-            git pull origin feature/dynamic-ui
-            pm2 reload 6
+            cd /home/azureuserSDH/Production/DataX
+            git fetch origin feature/dynamic-ui
+            git reset --hard origin/feature/dynamic-ui
+            cp *.py /home/azureuserSDH/Production/datax-service/
+            npm run build
+            pm2 restart 6

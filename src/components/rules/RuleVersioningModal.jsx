@@ -38,7 +38,7 @@ export default function RuleVersioningModal({ isOpen, onClose }) {
     {
       version: 'v2.1',
       tag: 'Current (Active)',
-      author: 'Harshal Sawatkar (Lead Steward)',
+      author: 'Lead Data Steward',
       date: '2026-10-23 15:40 UTC',
       changeSummary: 'Enforced RFC-5322 strict regex syntax and positive quantity threshold.',
       status: 'Active',

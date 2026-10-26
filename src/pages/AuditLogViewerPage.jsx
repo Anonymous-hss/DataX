@@ -25,7 +25,7 @@ export default function AuditLogViewerPage({ onSwitchToMarketing }) {
         {
           id: 'aud_991',
           action: 'PIPELINE_EXECUTED',
-          actor: 'harshal@aavil.com',
+          actor: 'admin@enterprise.io',
           actorRole: 'Data Steward / Lead',
           timestamp: '2026-10-23T07:15:20Z',
           targetSystem: 'SAP S/4HANA (BAPI PO)',
@@ -47,7 +47,7 @@ export default function AuditLogViewerPage({ onSwitchToMarketing }) {
         {
           id: 'aud_989',
           action: 'QUARANTINE_RESOLVED',
-          actor: 'harshal@aavil.com',
+          actor: 'admin@enterprise.io',
           actorRole: 'Compliance Officer',
           timestamp: '2026-10-23T06:50:11Z',
           targetSystem: 'DLQ Storage Vault',

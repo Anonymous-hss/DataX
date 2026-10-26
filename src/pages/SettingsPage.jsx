@@ -9,14 +9,14 @@ export default function SettingsPage({ onSwitchToMarketing }) {
   const [cronExpression, setCronExpression] = useState('0 */6 * * *');
   const [cronEnabled, setCronEnabled] = useState(true);
   const [notificationChannel, setNotificationChannel] = useState('email');
-  const [emailAlerts, setEmailAlerts] = useState('compliance-team@aavil.com');
+  const [emailAlerts, setEmailAlerts] = useState('compliance-alerts@enterprise.io');
   const [slackWebhook, setSlackWebhook] = useState('https://hooks.slack.com/services/T00/B00/X00');
   const [savedBanner, setSavedBanner] = useState(false);
 
   const [teamMembers, setTeamMembers] = useState([
-    { id: 'usr_1', name: 'Harshal Sawatkar', email: 'harshal@aavil.com', role: 'Tenant Admin', status: 'Active' },
-    { id: 'usr_2', name: 'Sarah Chen', email: 's.chen@aavil.com', role: 'Data Steward', status: 'Active' },
-    { id: 'usr_3', name: 'Marcus Vance', email: 'm.vance@aavil.com', role: 'Security Auditor', status: 'Active' }
+    { id: 'usr_1', name: 'Alex Rivera', email: 'admin@enterprise.io', role: 'Tenant Admin', status: 'Active' },
+    { id: 'usr_2', name: 'Sarah Chen', email: 's.chen@enterprise.io', role: 'Data Steward', status: 'Active' },
+    { id: 'usr_3', name: 'Marcus Vance', email: 'm.vance@enterprise.io', role: 'Security Auditor', status: 'Active' }
   ]);
 
   const [newMemberEmail, setNewMemberEmail] = useState('');

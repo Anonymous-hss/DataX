@@ -14,9 +14,9 @@ import paramiko
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
-HOSTNAME = "20.193.248.164"
-USERNAME = "azureuserSDH"
-PASSWORD = "WelcomeSDH@2027"
+HOSTNAME = os.environ.get("AZURE_VM_HOST", "20.193.248.164")
+USERNAME = os.environ.get("AZURE_VM_USER", "azureuserSDH")
+PASSWORD = os.environ.get("AZURE_VM_PASSWORD", "WelcomeSDH@2027")
 
 LOCAL_DIST = r"h:\AAVIL Inc\DataX\DataX\dist"
 REMOTE_DIST = "/home/azureuserSDH/Production/DataX/dist"

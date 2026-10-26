@@ -264,13 +264,13 @@ export const TEMPLATE_AUTOFILLS = {
     ],
     sourceConfig: {
       engine: 'postgres',
-      host: 'ep-neon-fin.us-east-2.aws.neon.tech',
+      host: 'pg-finance.internal.net',
       port: '5432',
       database: 'erp_finance',
       user: 'sox_audit_user',
       password: '••••••••',
       table: 'gl_journal_entries',
-      connectionUri: 'postgresql://sox_audit_user:••••••••@ep-neon-fin.us-east-2.aws.neon.tech:5432/erp_finance?sslmode=require'
+      connectionUri: 'postgresql://sox_audit_user:••••••••@pg-finance.internal.net:5432/erp_finance?sslmode=require'
     },
     targetConfig: {
       engine: 'bigquery',
@@ -402,15 +402,15 @@ export const TEMPLATE_AUTOFILLS = {
     },
     targetConfig: {
       engine: 'postgres',
-      host: 'ep-neon-datax.us-east-2.aws.neon.tech',
+      host: 'pg-reconciled.internal.net',
       port: '5432',
       database: 'reconciled_db',
-      user: 'neon_postgres',
+      user: 'postgres_admin',
       password: '••••••••',
       table: 'customers_gold',
       quarantineTable: 'customers_unresolved',
       writeMode: 'append',
-      connectionUri: 'postgresql://neon_postgres:••••••••@ep-neon-datax.us-east-2.aws.neon.tech:5432/reconciled_db?sslmode=require'
+      connectionUri: 'postgresql://postgres_admin:••••••••@pg-reconciled.internal.net:5432/reconciled_db?sslmode=require'
     },
     rules: [
       { id: 'r_cm_1', name: 'RFC-5322 Email Syntax', field: 'email', severity: 'Critical', code: "REGEX_MATCH(email, '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$')", selected: true, desc: 'Valid corporate email syntax' },

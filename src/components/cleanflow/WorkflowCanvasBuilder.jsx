@@ -1150,6 +1150,7 @@ const sanitizeNode = (n) => {
   };
 
   const handleSaveSourceConfig = () => {
+    const isLiveConnected = Boolean(srcTestMeta && srcTestMeta.success);
     const engineKey = srcDbType.includes('SAP') ? 'sap_bw' 
       : srcDbType.includes('Mongo') ? 'mongodb' 
       : srcDbType.includes('Azure') ? 'azure' 
@@ -1181,6 +1182,7 @@ const sanitizeNode = (n) => {
       password: srcPass,
       connectionUri: resolvedUri,
       table: srcTable,
+      isLive: isLiveConnected,
       scopeMode: readScope,
       rowCount: activeData.rowCount,
       totalRows: activeData.rowCount,
@@ -1188,10 +1190,11 @@ const sanitizeNode = (n) => {
     }));
     setNodes(prev => prev.map(n => n.id === selectedNodeId ? {
       ...n,
-      system: srcDbType,
+      system: isLiveConnected ? `${srcDbType} (Connected)` : `${srcDbType} (Demo Sandbox)`,
       table: srcTable,
+      isLive: isLiveConnected,
       rowCount: activeData.rowCountFormatted || `${activeData.rowCount?.toLocaleString()} rows`,
-      status: 'Configured'
+      status: isLiveConnected ? 'Connected' : 'Demo Sandbox'
     } : n));
     setIsPropertyModalOpen(false);
   };
@@ -1913,12 +1916,16 @@ const sanitizeNode = (n) => {
                       </span>
                     ) : (
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border flex items-center gap-1 ${
-                        node.variant === 'green' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                        node.variant === 'orange' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                        'bg-blue-50 text-blue-700 border-blue-200'
+                        (node.status && node.status.includes('Demo')) || (node.type === 'source' && !node.isLive && node.status === 'Ready')
+                          ? 'bg-amber-50 text-amber-700 border-amber-200'
+                          : node.variant === 'green' || node.status === 'Connected'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : node.variant === 'orange'
+                          ? 'bg-amber-50 text-amber-700 border-amber-200'
+                          : 'bg-blue-50 text-blue-700 border-blue-200'
                       }`}>
                         <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                        {node.status}
+                        {node.type === 'source' && !node.isLive && node.status === 'Ready' ? 'Demo Sandbox' : node.status}
                       </span>
                     )}
 
@@ -1943,10 +1950,22 @@ const sanitizeNode = (n) => {
 
                 {/* Meta Box: Bound Table or Metric */}
                 <div className="p-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-[11px]">
-                  <span className="font-mono font-bold text-slate-800 truncate">
-                    {node.type === 'source' && liveNodeStats.source
-                      ? node.table || '0PUR_C01'
-                      : node.type === 'target' && liveNodeStats.target
+                  <span className="font-mono font-bold text-slate-800 truncate flex items-center gap-1.5">
+                    {node.type === 'source' ? (
+                      node.isLive ? (
+                        <>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                          <span>{node.table || 'Live Table'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-[9px] font-sans font-bold text-amber-700 bg-amber-100/90 px-1 py-0.2 rounded border border-amber-200 shrink-0">
+                            DEMO TABLE
+                          </span>
+                          <span>{node.table || '0PUR_C01'}</span>
+                        </>
+                      )
+                    ) : node.type === 'target' && liveNodeStats.target
                       ? `${node.table || '0PUR_C01_clean'} (${liveNodeStats.target})`
                       : node.type === 'quarantine' && liveNodeStats.quarantine
                       ? `${node.table || '0PUR_C01_quarant...'} (${liveNodeStats.quarantine})`

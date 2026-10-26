@@ -23,20 +23,20 @@ const INITIAL_CONNECTIONS = [
     badge: 'Enterprise Gold'
   },
   {
-    id: 'conn_neon_pg',
-    name: 'PostgreSQL / Neon Cloud Warehouse',
+    id: 'conn_postgres_lakehouse',
+    name: 'PostgreSQL Enterprise Lakehouse',
     engine: 'PostgreSQL',
     engineCode: 'postgres',
-    host: 'ep-quiet-grass-a1w0k467-pooler.ap-southeast-1.aws.neon.tech',
+    host: 'pg-lakehouse.internal.net',
     port: '5432',
-    database: 'neondb',
-    username: 'neondb_owner',
+    database: 'warehouse_db',
+    username: 'postgres_svc',
     ssl: true,
     status: 'connected',
     latency: '88 ms',
     tablesCount: 14,
     activeThreads: ['Customer Master & Identity', 'Financial GL & AP Ledger'],
-    badge: 'Cloud Lakehouse'
+    badge: 'Enterprise Lakehouse'
   },
   {
     id: 'conn_mongo_atlas',
