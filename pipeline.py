@@ -534,7 +534,14 @@ def _execute_pipeline_core(req: PipelineExecutionRequest, idempotency_key: str, 
                             if quarantine_records:
                                 q_tuples = [
                                     (
-                                        str(item.get("record", {}).get("id") or item.get("record", {}).get("PO_NUMBER") or item.get("record", {}).get("MATNR") or "N/A"),
+                                        str(
+                                            item.get("record", {}).get("id")
+                                            or item.get("record", {}).get("po_id")
+                                            or item.get("record", {}).get("PO_NUMBER")
+                                            or item.get("record", {}).get("MATNR")
+                                            or item.get("record", {}).get("_id")
+                                            or (list(item.get("record", {}).values())[0] if item.get("record") else "N/A")
+                                        ),
                                         src_engine,
                                         " | ".join(item.get("violations", [])),
                                         json.dumps(item.get("record", {}), default=str)
