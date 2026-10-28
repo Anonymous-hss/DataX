@@ -31,6 +31,8 @@ class SourceConfig(BaseModel):
     limit: Optional[int] = 1420
     selectedTables: Optional[List[str]] = None
     selectAllTables: Optional[bool] = False
+    fileData: Optional[List[Dict[str, Any]]] = None
+    fileName: Optional[str] = None
 
 
 class TargetConfig(BaseModel):
@@ -46,6 +48,8 @@ class TargetConfig(BaseModel):
     customTableName: Optional[str] = None
     selectedTables: Optional[List[str]] = None
     selectAllTables: Optional[bool] = False
+    fileData: Optional[List[Dict[str, Any]]] = None
+    fileName: Optional[str] = None
 
 
 class PipelineExecutionRequest(BaseModel):
@@ -59,6 +63,9 @@ class PipelineExecutionRequest(BaseModel):
     rules: List[RuleItem]
     target1: TargetConfig
     target2: Optional[TargetConfig] = None
+    nodes: Optional[List[Dict[str, Any]]] = None
+    edges: Optional[List[Dict[str, Any]]] = None
+    uploadedRecords: Optional[List[Dict[str, Any]]] = None
 
 
 class ThreadCreateRequest(BaseModel):

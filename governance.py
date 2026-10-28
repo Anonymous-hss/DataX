@@ -10,7 +10,12 @@ import time
 import threading
 from typing import Dict, Any, List, Tuple
 
-VAULT_DIR = os.environ.get("DATAX_VAULT_DIR", "/home/azureuserSDH/Production/datax-service")
+VAULT_DIR = os.environ.get("DATAX_VAULT_DIR", ".")
+if not os.path.exists(VAULT_DIR):
+    if os.path.exists("/home/azureuserSDH/Production/datax-service"):
+        VAULT_DIR = "/home/azureuserSDH/Production/datax-service"
+    else:
+        VAULT_DIR = os.path.dirname(os.path.abspath(__file__))
 HASH_CHAIN_FILE = os.path.join(VAULT_DIR, ".audit_hash_chain.jsonl")
 
 # Standard composite indexes for high-speed <50ms lookups (ARC-03)

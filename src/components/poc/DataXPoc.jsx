@@ -16,6 +16,8 @@ import DataXAuthPage from '../../pages/auth/DataXAuthPage';
 import WorkflowCanvasPage from '../../pages/WorkflowCanvasPage';
 import QuarantineWorkbenchPage from '../../pages/QuarantineWorkbenchPage';
 import AuditLogViewerPage from '../../pages/AuditLogViewerPage';
+import ShadowReconcilerPage from '../../pages/ShadowReconcilerPage';
+import ExecutiveRoiPage from '../../pages/ExecutiveRoiPage';
 import SettingsPage from '../../pages/SettingsPage';
 import HelpCenterPage from '../../pages/HelpCenterPage';
 import NotFoundPage from '../../pages/NotFoundPage';
@@ -161,6 +163,26 @@ function ScreenRenderer({ onBackToWebsite }) {
     case 'lineage':
       return (
         <AuditLogViewerPage 
+          onSwitchToMarketing={onBackToWebsite}
+        />
+      );
+
+    case 'shadow':
+    case 'shadow-mode':
+    case 'shadow-reconciler':
+    case 'parity':
+      return (
+        <ShadowReconcilerPage 
+          onSwitchToMarketing={onBackToWebsite}
+        />
+      );
+
+    case 'roi':
+    case 'executive-roi':
+    case 'roi-dossier':
+    case 'dossier':
+      return (
+        <ExecutiveRoiPage 
           onSwitchToMarketing={onBackToWebsite}
         />
       );

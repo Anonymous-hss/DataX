@@ -46,6 +46,9 @@ ENV/
 .quarantine_dlq.jsonl
 .reconciliation_store.json
 .datax_auth_store.json
+.alerts_history.json
+.audit_hash_chain.jsonl
+.runs_store.json
 
 # GCP Keys & Credentials
 gcp-service-account.json
