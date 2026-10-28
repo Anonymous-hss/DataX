@@ -36,8 +36,12 @@ def execute_safe_staged_commit(
         clean_col = re.sub(r'[^a-zA-Z0-9_]', '_', k)
         if k.lower() == primary_key.lower():
             col_defs.append(f'"{clean_col}" VARCHAR(64) PRIMARY KEY')
+        elif isinstance(val, bool):
+            col_defs.append(f'"{clean_col}" BOOLEAN')
         elif isinstance(val, (int, float)):
             col_defs.append(f'"{clean_col}" NUMERIC(16, 4)')
+        elif isinstance(val, (dict, list)):
+            col_defs.append(f'"{clean_col}" JSONB')
         else:
             col_defs.append(f'"{clean_col}" TEXT')
 

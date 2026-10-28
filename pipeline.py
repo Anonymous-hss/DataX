@@ -478,20 +478,34 @@ def _execute_pipeline_core(req: PipelineExecutionRequest, idempotency_key: str, 
 
         try:
             if tgt1_engine in ["postgres", "postgresql"]:
+                # Sanitize valid records for database persistence (strip internal engine markers, map MongoDB _id)
+                target_records = []
+                for r in valid_records:
+                    rec = {k: v for k, v in r.items() if not k.startswith("_datax_") and not k.startswith("_remediation_")}
+                    if "_id" in rec and "id" not in rec:
+                        rec["id"] = str(rec.pop("_id"))
+                    elif "_id" in rec:
+                        rec.pop("_id")
+                    target_records.append(rec)
+
                 @retry_with_backoff(max_retries=2, base_delay=1.0, jitter=True)
                 def _commit_target():
                     with db_pool.get_connection(tgt1_uri) as conn:
                         with conn.cursor() as cur:
-                            if valid_records:
-                                sample_row = valid_records[0]
+                            if target_records:
+                                sample_row = target_records[0]
                                 primary_col = next((c for c in ["id", "ID", "PO_NUMBER", "MATNR", "MATERIAL_DOC", "EBELN", "ENTRY_ID"] if c in sample_row), list(sample_row.keys())[0])
                                 col_defs = []
                                 for k, val in sample_row.items():
                                     clean_col = re.sub(r'[^a-zA-Z0-9_]', '_', k)
                                     if k == primary_col:
                                         col_defs.append(f'"{clean_col}" VARCHAR(64) PRIMARY KEY')
+                                    elif isinstance(val, bool):
+                                        col_defs.append(f'"{clean_col}" BOOLEAN')
                                     elif isinstance(val, (int, float)):
                                         col_defs.append(f'"{clean_col}" NUMERIC(16, 4)')
+                                    elif isinstance(val, (dict, list)):
+                                        col_defs.append(f'"{clean_col}" JSONB')
                                     else:
                                         col_defs.append(f'"{clean_col}" TEXT')
                                 col_defs.append('"datax_status" VARCHAR(64) DEFAULT \'AI_VERIFIED_CLEAN\'')
@@ -536,12 +550,12 @@ def _execute_pipeline_core(req: PipelineExecutionRequest, idempotency_key: str, 
                                 )
                         conn.commit()
 
-                        if valid_records:
+                        if target_records:
                             from staging import execute_safe_staged_commit
                             ok, staged_rows, msg = execute_safe_staged_commit(
                                 conn,
                                 tgt1_table,
-                                valid_records,
+                                target_records,
                                 primary_col,
                                 write_mode=req.target1.writeMode or "append",
                                 chunk_size=5000
