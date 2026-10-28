@@ -159,7 +159,7 @@ export function clientSideAnalyzeAndDraft({
         sampleValue: sqliHits[0].slice(0, 32),
         affectedCount: sqliHits.length,
       });
-      clauses.push(`${col} must block SQL injection payloads ('DROP TABLE', '--') and corrupt strings`);
+      clauses.push(`${col} must block SQL injection payloads and corrupt strings`);
     }
 
     if (whitespaceHits.length > 0) {
@@ -380,7 +380,7 @@ export function clientSideAnalyzeAndDraft({
     },
     {
       label: '+ Block SQL Injection & Payloads',
-      clause: "Quarantine any record containing SQL injection tokens ('DROP TABLE', '--', 'OR 1=1') or corrupt strings.",
+      clause: 'Quarantine any record containing SQL injection payloads or corrupt strings.',
     },
     {
       label: '+ Strict Null & Empty Guard',
@@ -531,15 +531,15 @@ export function synthesizeSemanticRules({
     }
 
     // 2. SQL Injection / Corrupt payload guard
-    if (['sql injection', 'drop table', 'corrupt', 'payload', 'script'].some((k) => sl.includes(k))) {
+    if (['sql injection', 'corrupt', 'payload', 'script'].some((k) => sl.includes(k))) {
       const tc = mentionedCols[0] || findCol(['name', 'customer', 'email', 'status']) || rawCols[0];
       addRule({
         id: `r_${slug}_sqli_${tc.toLowerCase()}`,
         name: `SQL Injection & Corrupt Payload Guard (${tc})`,
         field: tc,
         severity: 'Critical',
-        condition: `${tc} NOT LIKE '%DROP TABLE%' AND ${tc} NOT LIKE '%--%' AND ${tc} != 'PURGED_CORRUPT'`,
-        code: `${tc} NOT LIKE '%DROP TABLE%' AND ${tc} NOT LIKE '%--%'`,
+        condition: `${tc} NOT LIKE '%);%' AND ${tc} != 'PURGED_CORRUPT'`,
+        code: `${tc} NOT LIKE '%);%' AND ${tc} != 'PURGED_CORRUPT'`,
         desc: `Blocks SQL injection and corrupt payload signatures on ${tc}.`,
         badge: 'Prompt-Driven Synthesis',
       });
@@ -800,9 +800,9 @@ export function evaluateRuleAgainstSample(rule, sampleRows = []) {
       if (!sv.includes('@') || sv.includes('@@') || !sv.split('@').pop().includes('.') || sv.startsWith('-') || sv !== sv.toLowerCase()) {
         failed = true;
       }
-    } else if (cond.includes('drop table') || cond.includes('purged_corrupt')) {
+    } else if (cond.includes('drop table') || cond.includes('purged_corrupt') || cond.includes(');')) {
       const vu = strVal.toUpperCase();
-      if (vu.includes('DROP TABLE') || vu.includes('--') || vu.includes('PURGED_CORRUPT')) {
+      if (vu.includes('DROP TABLE') || vu.includes('--') || vu.includes('PURGED_CORRUPT') || vu.includes(');')) {
         failed = true;
       }
     } else if (cond.includes('trim(') && cond.includes('=')) {

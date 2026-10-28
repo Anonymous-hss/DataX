@@ -495,7 +495,7 @@ class OfflineAIHeuristics:
                     "sampleValue": sqli_samples[0][:36],
                     "affectedCount": len(sqli_samples)
                 })
-                prompt_clauses.append(f"{col} must block SQL injection payloads ('DROP TABLE', '--') and corrupt strings")
+                prompt_clauses.append(f"{col} must block SQL injection payloads and corrupt strings")
 
             if whitespace_samples:
                 anomalies.append({
@@ -709,7 +709,7 @@ class OfflineAIHeuristics:
         # Build contextual smart chips the user can click to append to prompt
         prompt_chips = [
             {"label": "+ Trim Whitespace & Normalize Case", "clause": f"Trim leading/trailing whitespace and normalize text casing across {', '.join(target_cols[:3])}."},
-            {"label": "+ Block SQL Injection & Payloads", "clause": "Quarantine any record containing SQL injection tokens ('DROP TABLE', '--', 'OR 1=1')."},
+            {"label": "+ Block SQL Injection & Payloads", "clause": "Quarantine any record containing SQL injection payloads or corrupt strings."},
             {"label": "+ Strict Null & Empty Guard", "clause": f"Require non-null, non-empty values for {', '.join(target_cols[:4])}."},
             {"label": "+ Deduplicate Primary Key", "clause": f"Enforce strict primary key uniqueness on {target_cols[0] if target_cols else 'ID'}."},
         ]
@@ -811,15 +811,15 @@ class OfflineAIHeuristics:
                 continue
 
             # SQL Injection / Corrupt payload guard
-            if any(k in sl for k in ["sql injection", "drop table", "corrupt", "payload", "script"]):
+            if any(k in sl for k in ["sql injection", "corrupt", "payload", "script"]):
                 target_c = mentioned_cols[0] if mentioned_cols else (find_col_by_keywords(["name", "customer", "email", "status"]) or raw_cols[0])
                 add_rule({
                     "id": f"r_{slug}_sqli_{target_c.lower()}",
                     "name": f"SQL Injection & Corrupt Payload Guard ({target_c})",
                     "field": target_c,
                     "severity": "Critical",
-                    "condition": f"{target_c} NOT LIKE '%DROP TABLE%' AND {target_c} NOT LIKE '%--%' AND {target_c} != 'PURGED_CORRUPT'",
-                    "code": f"{target_c} NOT LIKE '%DROP TABLE%' AND {target_c} NOT LIKE '%--%' AND {target_c} != 'PURGED_CORRUPT'",
+                    "condition": f"{target_c} NOT LIKE '%);%' AND {target_c} != 'PURGED_CORRUPT'",
+                    "code": f"{target_c} NOT LIKE '%);%' AND {target_c} != 'PURGED_CORRUPT'",
                     "desc": f"Blocks malicious SQL injection strings and corrupt payloads on {target_c}.",
                     "badge": "Prompt-Driven Synthesis"
                 })
