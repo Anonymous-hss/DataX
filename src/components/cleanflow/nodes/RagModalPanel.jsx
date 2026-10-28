@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
-import { BookOpen, CheckCircle2, RefreshCw } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { BookOpen, CheckCircle2, RefreshCw, Database } from 'lucide-react';
 
 /**
  * RAG Context Enricher — Settings Panel
  * Searches a knowledge/document library and appends relevant info onto each data record.
- * Think of it as: for each row, auto-look up related policy/contract/reference and attach it.
+ * Dynamically binds to discovered schema columns from the active source table.
  */
 export default function RagModalPanel({
+  sourceTable = '',
+  availableColumns = [],
   knowledgeBase = 'Azure AI Search (enterprise-policies)',
   onKnowledgeBaseChange,
   queryKey = 'ITEM_DESCRIPTION',
@@ -16,10 +18,29 @@ export default function RagModalPanel({
   targetField = 'RAG_CONTEXT',
   onTargetFieldChange,
   fallbackPolicy = 'pass_thru',
-  onFallbackPolicyChange
+  onFallbackPolicyChange,
 }) {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
+
+  const cleanCols = useMemo(() => {
+    const list = (availableColumns || []).filter((c) => c && c !== '_id');
+    return list.length > 0 ? list : ['ITEM_DESCRIPTION', 'PO_NUMBER', 'VENDOR_NAME', 'NAME'];
+  }, [availableColumns]);
+
+  useEffect(() => {
+    if (cleanCols.length > 0 && !cleanCols.some((c) => c.toLowerCase() === (queryKey || '').toLowerCase())) {
+      const matchCol =
+        cleanCols.find((c) =>
+          ['desc', 'item', 'name', 'title', 'email', 'po', 'id', 'product'].some((k) =>
+            c.toLowerCase().includes(k)
+          )
+        ) || cleanCols[0];
+      if (matchCol) onQueryKeyChange?.(matchCol);
+    }
+  }, [cleanCols, queryKey]);
+
+  const activeQueryCol = queryKey || cleanCols[0];
 
   const handleTestRag = () => {
     setTesting(true);
@@ -27,29 +48,38 @@ export default function RagModalPanel({
     setTimeout(() => {
       setTesting(false);
       setTestResult({
-        query: 'Industrial ball-bearing SKU-PART-104',
+        query: `Sample lookup on ${activeQueryCol}`,
         retrieved: topK,
-        topDoc: 'Procurement SOP 2026 — Section 4.2',
-        excerpt: 'Ball bearing assemblies SKU-100 to 120 must adhere to ISO-9001 and have approved plant code P1000 or P2000.',
-        latencyMs: 24
+        topDoc: 'Enterprise Policy SOP — Section 4.2',
+        excerpt: 'Data compliance rules and approved standard codes for active business entity.',
+        latencyMs: 24,
       });
     }, 500);
   };
 
   return (
     <div className="space-y-4">
-
       {/* Header */}
-      <div className="p-3.5 bg-purple-50/70 border border-purple-200 rounded-xl flex items-start gap-3">
-        <div className="w-8 h-8 rounded-lg bg-purple-600 text-white flex items-center justify-center shrink-0">
-          <BookOpen className="w-4 h-4" />
+      <div className="p-3.5 bg-purple-50/70 border border-purple-200 rounded-xl flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-purple-600 text-white flex items-center justify-center shrink-0">
+            <BookOpen className="w-4 h-4" />
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-purple-950">RAG Context Enricher</h4>
+            <p className="text-[11px] text-purple-700 mt-0.5">
+              For each record, searches your company's knowledge library (policies, contracts, SOPs) and attaches the most relevant information.
+            </p>
+          </div>
         </div>
-        <div>
-          <h4 className="text-xs font-bold text-purple-950">RAG Context Enricher</h4>
-          <p className="text-[11px] text-purple-700 mt-0.5">
-            For each record, searches your company's knowledge library (policies, contracts, SOPs) and attaches the most relevant information. Like auto-looking up a reference manual for every data row.
-          </p>
-        </div>
+
+        {sourceTable && (
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-md bg-white border border-purple-200 text-slate-700 self-center">
+            <Database className="w-3 h-3 text-purple-600" />
+            <span className="text-slate-500">Source:</span>
+            <span className="font-mono font-bold text-purple-900">{sourceTable}</span>
+          </span>
+        )}
       </div>
 
       {/* Knowledge Library + Search Column */}
@@ -71,16 +101,17 @@ export default function RagModalPanel({
 
         <div>
           <label className="block text-xs font-bold text-slate-700 mb-1">Column to Search With</label>
-          <p className="text-[10px] text-slate-400 mb-1">The field value used as the search query</p>
+          <p className="text-[10px] text-slate-400 mb-1">Detected from {sourceTable || 'source schema'}</p>
           <select
-            value={queryKey}
+            value={activeQueryCol}
             onChange={(e) => onQueryKeyChange?.(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 cursor-pointer"
+            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold font-mono text-slate-900 cursor-pointer"
           >
-            <option value="ITEM_DESCRIPTION">ITEM_DESCRIPTION (Product / Material)</option>
-            <option value="PO_NUMBER">PO_NUMBER (Purchase Order)</option>
-            <option value="VENDOR_NAME">VENDOR_NAME (Supplier)</option>
-            <option value="NAME">NAME (Customer Account)</option>
+            {cleanCols.map((col) => (
+              <option key={col} value={col}>
+                {col}
+              </option>
+            ))}
           </select>
         </div>
       </div>

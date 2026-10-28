@@ -2577,6 +2577,8 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                  ========================================================================= */}
               {selectedNode.type === 'vector_matcher' && (
                 <VectorMatcherModalPanel
+                  sourceTable={srcTable || sourceConfig?.table || ''}
+                  availableColumns={discoveredColumns.length > 0 ? discoveredColumns : (sourceConfig?.discoveredColumns || [])}
                   model={vectorModel}
                   onModelChange={setVectorModel}
                   targetField={vectorTargetField}
@@ -2594,6 +2596,8 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                  ========================================================================= */}
               {selectedNode.type === 'rag' && (
                 <RagModalPanel
+                  sourceTable={srcTable || sourceConfig?.table || ''}
+                  availableColumns={discoveredColumns.length > 0 ? discoveredColumns : (sourceConfig?.discoveredColumns || [])}
                   knowledgeBase={ragKnowledgeBase}
                   onKnowledgeBaseChange={setRagKnowledgeBase}
                   queryKey={ragQueryKey}
@@ -2611,6 +2615,9 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                  ========================================================================= */}
               {selectedNode.type === 'conditional' && (
                 <ConditionalSwitchModalPanel
+                  sourceTable={srcTable || sourceConfig?.table || ''}
+                  availableColumns={discoveredColumns.length > 0 ? discoveredColumns : (sourceConfig?.discoveredColumns || [])}
+                  previewRows={previewRows}
                   conditionField={conditionField}
                   onConditionFieldChange={setConditionField}
                   conditionOp={conditionOp}
@@ -2639,7 +2646,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                   actionMode={hitlActionMode}
                   onActionModeChange={setHitlActionMode}
                   sourceTable={srcTable || sourceConfig?.table || '0PUR_C01'}
-                  availableColumns={sourceConfig?.discoveredColumns || []}
+                  availableColumns={discoveredColumns.length > 0 ? discoveredColumns : (sourceConfig?.discoveredColumns || [])}
                   conditionType={hitlConditionType}
                   onConditionTypeChange={setHitlConditionType}
                   customField={hitlCustomField}

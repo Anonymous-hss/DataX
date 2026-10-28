@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
-import { Layers, CheckCircle2, RefreshCw } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Layers, CheckCircle2, RefreshCw, Database } from 'lucide-react';
 
 /**
  * Semantic Vector Matcher — Settings Panel
- * Finds fuzzy-matching records (e.g. "IBM Corp" ↔ "International Business Machines")
- * using AI embeddings and similarity scoring.
+ * Finds fuzzy-matching records using AI embeddings and similarity scoring.
+ * Dynamically binds to discovered schema columns from the active source table.
  */
 export default function VectorMatcherModalPanel({
+  sourceTable = '',
+  availableColumns = [],
   model = 'text-embedding-3-small',
   onModelChange,
   targetField = 'VENDOR_NAME',
@@ -16,10 +18,29 @@ export default function VectorMatcherModalPanel({
   vectorIndex = 'Azure AI Search (enterprise-vendors)',
   onVectorIndexChange,
   autoResolve = true,
-  onAutoResolveChange
+  onAutoResolveChange,
 }) {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
+
+  const cleanCols = useMemo(() => {
+    const list = (availableColumns || []).filter((c) => c && c !== '_id');
+    return list.length > 0 ? list : ['VENDOR_NAME', 'NAME', 'DELIVERY_PLANT', 'SKU'];
+  }, [availableColumns]);
+
+  useEffect(() => {
+    if (cleanCols.length > 0 && !cleanCols.some((c) => c.toLowerCase() === (targetField || '').toLowerCase())) {
+      const matchCol =
+        cleanCols.find((c) =>
+          ['name', 'vendor', 'customer', 'item', 'desc', 'email', 'title', 'company'].some((k) =>
+            c.toLowerCase().includes(k)
+          )
+        ) || cleanCols[0];
+      if (matchCol) onTargetFieldChange?.(matchCol);
+    }
+  }, [cleanCols, targetField]);
+
+  const activeField = targetField || cleanCols[0];
 
   const handleTestMatch = () => {
     setTesting(true);
@@ -30,25 +51,34 @@ export default function VectorMatcherModalPanel({
         input: 'Intl Business Machines LLC',
         matched: 'International Business Machines Corp (IBM)',
         score: 94.8,
-        latencyMs: 18
+        latencyMs: 18,
       });
     }, 500);
   };
 
   return (
     <div className="space-y-4">
-
       {/* Header */}
-      <div className="p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl flex items-start gap-3">
-        <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
-          <Layers className="w-4 h-4" />
+      <div className="p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
+            <Layers className="w-4 h-4" />
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-indigo-950">Semantic Vector Matcher</h4>
+            <p className="text-[11px] text-indigo-700 mt-0.5">
+              Finds records that mean the same thing even when spelled differently (e.g. "IBM Corp" vs "International Business Machines"). Uses AI to compare meaning, not just spelling.
+            </p>
+          </div>
         </div>
-        <div>
-          <h4 className="text-xs font-bold text-indigo-950">Semantic Vector Matcher</h4>
-          <p className="text-[11px] text-indigo-700 mt-0.5">
-            Finds records that mean the same thing even when spelled differently (e.g. "IBM Corp" vs "International Business Machines"). Uses AI to compare meaning, not just spelling.
-          </p>
-        </div>
+
+        {sourceTable && (
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-md bg-white border border-indigo-200 text-slate-700 self-center">
+            <Database className="w-3 h-3 text-indigo-600" />
+            <span className="text-slate-500">Source:</span>
+            <span className="font-mono font-bold text-indigo-900">{sourceTable}</span>
+          </span>
+        )}
       </div>
 
       {/* AI Model + Column to Check */}
@@ -70,16 +100,17 @@ export default function VectorMatcherModalPanel({
 
         <div>
           <label className="block text-xs font-bold text-slate-700 mb-1">Column to Match</label>
-          <p className="text-[10px] text-slate-400 mb-1">Which field in your data to compare</p>
+          <p className="text-[10px] text-slate-400 mb-1">Detected from {sourceTable || 'source schema'}</p>
           <select
-            value={targetField}
+            value={activeField}
             onChange={(e) => onTargetFieldChange?.(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 cursor-pointer"
+            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold font-mono text-slate-900 cursor-pointer"
           >
-            <option value="VENDOR_NAME">VENDOR_NAME (Vendor / Supplier)</option>
-            <option value="NAME">NAME (Customer / Account)</option>
-            <option value="DELIVERY_PLANT">DELIVERY_PLANT (Plant / Site)</option>
-            <option value="SKU">SKU / ITEM_DESCRIPTION (Product)</option>
+            {cleanCols.map((col) => (
+              <option key={col} value={col}>
+                {col}
+              </option>
+            ))}
           </select>
         </div>
       </div>
