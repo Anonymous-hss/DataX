@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Link, useNavigation } from '../context/NavigationContext';
 import { useRuleEngine } from '../context/RuleEngineContext';
+import NotificationCenter from '../components/common/NotificationCenter';
 import DataXUserMenu from '../components/common/DataXUserMenu';
 import { DataXLogo } from './ThreadsPage';
 import { api } from '../services/apiClient';
@@ -240,6 +241,7 @@ export default function ShadowReconcilerPage({ onSwitchToMarketing }) {
               <span>Canvas Builder</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
+            <NotificationCenter />
             <DataXUserMenu />
           </div>
         </div>

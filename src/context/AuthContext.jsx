@@ -72,6 +72,14 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const updateUser = useCallback((updates) => {
+    setRawUser(prev => {
+      const next = { ...(prev || {}), ...updates };
+      authStorage.setUser(next);
+      return next;
+    });
+  }, []);
+
   const logout = useCallback((options = {}) => {
     authStorage.clear();
     setToken(null);
@@ -115,9 +123,10 @@ export function AuthProvider({ children }) {
     setAuthError,
     login,
     register,
+    updateUser,
     logout,
     signOut: logout
-  }), [user, token, isLoaded, authError, login, register, logout]);
+  }), [user, token, isLoaded, authError, login, register, logout, updateUser]);
 
   return (
     <AuthContext.Provider value={value}>

@@ -1,11 +1,27 @@
 import React, { useState } from 'react';
 import { Link } from '../context/NavigationContext';
 import { useRuleEngine } from '../context/RuleEngineContext';
+import NotificationCenter from '../components/common/NotificationCenter';
 import DataXUserMenu from '../components/common/DataXUserMenu';
 import { DataXLogo } from './ThreadsPage';
 
 export default function SettingsPage({ onSwitchToMarketing }) {
-  const [activeTab, setActiveTab] = useState('general');
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const stored = localStorage.getItem('datax_settings_active_tab');
+      if (stored && ['general', 'scheduling', 'alerts', 'team', 'apikeys'].includes(stored)) {
+        return stored;
+      }
+    } catch {}
+    return 'general';
+  });
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    try {
+      localStorage.setItem('datax_settings_active_tab', tabId);
+    } catch {}
+  };
   const [cronExpression, setCronExpression] = useState('0 */6 * * *');
   const [cronEnabled, setCronEnabled] = useState(true);
   const [notificationChannel, setNotificationChannel] = useState('email');
@@ -91,6 +107,7 @@ export default function SettingsPage({ onSwitchToMarketing }) {
             </nav>
           </div>
           <div className="flex items-center gap-3">
+            <NotificationCenter />
             <DataXUserMenu onSwitchToMarketing={onSwitchToMarketing} />
           </div>
         </div>
@@ -127,7 +144,7 @@ export default function SettingsPage({ onSwitchToMarketing }) {
             ].map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-semibold text-left transition-all ${
                   activeTab === tab.id
                     ? 'bg-[#2D55F5] text-white shadow-sm'

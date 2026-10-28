@@ -87,3 +87,4 @@ describe('notificationService', () => {
     expect(isSoundEnabled()).toBe(true);
   });
 });
+

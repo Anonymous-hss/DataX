@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from '../context/NavigationContext';
 import { useRuleEngine } from '../context/RuleEngineContext';
+import NotificationCenter from '../components/common/NotificationCenter';
 import DataXUserMenu from '../components/common/DataXUserMenu';
 import { DataXLogo } from './ThreadsPage';
 import { api } from '../services/apiClient';
@@ -154,6 +155,7 @@ export default function AuditLogViewerPage({ onSwitchToMarketing }) {
             </nav>
           </div>
           <div className="flex items-center gap-3">
+            <NotificationCenter />
             <DataXUserMenu onSwitchToMarketing={onSwitchToMarketing} />
           </div>
         </div>

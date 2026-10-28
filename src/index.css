@@ -106,3 +106,71 @@
 .virtual-canvas-node {
   contain: layout style paint;
 }
+
+/* ========================================================
+   Enterprise Dynamic Theme Engine (Dark & Light Mode)
+   ======================================================== */
+html.dark body {
+  background-color: #060A12;
+  color: #F1F5F9;
+}
+
+html.light body {
+  background-color: #F8F9FA;
+  color: #0F172A;
+}
+
+/* Dark mode overrides for dashboard screens */
+html.dark .min-h-screen.bg-\[\#F8F9FA\],
+html.dark .min-h-screen.bg-\[\#F8FAFC\],
+html.dark .min-h-screen.bg-\[\#F9FAFB\],
+html.dark div.bg-\[\#F8F9FA\],
+html.dark main.bg-\[\#F8F9FA\] {
+  background-color: #070B14 !important;
+  color: #94A3B8 !important;
+}
+
+html.dark header.bg-white,
+html.dark nav.bg-white {
+  background-color: #0D1527 !important;
+  border-color: #1E293B !important;
+  color: #E2E8F0 !important;
+}
+
+html.dark div.bg-white {
+  background-color: #0D1527 !important;
+  border-color: #1E293B !important;
+}
+
+html.dark .text-\[\#0A0F1F\] {
+  color: #F8FAFC !important;
+}
+
+html.dark .text-\[\#474E61\],
+html.dark .text-\[\#5F6678\] {
+  color: #94A3B8 !important;
+}
+
+html.dark .border-\[\#E3E6EE\],
+html.dark .border-slate-200 {
+  border-color: #1E293B !important;
+}
+
+html.dark .bg-\[\#F5F6FA\],
+html.dark .bg-slate-50 {
+  background-color: #131E36 !important;
+}
+
+html.dark .hover\:bg-\[\#F5F6FA\]:hover,
+html.dark .hover\:bg-slate-50:hover {
+  background-color: #1E293B !important;
+}
+
+html.dark input.bg-white,
+html.dark select.bg-white,
+html.dark textarea.bg-white,
+html.dark input.bg-slate-50 {
+  background-color: #0A0F1F !important;
+  border-color: #1E293B !important;
+  color: #F1F5F9 !important;
+}
