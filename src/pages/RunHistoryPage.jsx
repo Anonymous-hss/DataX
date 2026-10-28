@@ -18,7 +18,7 @@ const DataXLogo = ({ size = 28 }) => (
   </svg>
 );
 
-export default function RunHistoryPage() {
+export default function RunHistoryPage({ onSwitchToMarketing } = {}) {
   const { s4hanaDocNumber, dryRunResult, runHistory, activeThread, dynamicHealthScore } = useRuleEngine();
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');

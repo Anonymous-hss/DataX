@@ -135,7 +135,7 @@ const StartThreadDocIcon = () => (
   </svg>
 );
 
-export default function ThreadsPage() {
+export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {}) {
   const { navigateTo } = useNavigation();
   const { threads: contextThreads, selectThread, deleteThread, autoFixEnabled } = useRuleEngine();
   const [filter, setFilter] = useState('all');

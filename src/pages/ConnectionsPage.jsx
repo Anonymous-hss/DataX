@@ -89,7 +89,7 @@ const INITIAL_CONNECTIONS = [
   }
 ];
 
-export default function ConnectionsPage() {
+export default function ConnectionsPage({ onSwitchToMarketing } = {}) {
   const { navigateTo } = useNavigation();
   const { setSourceConfig } = useRuleEngine();
   const [connections, setConnections] = useState(INITIAL_CONNECTIONS);

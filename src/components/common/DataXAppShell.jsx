@@ -164,7 +164,7 @@ export default function DataXAppShell({
 
             {/* Dynamic Governance Profile & Theme Hub */}
             <div className="pl-1 border-l border-slate-200/80 dark:border-white/[0.08]">
-              <DataXUserMenu />
+              <DataXUserMenu onSwitchToMarketing={onSwitchToMarketing} />
             </div>
           </div>
         </div>
@@ -257,3 +257,4 @@ export default function DataXAppShell({
     </div>
   );
 }
+

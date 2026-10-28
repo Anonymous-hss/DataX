@@ -53,7 +53,7 @@ const SalesforceDocIcon = () => (
   </svg>
 );
 
-export default function StartAThreadPage() {
+export default function StartAThreadPage({ onSwitchToMarketing } = {}) {
   const { navigateTo } = useNavigation();
   const { selectThread, setActiveThread } = useRuleEngine();
   const [threadName, setThreadName] = useState('SAP BW → S/4HANA Clean Core');

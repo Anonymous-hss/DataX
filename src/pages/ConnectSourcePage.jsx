@@ -25,7 +25,7 @@ import DataXHeader from '../components/cleanflow/DataXHeader';
 import WorkflowCanvasBuilder from '../components/cleanflow/WorkflowCanvasBuilder';
 import { getTableCatalog, getTableData } from '../data/sampleDatasets';
 
-export default function ConnectSourcePage() {
+export default function ConnectSourcePage({ onSwitchToMarketing } = {}) {
   const { navigateTo } = useNavigation();
   const { 
     sourceConfig, 

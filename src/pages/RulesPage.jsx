@@ -88,7 +88,7 @@ const WritingRulesGraphic = () => (
   </div>
 );
 
-export default function RulesPage() {
+export default function RulesPage({ onSwitchToMarketing } = {}) {
   const { navigateTo } = useNavigation();
 
   // Screen Mode: 'generating' (Screen 4) or 'generated' (Screen 5)

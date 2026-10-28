@@ -14,7 +14,7 @@ import DescribeRulesForm from '../components/cleanflow/DescribeRulesForm';
 import GeneratedRulesList from '../components/cleanflow/GeneratedRulesList';
 import { callAiRuleEngine, getDefaultPromptForTable } from '../utils/aiRuleSynthesizer';
 
-export default function GenerateRulesPage() {
+export default function GenerateRulesPage({ onSwitchToMarketing } = {}) {
   const { navigateTo } = useNavigation();
   const { 
     sourceConfig, 

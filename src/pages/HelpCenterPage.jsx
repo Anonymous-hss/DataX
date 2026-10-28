@@ -58,7 +58,7 @@ Key points:
   }
 ];
 
-export default function HelpCenterPage() {
+export default function HelpCenterPage({ onSwitchToMarketing } = {}) {
   const { navigateTo } = useNavigation();
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');

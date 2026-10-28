@@ -354,7 +354,7 @@ const DOMAIN_PACK_CATALOG = [
   }
 ];
 
-export default function DomainPacksPage() {
+export default function DomainPacksPage({ onSwitchToMarketing } = {}) {
   const { navigateTo } = useNavigation();
   const { selectThread } = useRuleEngine();
   const [selectedCategory, setSelectedCategory] = useState('All');

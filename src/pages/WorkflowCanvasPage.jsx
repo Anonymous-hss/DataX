@@ -4,7 +4,7 @@ import { useRuleEngine } from '../context/RuleEngineContext';
 import DataXHeader from '../components/cleanflow/DataXHeader';
 import WorkflowCanvasBuilder from '../components/cleanflow/WorkflowCanvasBuilder';
 
-export default function WorkflowCanvasPage() {
+export default function WorkflowCanvasPage({ onSwitchToMarketing } = {}) {
   const { navigateTo } = useNavigation();
   const { activeThread, sourceConfig, targetConfig } = useRuleEngine();
 
