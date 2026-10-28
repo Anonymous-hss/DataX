@@ -1,3 +1,4 @@
+import Logo from "../icons/Logo";
 import React, { useState, useEffect } from 'react';
 import { 
   Activity, 
@@ -95,16 +96,20 @@ export default function DataXHeader({
           
           {/* Logo & Main Nav Tabs */}
           <div className="flex items-center gap-6">
-            <div 
-              className="flex items-center gap-2 cursor-pointer hover:opacity-85 transition-opacity" 
-              onClick={() => navigateTo('threads')}
-              title="Return to Threads dashboard"
+            <button 
+              type="button"
+              className="flex items-center gap-2.5 cursor-pointer hover:opacity-85 transition-opacity text-left shrink-0" 
+              onClick={() => navigateTo('workflows')}
+              title="Return to Workflows"
             >
-              <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center shadow-xs shadow-blue-500/30">
-                <span className="text-white font-black text-sm tracking-tight font-display">X</span>
+              <Logo size={28} />
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-slate-900 dark:text-white tracking-tight text-base font-display">DataX</span>
+                <span className="hidden xl:inline-block px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-slate-400 border border-slate-200/60 dark:border-white/[0.06]">
+                  Studio
+                </span>
               </div>
-              <span className="font-bold text-slate-900 tracking-tight text-base font-display">DataX</span>
-            </div>
+            </button>
 
             {/* Navigation Pills */}
             <nav className="hidden md:flex items-center gap-1">
@@ -140,6 +145,27 @@ export default function DataXHeader({
               >
                 <Network className={`w-3.5 h-3.5 ${currentScreen === 'connections' ? 'text-blue-600' : 'text-slate-400'}`} />
                 Connections
+              </button>
+              <button 
+                onClick={() => navigateTo('quarantine')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  currentScreen === 'quarantine'
+                    ? 'bg-[#1473E6]/10 text-[#1473E6] dark:bg-[#1473E6]/20 dark:text-[#60A5FA]'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.05]'
+                }`}
+              >
+                <span>Quarantine</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-[#B86E24]/15 text-[#B86E24] dark:bg-[#D48B3F]/20 dark:text-[#FBBF24]">14</span>
+              </button>
+              <button 
+                onClick={() => navigateTo('shadow')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  currentScreen === 'shadow'
+                    ? 'bg-[#1473E6]/10 text-[#1473E6] dark:bg-[#1473E6]/20 dark:text-[#60A5FA]'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.05]'
+                }`}
+              >
+                <span>Shadow Parity</span>
               </button>
               <button 
                 onClick={() => navigateTo('history')}

@@ -1,3 +1,4 @@
+import DataXAppShell from "../components/common/DataXAppShell";
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigation } from '../context/NavigationContext';
 import { useRuleEngine } from '../context/RuleEngineContext';
@@ -15,8 +16,8 @@ export const DataXLogo = ({ size = 32 }) => (
   <svg width={size} height={size} viewBox="0 0 64 64" fill="none" className="shrink-0">
     <rect width="64" height="64" rx="16" fill="#2D55F5" />
     <polygon points="14.5,49.5 24.5,49.5 49.5,14.5 39.5,14.5" fill="#FFFFFF" />
-    <polygon points="14.5,14.5 24.5,14.5 31.5,24.5 21.5,24.5" fill="#D4FF3A" />
-    <polygon points="32.5,39.5 42.5,39.5 49.5,49.5 39.5,49.5" fill="#D4FF3A" />
+    <polygon points="14.5,14.5 24.5,14.5 31.5,24.5 21.5,24.5" fill="#1473E6" />
+    <polygon points="32.5,39.5 42.5,39.5 49.5,49.5 39.5,49.5" fill="#1473E6" />
   </svg>
 );
 
@@ -30,7 +31,7 @@ const HeroFigmaGraphic = () => (
         <stop offset="100%" stopColor="#0B1226" stopOpacity="0" />
       </radialGradient>
       <linearGradient id="orbitBeam" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor="#D4FF3A" stopOpacity="0.7" />
+        <stop offset="0%" stopColor="#1473E6" stopOpacity="0.7" />
         <stop offset="50%" stopColor="#2D55F5" />
         <stop offset="100%" stopColor="#38BDF8" stopOpacity="0.7" />
       </linearGradient>
@@ -47,9 +48,9 @@ const HeroFigmaGraphic = () => (
     <line x1="60" y1="105" x2="380" y2="105" stroke="url(#orbitBeam)" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.7" />
 
     {/* Orbit Packet Dots */}
-    <circle cx="135" cy="72" r="3.5" fill="#D4FF3A" />
-    <circle cx="135" cy="72" r="7" fill="#D4FF3A" fillOpacity="0.2" />
-    <circle cx="170" cy="105" r="3" fill="#D4FF3A" />
+    <circle cx="135" cy="72" r="3.5" fill="#1473E6" />
+    <circle cx="135" cy="72" r="7" fill="#1473E6" fillOpacity="0.2" />
+    <circle cx="170" cy="105" r="3" fill="#1473E6" />
     <circle cx="270" cy="105" r="3" fill="#38BDF8" />
     <circle cx="305" cy="138" r="3.5" fill="#38BDF8" />
     <circle cx="305" cy="138" r="7" fill="#38BDF8" fillOpacity="0.2" />
@@ -59,7 +60,7 @@ const HeroFigmaGraphic = () => (
       <path d="M-20 -18 C-20 -25 20 -25 20 -18 V14 C20 21 -20 21 -20 14 Z" fill="#0C1428" stroke="#486299" strokeWidth="1.75" />
       <path d="M-20 -5 C-20 2 20 2 20 -5" stroke="#486299" strokeWidth="1.5" fill="none" />
       <path d="M-20 5 C-20 12 20 12 20 5" stroke="#486299" strokeWidth="1.5" fill="none" />
-      <ellipse cx="0" cy="-18" rx="20" ry="7" fill="#132142" stroke="#D4FF3A" strokeWidth="2.5" />
+      <ellipse cx="0" cy="-18" rx="20" ry="7" fill="#132142" stroke="#1473E6" strokeWidth="2.5" />
     </g>
 
     {/* Central Node: Glowing DataX Squircle matching User Brand Logo */}
@@ -68,8 +69,8 @@ const HeroFigmaGraphic = () => (
       <rect x="-32" y="-32" width="64" height="64" rx="16" fill="#2D55F5" stroke="#6084FF" strokeWidth="1.75" />
       <g transform="translate(-32, -32)">
         <polygon points="14.5,49.5 24.5,49.5 49.5,14.5 39.5,14.5" fill="#FFFFFF" />
-        <polygon points="14.5,14.5 24.5,14.5 31.5,24.5 21.5,24.5" fill="#D4FF3A" />
-        <polygon points="32.5,39.5 42.5,39.5 49.5,49.5 39.5,49.5" fill="#D4FF3A" />
+        <polygon points="14.5,14.5 24.5,14.5 31.5,24.5 21.5,24.5" fill="#1473E6" />
+        <polygon points="32.5,39.5 42.5,39.5 49.5,49.5 39.5,49.5" fill="#1473E6" />
       </g>
     </g>
 
@@ -226,177 +227,7 @@ export default function ThreadsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#474E61] font-sans antialiased">
-      {/* Top Universal Navbar */}
-      <header className="w-full bg-white border-b border-[#E3E6EE] sticky top-0 z-40">
-        <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          <div className="flex min-w-0 shrink items-center gap-3 2xl:gap-7">
-            {/* User Provided Brand Logo */}
-            <Link to="threads" className="flex shrink-0 items-center gap-2.5">
-              <DataXLogo size={32} />
-              <span className="font-bold text-[#0A0F1F] tracking-tight text-[18px]">DataX</span>
-            </Link>
-
-            {/* Navigation Pills */}
-            <nav className="hidden xl:flex min-w-0 items-center gap-1 2xl:gap-1.5">
-              <Link
-                to="workflows"
-                className="px-2 2xl:px-3.5 py-1.5 text-xs font-semibold rounded-full bg-[#EEF2FF] text-[#2D55F5] flex items-center gap-1.5 transition-all"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                </svg>
-                Workflows
-              </Link>
-              <Link
-                to="templates"
-                className="px-2 2xl:px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                  <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                  <polyline points="2 17 12 22 22 17" />
-                  <polyline points="2 12 12 17 22 12" />
-                </svg>
-                Templates
-              </Link>
-              <Link
-                to="connections"
-                className="px-2 2xl:px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                  <rect x="2" y="2" width="6" height="6" rx="1.5" />
-                  <rect x="16" y="2" width="6" height="6" rx="1.5" />
-                  <rect x="9" y="16" width="6" height="6" rx="1.5" />
-                  <path d="M5 8v3a2 2 0 002 2h10a2 2 0 002-2V8" />
-                  <path d="M12 13v3" />
-                </svg>
-                Connections
-              </Link>
-              <Link
-                to="history"
-                className="px-2 2xl:px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg>
-                Runs
-              </Link>
-              <Link
-                to="quarantine"
-                className="px-2 2xl:px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                Quarantine
-              </Link>
-              <Link
-                to="audit"
-                className="px-2 2xl:px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                  <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Audit Trail
-              </Link>
-              <Link
-                to="shadow"
-                className="px-2 2xl:px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                  <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                  <polyline points="2 17 12 22 22 17" />
-                  <polyline points="2 12 12 17 22 12" />
-                </svg>
-                Shadow Parity
-              </Link>
-              <Link
-                to="roi"
-                className="px-2 2xl:px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
-                </svg>
-                Executive ROI
-              </Link>
-              <Link
-                to="settings"
-                className="px-2 2xl:px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
-                </svg>
-                Settings
-              </Link>
-              <Link
-                to="help"
-                className="px-2 2xl:px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
-              >
-                <span className="w-3.5 h-3.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-600 font-bold flex items-center justify-center text-[10px]">
-                  ?
-                </span>
-                Help
-              </Link>
-            </nav>
-          </div>
-
-          {/* Search, Notifications & Avatar */}
-          <div className="flex min-w-0 shrink-0 items-center gap-2.5 xl:gap-3">
-            <div 
-              onClick={() => setSearchModalOpen(true)}
-              className="relative hidden 2xl:flex w-64 min-w-0 items-center cursor-pointer"
-            >
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8E95A9]">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-              </span>
-              <input
-                type="text"
-                readOnly
-                placeholder="Search workflows, tables (⌘K)..."
-                className="w-full min-w-0 pl-9 pr-10 py-1.5 bg-[#F5F6FA] border border-[#E3E6EE] rounded-full text-xs text-[#0A0F1F] placeholder:text-[#8E95A9] hover:bg-slate-100 cursor-pointer transition-all"
-              />
-              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono text-[#8E95A9] bg-[#E3E6EE] px-1 py-0.5 rounded">
-                ⌘K
-              </kbd>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setSearchModalOpen(true)}
-              title="Search workflows, tables, and rules"
-              aria-label="Search workflows, tables, and rules"
-              className="w-8 h-8 2xl:hidden shrink-0 rounded-full flex items-center justify-center text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] transition-colors cursor-pointer"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-            </button>
-
-            {/* Help / Onboarding Icon */}
-            <button
-              onClick={() => setOnboardingOpen(true)}
-              title="First-Run Onboarding Guide"
-              className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] transition-colors cursor-pointer"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                <line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="2.5" />
-              </svg>
-            </button>
-
-            {/* In-App Notification Center */}
-            <NotificationCenter />
-
-            {/* Dynamic Enterprise User Profile Section */}
-            <DataXUserMenu />
-          </div>
-        </div>
-      </header>
+    <DataXAppShell onSwitchToMarketing={onSwitchToMarketing}>
 
       {/* Main Content Area */}
       <main className="max-w-[1360px] mx-auto px-6 py-8 space-y-7">
@@ -424,7 +255,7 @@ export default function ThreadsPage() {
 
           <div className="max-w-2xl relative z-10">
             {/* Tag */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4FF3A] text-[#0A0F1F] font-bold text-xs tracking-tight">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1473E6] text-[#0A0F1F] font-bold text-xs tracking-tight">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="#0A0F1F">
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
               </svg>
@@ -440,7 +271,7 @@ export default function ThreadsPage() {
             {/* Stepper */}
             <div className="flex flex-wrap items-center gap-3 mt-5 text-xs md:text-sm text-[#C5CCE0]">
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-[#D4FF3A] text-[#0A0F1F] font-bold text-[11px] flex items-center justify-center shrink-0">
+                <span className="w-5 h-5 rounded-full bg-[#1473E6] text-[#0A0F1F] font-bold text-[11px] flex items-center justify-center shrink-0">
                   1
                 </span>
                 <span>Connect a source</span>
@@ -449,7 +280,7 @@ export default function ThreadsPage() {
                 <polyline points="9 18 15 12 9 6" />
               </svg>
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-[#D4FF3A] text-[#0A0F1F] font-bold text-[11px] flex items-center justify-center shrink-0">
+                <span className="w-5 h-5 rounded-full bg-[#1473E6] text-[#0A0F1F] font-bold text-[11px] flex items-center justify-center shrink-0">
                   2
                 </span>
                 <span>Generate rules with AI</span>
@@ -458,7 +289,7 @@ export default function ThreadsPage() {
                 <polyline points="9 18 15 12 9 6" />
               </svg>
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-[#D4FF3A] text-[#0A0F1F] font-bold text-[11px] flex items-center justify-center shrink-0">
+                <span className="w-5 h-5 rounded-full bg-[#1473E6] text-[#0A0F1F] font-bold text-[11px] flex items-center justify-center shrink-0">
                   3
                 </span>
                 <span>Test, then run live</span>
@@ -475,7 +306,7 @@ export default function ThreadsPage() {
                 <p className="text-[11px] font-medium text-[#8F9BB3]">Mean data health</p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-[18px] md:text-[20px] font-bold text-white">{meanHealth}%</span>
-                  <span className="bg-[#D4FF3A] text-[#0A0F1F] text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  <span className="bg-[#1473E6] text-[#0A0F1F] text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                     {meanHealth >= 90 ? 'A+' : meanHealth >= 80 ? 'B+' : 'C'}
                   </span>
                 </div>
@@ -486,7 +317,7 @@ export default function ThreadsPage() {
               </div>
               <div className="px-3 last:pr-1">
                 <p className="text-[11px] font-medium text-[#8F9BB3]">Auto-fix</p>
-                <p className="text-[18px] md:text-[20px] font-bold text-[#D4FF3A] mt-0.5">
+                <p className="text-[18px] md:text-[20px] font-bold text-[#1473E6] mt-0.5">
                   {autoFixEnabled ? 'On' : 'Off'}
                 </p>
               </div>
@@ -737,6 +568,6 @@ export default function ThreadsPage() {
         onConfirm={handleConfirmDelete}
         onCancel={() => setThreadToDelete(null)}
       />
-    </div>
+    </DataXAppShell>
   );
 }

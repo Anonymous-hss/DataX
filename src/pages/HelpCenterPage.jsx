@@ -1,3 +1,4 @@
+import DataXAppShell from "../components/common/DataXAppShell";
 import React, { useState } from 'react';
 import { useNavigation } from '../context/NavigationContext';
 import { api, API_BASE_URL } from '../services/apiClient';
@@ -103,42 +104,7 @@ export default function HelpCenterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] text-[#0A0F1F]">
-      {/* Header */}
-      <header className="border-b border-[#E5E7EB] bg-white sticky top-0 z-30 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigateTo('threads')}
-              className="p-2 -ml-2 text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] rounded-lg transition-colors"
-              title="Back to Workflows"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M19 12H5M12 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 font-bold text-sm">
-              ?
-            </div>
-            <div>
-              <h1 className="text-base font-semibold text-[#0A0F1F]">Help Centre & Knowledge Base</h1>
-              <p className="text-xs text-[#5F6678]">Documentation, standard operating procedures, and product support</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <a
-              href={`${API_BASE_URL}/status/public`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              System Status: 99.98%
-            </a>
-          </div>
-        </div>
-      </header>
+    <DataXAppShell onSwitchToMarketing={onSwitchToMarketing}>
 
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-6 py-8">
@@ -348,6 +314,6 @@ export default function HelpCenterPage() {
           </div>
         </div>
       </main>
-    </div>
+    </DataXAppShell>
   );
 }

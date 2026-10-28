@@ -1,3 +1,4 @@
+import DataXAppShell from "../components/common/DataXAppShell";
 import React, { useState, useEffect } from 'react';
 import { Link } from '../context/NavigationContext';
 import { useRuleEngine } from '../context/RuleEngineContext';
@@ -12,8 +13,8 @@ const DataXLogo = ({ size = 28 }) => (
   <svg width={size} height={size} viewBox="0 0 64 64" fill="none" className="shrink-0">
     <rect width="64" height="64" rx="16" fill="#2D55F5" />
     <polygon points="14.5,49.5 24.5,49.5 49.5,14.5 39.5,14.5" fill="#FFFFFF" />
-    <polygon points="14.5,14.5 24.5,14.5 31.5,24.5 21.5,24.5" fill="#D4FF3A" />
-    <polygon points="32.5,39.5 42.5,39.5 49.5,49.5 39.5,49.5" fill="#D4FF3A" />
+    <polygon points="14.5,14.5 24.5,14.5 31.5,24.5 21.5,24.5" fill="#1473E6" />
+    <polygon points="32.5,39.5 42.5,39.5 49.5,49.5 39.5,49.5" fill="#1473E6" />
   </svg>
 );
 
@@ -114,29 +115,7 @@ export default function RunHistoryPage() {
   const pagedRuns = filteredRuns.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#474E61] font-sans antialiased flex flex-col">
-      {/* Top Navbar */}
-      <header className="w-full bg-white border-b border-[#E3E6EE] sticky top-0 z-40">
-        <div className="max-w-[1360px] mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to="threads" className="flex items-center gap-2.5">
-              <DataXLogo size={32} />
-              <span className="font-bold text-[#0A0F1F] tracking-tight text-[18px]">DataX</span>
-            </Link>
-            <span className="text-[#CDD2DE] font-light">/</span>
-            <span className="text-sm font-semibold text-[#0A0F1F]">Execution History & Analytics</span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link to="threads">
-              <Button variant="primary" size="md">
-                ← Return to Threads
-              </Button>
-            </Link>
-            <DataXUserMenu />
-          </div>
-        </div>
-      </header>
+    <DataXAppShell showContextBar={true} onSwitchToMarketing={onSwitchToMarketing}>
 
       {/* Main Content Area */}
       <main className="max-w-[1360px] w-full mx-auto px-6 py-8 flex-1 flex flex-col gap-7">
@@ -209,7 +188,7 @@ export default function RunHistoryPage() {
                 <span className="w-3 h-3 rounded-[3px] bg-[#2D55F5]" /> Clean Ingestion
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-[3px] bg-[#D4FF3A]" /> Auto-Remediated
+                <span className="w-3 h-3 rounded-[3px] bg-[#1473E6]" /> Auto-Remediated
               </span>
             </div>
           </div>
@@ -233,7 +212,7 @@ export default function RunHistoryPage() {
                       {d.total} runs
                     </span>
                     <div className="w-full max-w-[42px] flex flex-col justify-end rounded-[6px] overflow-hidden bg-[#F5F6FA] h-full">
-                      <div style={{ height: remediatedHeight }} className="w-full bg-[#D4FF3A] transition-all" />
+                      <div style={{ height: remediatedHeight }} className="w-full bg-[#1473E6] transition-all" />
                       <div style={{ height: cleanHeight }} className="w-full bg-[#2D55F5] transition-all" />
                     </div>
                     <span className="text-xs font-semibold text-[#5F6678] mt-1">{d.day}</span>
@@ -501,6 +480,6 @@ export default function RunHistoryPage() {
           </Link>
         </div>
       </div>
-    </div>
+    </DataXAppShell>
   );
 }

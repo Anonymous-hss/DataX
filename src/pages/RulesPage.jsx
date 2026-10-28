@@ -1,3 +1,4 @@
+import DataXAppShell from "../components/common/DataXAppShell";
 import React, { useState, useEffect } from 'react';
 import { GitBranch } from 'lucide-react';
 import { Link, useNavigation } from '../context/NavigationContext';
@@ -12,8 +13,8 @@ const DataXLogo = ({ size = 32 }) => (
   <svg width={size} height={size} viewBox="0 0 64 64" fill="none" className="shrink-0">
     <rect width="64" height="64" rx="16" fill="#2D55F5" />
     <polygon points="14.5,49.5 24.5,49.5 49.5,14.5 39.5,14.5" fill="#FFFFFF" />
-    <polygon points="14.5,14.5 24.5,14.5 31.5,24.5 21.5,24.5" fill="#D4FF3A" />
-    <polygon points="32.5,39.5 42.5,39.5 49.5,49.5 39.5,49.5" fill="#D4FF3A" />
+    <polygon points="14.5,14.5 24.5,14.5 31.5,24.5 21.5,24.5" fill="#1473E6" />
+    <polygon points="32.5,39.5 42.5,39.5 49.5,49.5 39.5,49.5" fill="#1473E6" />
   </svg>
 );
 
@@ -80,7 +81,7 @@ const WritingRulesGraphic = () => (
 
     {/* Sparkle badge in blue squircle with yellow cross/star */}
     <div className="absolute -top-1 -right-1 w-9 h-9 rounded-full bg-[#2D55F5] border-2 border-white shadow-md flex items-center justify-center z-20">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="#D4FF3A">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#1473E6">
         <polygon points="12 2 15 9 22 12 15 15 12 22 9 15 2 12 9 9" />
       </svg>
     </div>
@@ -302,116 +303,7 @@ export default function RulesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#474E61] font-sans antialiased flex flex-col justify-between relative selection:bg-[#2D55F5]/15 selection:text-[#2D55F5]">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed top-5 right-6 z-50 bg-[#0A0F1F] text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg border border-white/10 flex items-center gap-2 animate-fade-in">
-          <span className="w-2 h-2 rounded-full bg-[#D4FF3A]" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
-
-      {/* 1. Universal Top Navbar (Figma Exact) */}
-      <header className="w-full bg-white border-b border-[#E3E6EE] sticky top-0 z-40">
-        <div className="max-w-[1360px] mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-7">
-            {/* Logo */}
-            <Link to="threads" className="flex items-center gap-2.5">
-              <DataXLogo size={32} />
-              <span className="font-bold text-[#0A0F1F] tracking-tight text-[18px]">DataX</span>
-            </Link>
-
-            {/* Nav Pills */}
-            <nav className="hidden md:flex items-center gap-1.5">
-              <Link
-                to="threads"
-                className="px-3.5 py-1.5 text-xs font-semibold rounded-full bg-[#EEF2FF] text-[#2D55F5] flex items-center gap-1.5 transition-all"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                </svg>
-                Threads
-              </Link>
-              <Link
-                to="domain-packs"
-                className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                  <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                  <polyline points="2 17 12 22 22 17" />
-                  <polyline points="2 12 12 17 22 12" />
-                </svg>
-                Domain packs
-              </Link>
-              <Link
-                to="connections"
-                className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                  <rect x="2" y="2" width="6" height="6" rx="1.5" />
-                  <rect x="16" y="2" width="6" height="6" rx="1.5" />
-                  <rect x="9" y="16" width="6" height="6" rx="1.5" />
-                  <path d="M5 8v3a2 2 0 002 2h10a2 2 0 002-2V8" />
-                  <path d="M12 13v3" />
-                </svg>
-                Connections
-              </Link>
-              <Link
-                to="history"
-                className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg>
-                Runs
-              </Link>
-            </nav>
-          </div>
-
-          {/* Right: Search, Notifications & Avatar */}
-          <div className="flex items-center gap-4">
-            <div className="relative hidden sm:block">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8E95A9]">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-              </span>
-              <input
-                type="text"
-                placeholder="Search threads, tables…"
-                className="w-64 pl-9 pr-3.5 py-1.5 bg-[#F5F6FA] border border-[#E3E6EE] rounded-full text-xs text-[#0A0F1F] placeholder:text-[#8E95A9] focus:outline-none focus:border-[#2D55F5] focus:bg-white transition-all"
-              />
-            </div>
-
-            <button
-              onClick={() => showToast('Intelligence Engine: Describe your validation rules in plain English.')}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] transition-colors cursor-pointer"
-              title="Help"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                <line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="2.5" />
-              </svg>
-            </button>
-
-            <button
-              onClick={() => showToast('No unread notifications.')}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] transition-colors cursor-pointer"
-              title="Notifications"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-            </button>
-
-            <DataXUserMenu />
-          </div>
-        </div>
-      </header>
+    <DataXAppShell showContextBar={true} onSwitchToMarketing={onSwitchToMarketing}>
 
       {/* 2. Thread Sub-header Bar (Figma Exact) */}
       <div className="w-full bg-white border-b border-[#E3E6EE] px-6 py-3">
@@ -1088,6 +980,6 @@ export default function RulesPage() {
         isOpen={versioningModalOpen}
         onClose={() => setVersioningModalOpen(false)}
       />
-    </div>
+    </DataXAppShell>
   );
 }

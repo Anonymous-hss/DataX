@@ -1,3 +1,4 @@
+import DataXAppShell from "../components/common/DataXAppShell";
 import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, 
@@ -185,67 +186,7 @@ export default function ShadowReconcilerPage({ onSwitchToMarketing }) {
   });
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#474E61] font-sans antialiased">
-      {/* Universal Top Navigation Bar */}
-      <header className="w-full bg-white border-b border-[#E3E6EE] sticky top-0 z-40">
-        <div className="max-w-[1360px] mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-7">
-            <Link to="threads" className="flex items-center gap-2.5">
-              <DataXLogo size={32} />
-              <span className="font-bold text-[#0A0F1F] tracking-tight text-[18px]">DataX</span>
-            </Link>
-            <nav className="hidden xl:flex min-w-0 items-center gap-1 2xl:gap-1.5">
-              <Link to="workflows" className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5">
-                Workflows
-              </Link>
-              <Link to="templates" className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5">
-                Templates
-              </Link>
-              <Link to="connections" className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5">
-                Connections
-              </Link>
-              <Link to="history" className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5">
-                Runs
-              </Link>
-              <Link to="quarantine" className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                Quarantine
-              </Link>
-              <Link to="audit" className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5">
-                Audit Trail
-              </Link>
-              <Link to="shadow" className="px-3.5 py-1.5 text-xs font-semibold rounded-full bg-[#EEF2FF] text-[#2D55F5] flex items-center gap-1.5">
-                <Scale className="w-3.5 h-3.5 text-[#2D55F5]" />
-                Shadow Parity
-              </Link>
-              <Link
-                to="roi"
-                className="px-2 2xl:px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
-                </svg>
-                Executive ROI
-              </Link>
-              <Link to="settings" className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5">
-                Settings
-              </Link>
-            </nav>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigateTo('canvas')}
-              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <span>Canvas Builder</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-            <NotificationCenter />
-            <DataXUserMenu />
-          </div>
-        </div>
-      </header>
+    <DataXAppShell showContextBar={true} onSwitchToMarketing={onSwitchToMarketing}>
 
       {/* Main Container */}
       <main className="max-w-[1360px] mx-auto px-6 py-8 space-y-6">
@@ -652,6 +593,6 @@ export default function ShadowReconcilerPage({ onSwitchToMarketing }) {
           </div>
         )}
       </main>
-    </div>
+    </DataXAppShell>
   );
 }

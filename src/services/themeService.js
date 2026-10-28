@@ -110,3 +110,4 @@ export function subscribeToThemeChanges(callback) {
 if (typeof window !== 'undefined') {
   applyTheme(getStoredTheme());
 }
+

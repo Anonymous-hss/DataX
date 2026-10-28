@@ -1,3 +1,4 @@
+import DataXAppShell from "../components/common/DataXAppShell";
 import React, { useState } from 'react';
 import { Link, useNavigation } from '../context/NavigationContext';
 import { useRuleEngine } from '../context/RuleEngineContext';
@@ -12,8 +13,8 @@ const DataXLogo = ({ size = 32 }) => (
   <svg width={size} height={size} viewBox="0 0 64 64" fill="none" className="shrink-0">
     <rect width="64" height="64" rx="16" fill="#2D55F5" />
     <polygon points="14.5,49.5 24.5,49.5 49.5,14.5 39.5,14.5" fill="#FFFFFF" />
-    <polygon points="14.5,14.5 24.5,14.5 31.5,24.5 21.5,24.5" fill="#D4FF3A" />
-    <polygon points="32.5,39.5 42.5,39.5 49.5,49.5 39.5,49.5" fill="#D4FF3A" />
+    <polygon points="14.5,14.5 24.5,14.5 31.5,24.5 21.5,24.5" fill="#A5C8FF" />
+    <polygon points="32.5,39.5 42.5,39.5 49.5,49.5 39.5,49.5" fill="#A5C8FF" />
   </svg>
 );
 
@@ -148,71 +149,7 @@ export default function StartAThreadPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#474E61] font-sans antialiased flex flex-col justify-between">
-      {/* Top Universal Navbar */}
-      <header className="w-full bg-white border-b border-[#E3E6EE] sticky top-0 z-40">
-        <div className="max-w-[1360px] mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-7">
-            {/* Logo */}
-            <Link to="threads" className="flex items-center gap-2.5">
-              <DataXLogo size={32} />
-              <span className="font-bold text-[#0A0F1F] tracking-tight text-[18px]">DataX</span>
-            </Link>
-
-            {/* Navigation Pills */}
-            <nav className="hidden md:flex items-center gap-1.5">
-              <Link
-                to="workflows"
-                className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                </svg>
-                Workflows
-              </Link>
-              <Link
-                to="templates"
-                className="px-3.5 py-1.5 text-xs font-semibold rounded-full bg-[#EEF2FF] text-[#2D55F5] flex items-center gap-1.5 transition-all"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                  <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                  <polyline points="2 17 12 22 22 17" />
-                  <polyline points="2 12 12 17 22 12" />
-                </svg>
-                Templates
-              </Link>
-              <Link
-                to="connections"
-                className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                  <rect x="2" y="2" width="6" height="6" rx="1.5" />
-                  <rect x="16" y="2" width="6" height="6" rx="1.5" />
-                  <rect x="9" y="16" width="6" height="6" rx="1.5" />
-                  <path d="M5 8v3a2 2 0 002 2h10a2 2 0 002-2V8" />
-                  <path d="M12 13v3" />
-                </svg>
-                Connections
-              </Link>
-              <Link
-                to="history"
-                className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5 transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg>
-                Runs
-              </Link>
-            </nav>
-          </div>
-
-          {/* User Profile */}
-          <div className="flex items-center gap-3">
-            <DataXUserMenu />
-          </div>
-        </div>
-      </header>
+    <DataXAppShell onSwitchToMarketing={onSwitchToMarketing}>
 
       {/* Sub-header with Back Arrow, Draft Tag, and Not Saved Yet */}
       <div className="w-full bg-white border-b border-[#E3E6EE] px-6 h-12 flex items-center">
@@ -372,6 +309,6 @@ export default function StartAThreadPage() {
           </div>
         </div>
       </footer>
-    </div>
+    </DataXAppShell>
   );
 }

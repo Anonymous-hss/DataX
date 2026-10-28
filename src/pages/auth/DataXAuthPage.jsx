@@ -17,10 +17,10 @@ import { useAuth } from '../../context/AuthContext';
 
 const DataXLogo = ({ size = 36 }) => (
   <svg width={size} height={size} viewBox="0 0 64 64" fill="none" className="shrink-0">
-    <rect width="64" height="64" rx="16" fill="#2D55F5" />
+    <rect width="64" height="64" rx="16" fill="#1473E6" />
     <polygon points="14.5,49.5 24.5,49.5 49.5,14.5 39.5,14.5" fill="#FFFFFF" />
-    <polygon points="14.5,14.5 24.5,14.5 31.5,24.5 21.5,24.5" fill="#D4FF3A" />
-    <polygon points="32.5,39.5 42.5,39.5 49.5,49.5 39.5,49.5" fill="#D4FF3A" />
+    <polygon points="14.5,14.5 24.5,14.5 31.5,24.5 21.5,24.5" fill="#A5C8FF" />
+    <polygon points="32.5,39.5 42.5,39.5 49.5,49.5 39.5,49.5" fill="#A5C8FF" />
   </svg>
 );
 
@@ -76,7 +76,7 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
   };
 
   return (
-    <div className="min-h-screen bg-[#070B14] text-slate-100 flex flex-col justify-between font-sans relative overflow-hidden">
+    <div className="min-h-screen bg-[#141416] text-slate-100 flex flex-col justify-between font-sans relative overflow-hidden">
       {/* Dynamic ambient glow effects */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-blue-600/15 via-indigo-600/5 to-transparent blur-3xl pointer-events-none" />
       <div className="absolute -bottom-24 -left-24 w-[450px] h-[450px] bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -138,7 +138,7 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
               <button
                 type="button"
                 onClick={() => { window.location.hash = '#threads'; }}
-                className="w-full py-2.5 px-4 rounded-xl bg-[#2D55F5] hover:bg-blue-600 text-white font-semibold text-xs transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-4 rounded-xl bg-[#1473E6] hover:bg-blue-600 text-white font-semibold text-xs transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
               >
                 <span>Launch DataX Workspace</span>
                 <span>→</span>
@@ -173,7 +173,7 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
                 type="button"
                 onClick={() => switchMode('login')}
                 className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                  mode === 'login' ? 'bg-[#2D55F5] text-white shadow-md' : 'text-slate-400 hover:text-white'
+                  mode === 'login' ? 'bg-[#1473E6] text-white shadow-md' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 Sign In
@@ -182,7 +182,7 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
                 type="button"
                 onClick={() => switchMode('register')}
                 className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                  mode === 'register' ? 'bg-[#2D55F5] text-white shadow-md' : 'text-slate-400 hover:text-white'
+                  mode === 'register' ? 'bg-[#1473E6] text-white shadow-md' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 Register
@@ -251,7 +251,7 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full mt-2 bg-[#2D55F5] hover:bg-blue-600 text-white text-xs font-semibold rounded-xl py-2.5 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                className="w-full mt-2 bg-[#1473E6] hover:bg-blue-600 text-white text-xs font-semibold rounded-xl py-2.5 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {isSubmitting ? (
                   <>

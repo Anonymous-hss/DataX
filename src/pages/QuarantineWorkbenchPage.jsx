@@ -1,3 +1,4 @@
+import DataXAppShell from "../components/common/DataXAppShell";
 import React, { useState, useEffect } from 'react';
 import { Link } from '../context/NavigationContext';
 import { useRuleEngine } from '../context/RuleEngineContext';
@@ -196,49 +197,7 @@ export default function QuarantineWorkbenchPage({ onSwitchToMarketing }) {
   });
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#474E61] font-sans antialiased">
-      {/* Universal Top Navbar */}
-      <header className="w-full bg-white border-b border-[#E3E6EE] sticky top-0 z-40">
-        <div className="max-w-[1360px] mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-7">
-            <Link to="threads" className="flex items-center gap-2.5">
-              <DataXLogo size={32} />
-              <span className="font-bold text-[#0A0F1F] tracking-tight text-[18px]">DataX</span>
-            </Link>
-            <nav className="hidden md:flex items-center gap-1.5">
-              <Link to="workflows" className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5">
-                Workflows
-              </Link>
-              <Link to="templates" className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5">
-                Templates
-              </Link>
-              <Link to="connections" className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5">
-                Connections
-              </Link>
-              <Link to="quarantine" className="px-3.5 py-1.5 text-xs font-semibold rounded-full bg-[#FFF4E3] text-[#A35600] flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                Quarantine Workbench
-              </Link>
-              <Link to="audit" className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5">
-                Audit Trail
-              </Link>
-              <Link to="shadow" className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5">
-                Shadow Parity
-              </Link>
-              <Link to="roi" className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5">
-                Executive ROI
-              </Link>
-              <Link to="settings" className="px-3.5 py-1.5 text-xs font-medium rounded-full text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] flex items-center gap-1.5">
-                Settings
-              </Link>
-            </nav>
-          </div>
-          <div className="flex items-center gap-3">
-            <NotificationCenter />
-            <DataXUserMenu onSwitchToMarketing={onSwitchToMarketing} />
-          </div>
-        </div>
-      </header>
+    <DataXAppShell showContextBar={true} onSwitchToMarketing={onSwitchToMarketing}>
 
       {/* Main Container */}
       <main className="max-w-[1360px] mx-auto px-6 py-8">
@@ -537,6 +496,6 @@ export default function QuarantineWorkbenchPage({ onSwitchToMarketing }) {
           </div>
         </div>
       </main>
-    </div>
+    </DataXAppShell>
   );
 }

@@ -1,3 +1,4 @@
+import DataXAppShell from "../components/common/DataXAppShell";
 import React from 'react';
 import { Compass, ArrowLeft, Home, HelpCircle, Layers } from 'lucide-react';
 import { useNavigation } from '../context/NavigationContext';
@@ -6,7 +7,8 @@ export default function NotFoundPage({ attemptedScreen, onSwitchToMarketing }) {
   const { navigateTo } = useNavigation();
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col justify-between">
+    <DataXAppShell onSwitchToMarketing={onSwitchToMarketing}>
+<div className="min-h-screen bg-transparent text-slate-800 dark:text-slate-200 flex flex-col justify-between">
       {/* Top Header */}
       <header className="border-b border-slate-800 bg-slate-950/60 backdrop-blur-md px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -82,5 +84,6 @@ export default function NotFoundPage({ attemptedScreen, onSwitchToMarketing }) {
         DataX Clean Core Pipeline Studio • Autonomous Enterprise Data Operations
       </footer>
     </div>
+</DataXAppShell>
   );
 }
