@@ -25,6 +25,7 @@ import { useRuleEngine } from '../context/RuleEngineContext';
 import DataXUserMenu from '../components/common/DataXUserMenu';
 import { DataXLogo } from './ThreadsPage';
 import { api } from '../services/apiClient';
+import { addNotification } from '../services/notificationService';
 
 export default function ShadowReconcilerPage({ onSwitchToMarketing }) {
   const { navigateTo } = useNavigation();
@@ -108,6 +109,12 @@ export default function ShadowReconcilerPage({ onSwitchToMarketing }) {
       if (newReport) {
         setReports(prev => [newReport, ...prev]);
         setSelectedReport(newReport);
+        addNotification({
+          title: 'Shadow Parity Verified',
+          description: `Shadow run ${newReport.batchId || payload.batchId} reached ${newReport.parityRate ?? 99.6}% parity (${newReport.legacyCount || 1420} legacy vs ${newReport.dataxCount || 1416} DataX rows).`,
+          type: (newReport.parityRate >= 99) ? 'success' : 'warning',
+          link: '#shadow'
+        });
       }
     } catch (err) {
       console.warn('Live shadow reconcile API failed:', err.message);

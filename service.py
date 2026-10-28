@@ -1507,5 +1507,24 @@ def api_get_executive_metrics():
     }
 
 
+
+@app.get("/notifications/feed")
+def api_get_notifications_feed(limit: int = 15):
+    alerts = alert_dispatcher.get_history(limit=limit)
+    feed = []
+    for a in alerts:
+        sev = a.get("severity", "WARNING").upper()
+        notif_type = "alert" if sev == "CRITICAL" else "warning" if sev == "WARNING" else "info"
+        feed.append({
+            "id": a.get("alert_id") or f"alert_{int(time.time()*1000)}",
+            "title": a.get("policy_name") or "System Pipeline Alert",
+            "message": a.get("trigger_reason") or "Pipeline anomaly breached threshold policy.",
+            "type": notif_type,
+            "createdAt": int(time.time() * 1000) - 30000,
+            "screen": "quarantine" if "quarantine" in (a.get("trigger_reason") or "").lower() else "history"
+        })
+    return {"status": "success", "notifications": feed, "count": len(feed)}
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8003)

@@ -4,6 +4,7 @@ import { useRuleEngine } from '../context/RuleEngineContext';
 import DataXUserMenu from '../components/common/DataXUserMenu';
 import { DataXLogo } from './ThreadsPage';
 import { api, API_BASE_URL } from '../services/apiClient';
+import { addNotification } from '../services/notificationService';
 
 export default function QuarantineWorkbenchPage({ onSwitchToMarketing }) {
   const { activeThread } = useRuleEngine();
@@ -153,6 +154,12 @@ export default function QuarantineWorkbenchPage({ onSwitchToMarketing }) {
         editedPayload: modifiedData
       });
       setNotification({ type: 'success', text: `Record ${recordId} successfully resolved via action '${action}'.` });
+      addNotification({
+        title: 'Quarantine Record Remediated',
+        description: `Record #${recordId} processed via action '${action}' with cryptographic audit trail.`,
+        type: 'success',
+        link: '#quarantine'
+      });
       setRecords(prev => {
         const next = prev.filter(r => r.id !== recordId && r.recordId !== recordId);
         if (next.length > 0 && (selectedRecord?.id === recordId || selectedRecord?.recordId === recordId)) {

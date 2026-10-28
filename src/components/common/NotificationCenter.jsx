@@ -1,55 +1,66 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, CheckCheck, Trash2, AlertTriangle, CheckCircle2, Clock, X, ExternalLink } from 'lucide-react';
+import { 
+  Bell, 
+  CheckCheck, 
+  Trash2, 
+  AlertTriangle, 
+  CheckCircle2, 
+  Clock, 
+  Volume2, 
+  VolumeX, 
+  Zap, 
+  ExternalLink 
+} from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
-
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: 'notif_1',
-    title: 'Pipeline Run Completed',
-    message: 'Autonomous SAP PO pipeline executed with 98.4% health score (1,420 rows validated).',
-    type: 'success',
-    timestamp: '2 mins ago',
-    screen: 'history',
-    read: false
-  },
-  {
-    id: 'notif_2',
-    title: 'Quarantine Review Pending',
-    message: '7 records isolated in quarantine require Lead Data Steward sign-off.',
-    type: 'warning',
-    timestamp: '15 mins ago',
-    screen: 'live-auto-fix',
-    read: false
-  },
-  {
-    id: 'notif_3',
-    title: 'Distribution Drift Detected',
-    message: 'Material Category MARA experienced 24.5% distribution shift from baseline.',
-    type: 'alert',
-    timestamp: '1 hour ago',
-    screen: 'history',
-    read: false
-  }
-];
+import { 
+  getStoredNotifications, 
+  markAsRead, 
+  markAllAsRead, 
+  clearAllNotifications, 
+  subscribeToNotifications, 
+  syncBackendAlerts, 
+  formatRelativeTime,
+  addNotification,
+  isSoundEnabled,
+  setSoundEnabled,
+  playNotificationSound
+} from '../../services/notificationService';
 
 export default function NotificationCenter() {
   const { navigateTo } = useNavigation();
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState(() => {
-    try {
-      const saved = localStorage.getItem('datax_notifications');
-      return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
-    } catch {
-      return INITIAL_NOTIFICATIONS;
-    }
-  });
+  const [notifications, setNotifications] = useState(getStoredNotifications);
   const [filter, setFilter] = useState('all'); // 'all' | 'unread'
+  const [soundOn, setSoundOn] = useState(isSoundEnabled);
+  const [, setTick] = useState(0); // Forces re-render for relative times
   const menuRef = useRef(null);
 
+  // Subscribe to live notification dispatches & storage updates
   useEffect(() => {
-    localStorage.setItem('datax_notifications', JSON.stringify(notifications));
-  }, [notifications]);
+    const unsubscribe = subscribeToNotifications((updatedList) => {
+      setNotifications(updatedList);
+    });
+    return unsubscribe;
+  }, []);
 
+  // Poll backend for real alerts every 12 seconds
+  useEffect(() => {
+    syncBackendAlerts();
+    const pollInterval = setInterval(() => {
+      syncBackendAlerts();
+    }, 12000);
+    return () => clearInterval(pollInterval);
+  }, []);
+
+  // Update relative timestamps ("just now", "2 mins ago") every 25 seconds
+  useEffect(() => {
+    const tickInterval = setInterval(() => {
+      setTick(t => t + 1);
+    }, 25000);
+    return () => clearInterval(tickInterval);
+  }, []);
+
+  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -64,16 +75,37 @@ export default function NotificationCenter() {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  const handleToggleSound = () => {
+    const next = !soundOn;
+    setSoundOn(next);
+    setSoundEnabled(next);
+    if (next) {
+      playNotificationSound('pop');
+    }
   };
 
-  const clearAll = () => {
-    setNotifications([]);
+  const handleTestAlert = () => {
+    addNotification({
+      title: 'Real-Time Telemetry Alert',
+      message: 'Simulated pipeline anomaly detected on Material Category MARA. Audio alert active.',
+      type: 'alert',
+      screen: 'quarantine'
+    });
+  };
+
+  const handleMarkAllRead = () => {
+    const updated = markAllAsRead();
+    setNotifications(updated);
+  };
+
+  const handleClearAll = () => {
+    const updated = clearAllNotifications();
+    setNotifications(updated);
   };
 
   const handleItemClick = (notif) => {
-    setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+    const updated = markAsRead(notif.id);
+    setNotifications(updated);
     setIsOpen(false);
     if (notif.screen) {
       navigateTo(notif.screen);
@@ -89,6 +121,7 @@ export default function NotificationCenter() {
       case 'success':
         return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
       case 'alert':
+      case 'error':
         return <AlertTriangle className="w-4 h-4 text-red-400" />;
       default:
         return <Clock className="w-4 h-4 text-amber-400" />;
@@ -106,40 +139,64 @@ export default function NotificationCenter() {
       >
         <Bell className="w-4 h-4" />
         {unreadCount > 0 && (
-          <span className="min-w-4 h-4 px-1 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center absolute -top-1 -right-1 shadow-sm">
+          <span className="min-w-4 h-4 px-1 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center absolute -top-1 -right-1 shadow-sm animate-in zoom-in-50 duration-200">
             {unreadCount}
           </span>
         )}
       </button>
 
-      {/* Notifications Popover Drawer */}
+      {/* Notifications Popover Dropdown (Matches user screenshot) */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 text-left">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-[#0B1226] border border-[#1E293B] rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 text-left font-sans">
           {/* Header */}
-          <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+          <div className="px-4 py-3 border-b border-[#1E293B] flex items-center justify-between bg-[#0F172A]">
             <div className="flex items-center gap-2">
-              <h3 className="text-xs font-semibold text-slate-100">Notifications</h3>
+              <h3 className="text-sm font-bold text-slate-100">Notifications</h3>
               {unreadCount > 0 && (
-                <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-400 font-medium">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">
                   {unreadCount} new
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2">
+
+            <div className="flex items-center gap-1.5 text-slate-400">
+              {/* Sound Mute/Unmute Control */}
+              <button
+                onClick={handleToggleSound}
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  soundOn ? 'text-blue-400 hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-800'
+                }`}
+                title={soundOn ? 'Audio Chimes Active (Click to mute)' : 'Audio Muted (Click to enable)'}
+              >
+                {soundOn ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+              </button>
+
+              {/* Trigger Live Test Notification */}
+              <button
+                onClick={handleTestAlert}
+                className="p-1.5 hover:text-amber-300 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                title="Simulate Live Production Alert (with sound)"
+              >
+                <Zap className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Mark All Read */}
               {unreadCount > 0 && (
                 <button
-                  onClick={markAllRead}
-                  className="p-1 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded text-[11px] flex items-center gap-1 transition-colors"
+                  onClick={handleMarkAllRead}
+                  className="p-1.5 hover:text-emerald-300 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                   title="Mark all as read"
                 >
                   <CheckCheck className="w-3.5 h-3.5" />
                 </button>
               )}
+
+              {/* Clear All */}
               {notifications.length > 0 && (
                 <button
-                  onClick={clearAll}
-                  className="p-1 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded text-[11px] flex items-center gap-1 transition-colors"
-                  title="Clear all"
+                  onClick={handleClearAll}
+                  className="p-1.5 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                  title="Clear all notifications"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -148,19 +205,23 @@ export default function NotificationCenter() {
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex border-b border-slate-800 bg-slate-950/30 px-3 pt-2 gap-4 text-xs font-medium">
+          <div className="flex border-b border-[#1E293B] bg-[#0A0F1F] px-4 pt-2 gap-5 text-xs font-semibold">
             <button
               onClick={() => setFilter('all')}
-              className={`pb-2 border-b-2 transition-colors cursor-pointer ${
-                filter === 'all' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-300'
+              className={`pb-2 border-b-2 transition-all cursor-pointer ${
+                filter === 'all' 
+                  ? 'border-blue-500 text-blue-400 font-bold' 
+                  : 'border-transparent text-slate-400 hover:text-slate-300'
               }`}
             >
               All ({notifications.length})
             </button>
             <button
               onClick={() => setFilter('unread')}
-              className={`pb-2 border-b-2 transition-colors cursor-pointer ${
-                filter === 'unread' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-300'
+              className={`pb-2 border-b-2 transition-all cursor-pointer ${
+                filter === 'unread' 
+                  ? 'border-blue-500 text-blue-400 font-bold' 
+                  : 'border-transparent text-slate-400 hover:text-slate-300'
               }`}
             >
               Unread ({unreadCount})
@@ -168,29 +229,33 @@ export default function NotificationCenter() {
           </div>
 
           {/* Notifications List */}
-          <div className="max-h-80 overflow-y-auto divide-y divide-slate-800/60">
+          <div className="max-h-80 overflow-y-auto divide-y divide-[#1E293B]">
             {filteredNotifications.length === 0 ? (
-              <div className="p-8 text-center text-xs text-slate-500">
-                No notifications to display.
+              <div className="p-8 text-center text-xs text-slate-500 font-medium">
+                No notifications in queue. All pipelines healthy!
               </div>
             ) : (
               filteredNotifications.map((n) => (
                 <div
                   key={n.id}
                   onClick={() => handleItemClick(n)}
-                  className={`p-3.5 flex items-start gap-3 hover:bg-slate-800/50 transition-colors cursor-pointer ${
-                    n.read ? 'opacity-70 bg-transparent' : 'bg-slate-800/20'
+                  className={`p-3.5 flex items-start gap-3 hover:bg-slate-800/40 transition-colors cursor-pointer ${
+                    n.read ? 'opacity-65 bg-transparent' : 'bg-slate-800/25'
                   }`}
                 >
-                  <div className="p-1.5 rounded-lg bg-slate-950/60 border border-slate-800 flex-shrink-0 mt-0.5">
+                  <div className="p-1.5 rounded-xl bg-slate-950/80 border border-slate-800 flex-shrink-0 mt-0.5">
                     {getIcon(n.type)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <h4 className="text-xs font-semibold text-slate-200 truncate">{n.title}</h4>
-                      <span className="text-[10px] text-slate-500 font-mono">{n.timestamp}</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className="text-xs font-bold text-slate-100 truncate">{n.title}</h4>
+                      <span className="text-[10px] text-slate-400 font-mono shrink-0 ml-2">
+                        {n.createdAt ? formatRelativeTime(n.createdAt) : (n.timestamp || 'just now')}
+                      </span>
                     </div>
-                    <p className="text-[11px] text-slate-400 leading-snug line-clamp-2">{n.message}</p>
+                    <p className="text-[11px] text-slate-300 leading-relaxed line-clamp-2">
+                      {n.message}
+                    </p>
                   </div>
                 </div>
               ))
