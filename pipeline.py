@@ -481,7 +481,6 @@ def _execute_pipeline_core(req: PipelineExecutionRequest, idempotency_key: str, 
                 @retry_with_backoff(max_retries=2, base_delay=1.0, jitter=True)
                 def _commit_target():
                     with db_pool.get_connection(tgt1_uri) as conn:
-                        conn.autocommit = True
                         with conn.cursor() as cur:
                             if valid_records:
                                 sample_row = valid_records[0]
@@ -535,6 +534,7 @@ def _execute_pipeline_core(req: PipelineExecutionRequest, idempotency_key: str, 
                                     q_tuples,
                                     page_size=5000
                                 )
+                        conn.commit()
 
                         if valid_records:
                             from staging import execute_safe_staged_commit

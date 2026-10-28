@@ -46,7 +46,6 @@ def execute_safe_staged_commit(
     cols_sql = ", ".join(col_defs)
 
     try:
-        conn.autocommit = False
         with conn.cursor() as cur:
             # 1. Create target table if it doesn't already exist
             cur.execute(f'CREATE TABLE IF NOT EXISTS "{target_table}" ({cols_sql});')
@@ -108,5 +107,3 @@ def execute_safe_staged_commit(
         except Exception:
             pass
         raise e
-    finally:
-        conn.autocommit = True
