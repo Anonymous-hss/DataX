@@ -9,6 +9,7 @@ Implements Production Checklist Section 1:
 """
 
 import os
+import re
 import sys
 import time
 import json
