@@ -184,12 +184,22 @@ export default function ConnectSourcePage({ onSwitchToMarketing } = {}) {
         tableCount: result.tableCount || (result.tables ? result.tables.length : 0)
       });
 
-      // Preserve the user's currently selected table if available, rather than hardcoding firstTable
-      const activeTable = (selectedTables && selectedTables.length > 0 ? selectedTables[0] : null) 
-        || previewTable 
-        || sourceConfig?.table 
-        || result.tables?.[0] 
-        || '0IC_C03';
+      // Select a valid table from discovered tables if current selection is not in result.tables
+      const discoveredList = Array.isArray(result.tables) ? result.tables : [];
+      const currentSelection = (selectedTables && selectedTables.length > 0 ? selectedTables[0] : null)
+        || previewTable
+        || sourceConfig?.table;
+      const activeTable = (currentSelection && discoveredList.includes(currentSelection))
+        ? currentSelection
+        : (discoveredList.includes('raw_customers')
+          ? 'raw_customers'
+          : discoveredList.includes('raw_users')
+            ? 'raw_users'
+            : (discoveredList[0] || currentSelection || '0IC_C03'));
+      const resolvedDb = result.database || databaseName;
+      if (result.database && result.database !== databaseName) {
+        setDatabaseName(result.database);
+      }
       const activeTableData = getTableData(activeTable, engineKey, 5);
 
       setSourceConfig(prev => ({
@@ -198,7 +208,7 @@ export default function ConnectSourcePage({ onSwitchToMarketing } = {}) {
         connectionUri: effectiveUri,
         host,
         port,
-        database: databaseName,
+        database: resolvedDb,
         user: username,
         password,
         table: activeTable,
@@ -207,25 +217,33 @@ export default function ConnectSourcePage({ onSwitchToMarketing } = {}) {
         discoveredColumns: activeTableData.columns
       }));
 
-      if (result.tables && result.tables.length > 0) {
+      if (discoveredList.length > 0) {
         const fallbackCatalog = getTableCatalog(engineKey);
         const mappedTables = result.tableDetails && result.tableDetails.length > 0
           ? result.tableDetails
-          : result.tables.map(name => {
+          : discoveredList.map(name => {
               const matched = fallbackCatalog.find(c => c.name === name);
               return {
                 name,
-                rows: matched ? matched.rows : '1,420 rows'
+                rows: matched ? matched.rows : 'Live Table'
               };
             });
         setAvailableTables(mappedTables);
 
-        // Maintain selection of the active table
         setSelectedTables([activeTable]);
         setPreviewTable(activeTable);
         setPreviewRows(activeTableData.rows);
 
-        fetchTableSample(activeTable, 5, effectiveUri).then(sampleRes => {
+        fetchTableSample(activeTable, 5, effectiveUri, {
+          engine: engineKey,
+          connectionUri: effectiveUri,
+          host,
+          port,
+          database: resolvedDb,
+          user: username,
+          password,
+          table: activeTable
+        }).then(sampleRes => {
           if (sampleRes && sampleRes.rows && sampleRes.rows.length > 0) {
             setPreviewRows(sampleRes.rows);
           }

@@ -298,8 +298,18 @@ def run_pipeline(req: PipelineExecutionRequest) -> Dict[str, Any]:
                 @retry_with_backoff(max_retries=2, base_delay=1.0, jitter=True)
                 def _extract_mongo():
                     client = MongoClient(src_uri, serverSelectionTimeoutMS=5000)
-                    db_name = req.source.database or "datax_staging"
+                    db_names = client.list_database_names()
+                    user_dbs = [d for d in db_names if d not in ["admin", "local", "config"]]
+                    req_db = req.source.database
+                    db_name = req_db if (req_db and req_db in user_dbs) else (
+                        "datax_staging" if "datax_staging" in user_dbs else (user_dbs[0] if user_dbs else "datax_staging")
+                    )
                     tbl_name = req.source.table or "raw_users"
+                    if db_name in user_dbs and tbl_name not in client[db_name].list_collection_names():
+                        for d in user_dbs:
+                            if tbl_name in client[d].list_collection_names():
+                                db_name = d
+                                break
                     coll = client[db_name][tbl_name]
                     limit_val = req.source.limit or 500
                     docs = []

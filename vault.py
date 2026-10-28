@@ -99,6 +99,10 @@ def get_resolved_uri(req: Any) -> str:
     if getattr(req, "credentialId", None):
         return get_credential_uri(req.credentialId)
     uri = getattr(req, "connectionUri", None)
+    if (not uri or not isinstance(uri, str)) and getattr(req, "host", None):
+        raw_host = str(req.host).strip()
+        if raw_host.startswith(("mongodb://", "mongodb+srv://", "postgresql://", "postgres://", "jdbc:")):
+            uri = raw_host
     if not uri or not isinstance(uri, str):
         return ""
     uri = uri.strip()

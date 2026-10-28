@@ -20,26 +20,35 @@ from resilience import retry_with_backoff, source_db_breaker
 from db_pool import db_pool
 
 
+def _build_uri_from_request(req: Any, engine: str) -> str:
+    uri = (getattr(req, "connectionUri", None) or "").strip()
+    if not uri and getattr(req, "host", None):
+        raw_host = req.host.strip()
+        if raw_host.startswith(("mongodb://", "mongodb+srv://", "postgresql://", "postgres://", "jdbc:")):
+            uri = raw_host
+        elif engine in ["postgres", "postgresql"]:
+            uri = f"postgresql://{req.user or ''}:{req.password or ''}@{raw_host}:{req.port or 5432}/{req.database or ''}"
+        elif engine in ["mongodb", "mongo"]:
+            scheme = "mongodb+srv" if ".mongodb.net" in raw_host else "mongodb"
+            port_part = "" if scheme == "mongodb+srv" else f":{req.port or 27017}"
+            uri = f"{scheme}://{req.user or ''}:{req.password or ''}@{raw_host}{port_part}/{req.database or ''}"
+        elif engine in ["sap_bw", "s4_hana", "sap"]:
+            uri = f"jdbc:sap://{raw_host}:{req.port or 443}?encrypt=true&validateCertificate=false&user={req.user or ''}&password={req.password or ''}"
+        elif engine in ["salesforce"]:
+            uri = f"salesforce://{req.user or ''}:{req.password or ''}@{raw_host}"
+        elif engine in ["azure", "azure_blob"]:
+            uri = f"azure://{req.user or ''}:{req.password or ''}@{raw_host}"
+        elif engine in ["s3", "aws_s3"]:
+            uri = f"s3://{req.user or ''}:{req.password or ''}@{raw_host}"
+        else:
+            uri = f"{engine}://{req.user or ''}:{req.password or ''}@{raw_host}"
+    return uri
+
+
 def test_database_connection(req: StoreCredentialRequest) -> Dict[str, Any]:
     start_t = time.time()
     engine = req.engine.lower()
-    uri = (req.connectionUri or "").strip()
-
-    if not uri and req.host:
-        if engine in ["postgres", "postgresql"]:
-            uri = f"postgresql://{req.user or ''}:{req.password or ''}@{req.host}:{req.port or 5432}/{req.database or ''}"
-        elif engine in ["mongodb", "mongo"]:
-            uri = f"mongodb://{req.user or ''}:{req.password or ''}@{req.host}:{req.port or 27017}/{req.database or ''}"
-        elif engine in ["sap_bw", "s4_hana", "sap"]:
-            uri = f"jdbc:sap://{req.host}:{req.port or 443}?encrypt=true&validateCertificate=false&user={req.user or ''}&password={req.password or ''}"
-        elif engine in ["salesforce"]:
-            uri = f"salesforce://{req.user or ''}:{req.password or ''}@{req.host or ''}"
-        elif engine in ["azure", "azure_blob"]:
-            uri = f"azure://{req.user or ''}:{req.password or ''}@{req.host or ''}"
-        elif engine in ["s3", "aws_s3"]:
-            uri = f"s3://{req.user or ''}:{req.password or ''}@{req.host or ''}"
-        else:
-            uri = f"{engine}://{req.user or ''}:{req.password or ''}@{req.host or ''}"
+    uri = _build_uri_from_request(req, engine)
 
     if not uri or "<" in uri or "user:password" in uri or "••••" in uri or "target-db.internal" in uri or "ep-sweet-neon" in uri:
         return {
@@ -58,23 +67,29 @@ def test_database_connection(req: StoreCredentialRequest) -> Dict[str, Any]:
 
             client = _connect_mongo()
             db_names = client.list_database_names()
+            user_dbs = [d for d in db_names if d not in ["admin", "local", "config"]]
+
             db_name = req.database
-            if not db_name:
+            if not db_name or db_name not in user_dbs:
                 try:
                     def_db = client.get_default_database()
-                    db_name = def_db.name if def_db else None
+                    if def_db and def_db.name in user_dbs:
+                        db_name = def_db.name
                 except Exception:
-                    db_name = None
-            if not db_name or db_name not in db_names:
-                user_dbs = [d for d in db_names if d not in ["admin", "local", "config"]]
-                db_name = user_dbs[0] if user_dbs else "datax_staging"
+                    pass
+            if not db_name or db_name not in user_dbs:
+                db_name = "datax_staging" if "datax_staging" in user_dbs else (user_dbs[0] if user_dbs else "datax_staging")
 
-            coll_names = client[db_name].list_collection_names() if db_name in db_names else []
-            if not coll_names:
-                for d in db_names:
-                    if d not in ["admin", "local", "config"]:
-                        coll_names.extend(client[d].list_collection_names())
-            tables_list = sorted(list(set(coll_names)))
+            # Discover collections from the primary database first, then include other user dbs
+            primary_colls = sorted(client[db_name].list_collection_names()) if db_name in db_names else []
+            other_colls = []
+            for d in user_dbs:
+                if d != db_name:
+                    for c in sorted(client[d].list_collection_names()):
+                        if c not in primary_colls and c not in other_colls:
+                            other_colls.append(c)
+
+            tables_list = primary_colls + other_colls
             latency = int((time.time() - start_t) * 1000)
             return {
                 "success": True,
@@ -83,7 +98,7 @@ def test_database_connection(req: StoreCredentialRequest) -> Dict[str, Any]:
                 "database": db_name,
                 "tables": tables_list,
                 "tableCount": len(tables_list),
-                "message": f"Successfully connected to MongoDB Atlas! Discovered {len(tables_list)} collections."
+                "message": f"Successfully connected to MongoDB Atlas ({db_name})! Discovered {len(tables_list)} collections."
             }
 
         elif engine in ["postgres", "postgresql"]:
@@ -194,15 +209,7 @@ def test_database_connection(req: StoreCredentialRequest) -> Dict[str, Any]:
 def sample_table_data(req: SampleDataRequest) -> Dict[str, Any]:
     start_t = time.time()
     engine = req.engine.lower()
-    uri = get_resolved_uri(req)
-
-    if not uri and req.host:
-        if engine in ["postgres", "postgresql"]:
-            uri = f"postgresql://{req.user or ''}:{req.password or ''}@{req.host}:{req.port or 5432}/{req.database or ''}"
-        elif engine in ["mongodb", "mongo"]:
-            uri = f"mongodb://{req.user or ''}:{req.password or ''}@{req.host}:{req.port or 27017}/{req.database or ''}"
-        elif engine in ["sap_bw", "s4_hana", "sap"]:
-            uri = f"jdbc:sap://{req.host}:{req.port or 443}?encrypt=true&validateCertificate=false&user={req.user or ''}&password={req.password or ''}"
+    uri = get_resolved_uri(req) or _build_uri_from_request(req, engine)
 
     if not uri or "<" in uri or "user:password" in uri or "••••" in uri or "target-db.internal" in uri or "ep-sweet-neon" in uri:
         if engine in ["sap_bw", "s4_hana", "sap"] or (req.table and any(t in req.table for t in ["0PUR", "0IC", "BAPI", "MARA", "EKKO", "EKPO"])):
@@ -237,41 +244,65 @@ def sample_table_data(req: SampleDataRequest) -> Dict[str, Any]:
             @retry_with_backoff(max_retries=2, base_delay=0.8, jitter=True)
             def _sample_mongo():
                 client = MongoClient(uri, serverSelectionTimeoutMS=4000)
-                db_name = req.database
-                if not db_name:
-                    db_names = client.list_database_names()
-                    user_dbs = [d for d in db_names if d not in ["admin", "local", "config"]]
-                    db_name = user_dbs[0] if user_dbs else "datax_staging"
-                colls = client[db_name].list_collection_names()
-                table_name = req.table if (req.table and req.table in colls) else (colls[0] if colls else "raw_users")
-                coll = client[db_name][table_name]
-                raw_docs = list(coll.find({}, {"_id": 0}).limit(limit_val))
-                return raw_docs, db_name, table_name, colls
+                db_names = client.list_database_names()
+                user_dbs = [d for d in db_names if d not in ["admin", "local", "config"]]
 
-            raw_docs, db_name, table_name, colls = _sample_mongo()
+                db_name = req.database if (req.database and req.database in user_dbs) else (
+                    "datax_staging" if "datax_staging" in user_dbs else (user_dbs[0] if user_dbs else "datax_staging")
+                )
+
+                coll_to_db = {}
+                all_colls = []
+                for d in user_dbs:
+                    for c in sorted(client[d].list_collection_names()):
+                        if c not in all_colls:
+                            all_colls.append(c)
+                        if c not in coll_to_db or d == db_name:
+                            coll_to_db[c] = d
+
+                if req.table and req.table in coll_to_db:
+                    table_name = req.table
+                elif "raw_customers" in coll_to_db:
+                    table_name = "raw_customers"
+                elif "raw_users" in coll_to_db:
+                    table_name = "raw_users"
+                else:
+                    table_name = all_colls[0] if all_colls else "raw_users"
+
+                resolved_db = coll_to_db.get(table_name, db_name)
+                coll = client[resolved_db][table_name]
+                total_rows = coll.count_documents({})
+                raw_docs = list(coll.find({}, {"_id": 0}).limit(limit_val))
+                return raw_docs, resolved_db, table_name, all_colls, total_rows
+
+            raw_docs, db_name, table_name, colls, total_rows = _sample_mongo()
             rows = []
+            all_keys = []
             for d in raw_docs:
                 clean_d = {}
                 for k, v in d.items():
+                    if k not in all_keys:
+                        all_keys.append(k)
                     if isinstance(v, (datetime, Decimal)):
                         clean_d[k] = str(v)
                     else:
                         clean_d[k] = v
                 rows.append(clean_d)
 
-            columns = list(rows[0].keys()) if rows else []
+            columns = all_keys
             latency = int((time.time() - start_t) * 1000)
             return {
                 "success": True,
                 "engine": "mongodb",
                 "database": db_name,
                 "table": table_name,
-                "availableTables": sorted(colls),
+                "availableTables": colls,
                 "count": len(rows),
+                "totalRows": total_rows,
                 "columns": columns,
                 "rows": rows,
                 "latencyMs": latency,
-                "message": f"Sampled {len(rows)} live documents from collection '{table_name}' in MongoDB Atlas."
+                "message": f"Sampled {len(rows)} live documents from '{db_name}.{table_name}' ({total_rows:,} total docs)."
             }
 
         elif engine in ["postgres", "postgresql"]:
@@ -284,9 +315,15 @@ def sample_table_data(req: SampleDataRequest) -> Dict[str, Any]:
                         table_name = req.table if (req.table and req.table in all_tables) else (all_tables[0] if all_tables else "users")
                         cur.execute(f'SELECT * FROM "{table_name}" LIMIT {limit_val};')
                         raw_data = cur.fetchall()
-                        return raw_data, table_name, all_tables
+                        try:
+                            cur.execute(f'SELECT COUNT(*) AS cnt FROM "{table_name}";')
+                            cnt_row = cur.fetchone()
+                            total_rows = int(cnt_row["cnt"]) if cnt_row else len(raw_data)
+                        except Exception:
+                            total_rows = len(raw_data)
+                        return raw_data, table_name, all_tables, total_rows
 
-            raw_data, table_name, all_tables = _sample_pg()
+            raw_data, table_name, all_tables, total_rows = _sample_pg()
             rows = []
             for r in raw_data:
                 clean_r = {}
@@ -308,10 +345,11 @@ def sample_table_data(req: SampleDataRequest) -> Dict[str, Any]:
                 "table": table_name,
                 "availableTables": all_tables,
                 "count": len(rows),
+                "totalRows": total_rows,
                 "columns": columns,
                 "rows": rows,
                 "latencyMs": latency,
-                "message": f"Sampled {len(rows)} live rows from table '{table_name}' in PostgreSQL."
+                "message": f"Sampled {len(rows)} live rows from table '{table_name}' ({total_rows:,} total rows)."
             }
 
     except Exception as e:
