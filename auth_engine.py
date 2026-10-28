@@ -36,7 +36,12 @@ logger = logging.getLogger("DataX.AuthEngine")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24 * 7  # 7 days
 
-NEON_POSTGRES_URL = os.getenv("DATABASE_URL") or os.getenv("DATAX_DATABASE_URI") or os.getenv("NEON_DATABASE_URI") or ""
+NEON_POSTGRES_URL = (
+    os.getenv("DATABASE_URL")
+    or os.getenv("DATAX_DATABASE_URI")
+    or os.getenv("NEON_DATABASE_URI")
+    or "postgresql://neondb_owner:npg_Eim1u6bIldRL@ep-square-breeze-aqokq2fe-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require"
+)
 
 LOCAL_STORE_PATH = os.path.join(os.getcwd(), ".datax_auth_store.json")
 
@@ -118,7 +123,7 @@ class AuthDatabase:
         self._db_initialized = False
 
     def _get_pg_connection(self):
-        if not psycopg2:
+        if not psycopg2 or not NEON_POSTGRES_URL or not NEON_POSTGRES_URL.strip():
             return None
         try:
             return psycopg2.connect(NEON_POSTGRES_URL, connect_timeout=5)

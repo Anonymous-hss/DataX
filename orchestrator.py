@@ -42,12 +42,30 @@ class PipelineRunOrchestrator:
         with self._lock:
             existing_run = self.pipeline_locks.get(pipeline_id)
             if existing_run:
-                # Check if existing run is still active
                 run_info = self.active_runs.get(existing_run, {})
-                if run_info.get("status") in ["RUNNING", "PAUSED"]:
+                status = run_info.get("status")
+                
+                # Check for stale lock timeout (e.g. run crashed or older than 45s)
+                is_stale = False
+                started_at_str = run_info.get("started_at", "")
+                if started_at_str:
+                    try:
+                        clean_iso = started_at_str.replace("Z", "").split(".")[0]
+                        started_dt = datetime.fromisoformat(clean_iso)
+                        if (datetime.utcnow() - started_dt).total_seconds() > 45:
+                            is_stale = True
+                    except Exception:
+                        is_stale = True
+
+                if status in ["RUNNING", "PAUSED"] and not is_stale:
                     raise ConcurrencyViolationError(
                         f"Concurrency Guard: Pipeline '{pipeline_id}' is already executing run '{existing_run}'. Overlapping run rejected."
                     )
+                # If stale or finished, cleanly evict old lock
+                if is_stale and status in ["RUNNING", "PAUSED"]:
+                    run_info["status"] = "TIMED_OUT"
+                    run_info["ended_at"] = datetime.utcnow().isoformat() + "Z"
+
             self.pipeline_locks[pipeline_id] = run_id
             self.active_runs[run_id] = {
                 "run_id": run_id,
@@ -59,6 +77,15 @@ class PipelineRunOrchestrator:
                 "cancelled": False
             }
             return True
+
+    def force_release(self, pipeline_id: str):
+        """Force-releases any existing lock on a pipeline without throwing errors."""
+        with self._lock:
+            if pipeline_id in self.pipeline_locks:
+                existing_run = self.pipeline_locks.pop(pipeline_id, None)
+                if existing_run and existing_run in self.active_runs:
+                    self.active_runs[existing_run]["status"] = "FORCE_RELEASED"
+                    self.active_runs[existing_run]["ended_at"] = datetime.utcnow().isoformat() + "Z"
 
     def release_lock(self, pipeline_id: str, run_id: str, final_status: str = "COMPLETED"):
         with self._lock:

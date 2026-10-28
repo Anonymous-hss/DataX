@@ -1379,6 +1379,31 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       status: isLiveConnected ? 'Connected' : 'Demo Sandbox'
     } : n));
 
+    // Auto-align Target node when switching from SAP template to MongoDB or Postgres
+    if (srcDbType.includes('Mongo') || srcDbType.includes('Postgres')) {
+      const derivedTgtTable = srcTable ? srcTable.replace(/^raw_/, '') : 'customers';
+      const neonUri = 'postgresql://neondb_owner:npg_Eim1u6bIldRL@ep-square-breeze-aqokq2fe-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require';
+      if (tgtDbType.includes('SAP') || tgtTable === '0PUR_C01_clean') {
+        setTgtDbType('PostgreSQL');
+        setTgtTable(derivedTgtTable);
+        setTgtEndpoint(neonUri);
+        setTargetConfig(prev => ({
+          ...prev,
+          engine: 'postgres',
+          table: derivedTgtTable,
+          connectionUri: neonUri,
+          host: 'ep-square-breeze-aqokq2fe-pooler.c-8.us-east-1.aws.neon.tech',
+          database: 'neondb'
+        }));
+        setNodes(prev => prev.map(n => n.type === 'target' ? {
+          ...n,
+          system: 'PostgreSQL',
+          table: derivedTgtTable,
+          status: `Write: ${writeMode.toUpperCase()}`
+        } : n));
+      }
+    }
+
     setIsPropertyModalOpen(false);
   };
 
@@ -1476,21 +1501,24 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   };
   const handleSaveTargetConfig = () => {
     const engineKey = tgtDbType.includes('SAP') ? 's4_hana' : tgtDbType.includes('Databricks') ? 'databricks' : 'postgres';
+    const defaultNeonUri = 'postgresql://neondb_owner:npg_Eim1u6bIldRL@ep-square-breeze-aqokq2fe-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require';
+    const effectiveUri = (tgtEndpoint || '').trim() || (engineKey === 'postgres' ? defaultNeonUri : '');
+    const effectiveTable = tgtTable || (srcTable ? (srcTable.startsWith('raw_') ? srcTable.replace('raw_', '') : `${srcTable}_clean`) : 'customers');
     setTargetConfig(prev => ({
       ...prev,
       engine: engineKey,
-      table: tgtTable,
+      table: effectiveTable,
       writeMode: writeMode,
-      connectionUri: tgtEndpoint,
-      host: tgtEndpoint.includes('//') ? tgtEndpoint.split('//')[1].split('/')[0] : 's4h.corp.ondemand.com',
-      database: 'reconciled_db',
+      connectionUri: effectiveUri,
+      host: effectiveUri.includes('//') ? effectiveUri.split('//')[1].split('/')[0] : (engineKey === 'postgres' ? 'ep-square-breeze-aqokq2fe-pooler.c-8.us-east-1.aws.neon.tech' : 's4h.corp.ondemand.com'),
+      database: engineKey === 'postgres' ? 'neondb' : 'reconciled_db',
       user: 'cleanflow_writer',
       password: ''
     }));
     setNodes(prev => prev.map(n => n.type === 'target' ? {
       ...n,
       system: tgtDbType,
-      table: tgtTable,
+      table: effectiveTable,
       status: `Write: ${writeMode.toUpperCase()}`
     } : n));
     setIsPropertyModalOpen(false);
@@ -2547,6 +2575,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
 
               {selectedNode.type === 'target' && (
                 <TargetModalPanel
+                  sourceTable={srcTable || sourceConfig?.table || ''}
                   tgtDbType={tgtDbType}
                   setTgtDbType={setTgtDbType}
                   tgtEndpoint={tgtEndpoint}

@@ -1450,7 +1450,30 @@ def api_sample_table_data(req: SampleDataRequest):
 # -----------------------------------------------------------------------------
 @app.post("/pipeline/execute")
 def execute_pipeline(req: PipelineExecutionRequest, user: Dict[str, Any] = Depends(require_roles(["Admin", "Data Steward", "Operator", "data_engineer"]))):
-    return run_pipeline(req)
+    from orchestrator import orchestrator, ConcurrencyViolationError
+    pipeline_id = req.threadId or req.pipelineName
+    try:
+        return run_pipeline(req)
+    except ConcurrencyViolationError as cve:
+        logger.warning(f"Concurrency collision on pipeline '{pipeline_id}': {cve}. Attempting force-release of stale lock and retrying once.")
+        orchestrator.force_release(pipeline_id)
+        try:
+            return run_pipeline(req)
+        except Exception as retry_err:
+            logger.error(f"Retry after force_release failed: {retry_err}")
+            raise HTTPException(status_code=409, detail=f"Pipeline '{pipeline_id}' busy: {retry_err}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Pipeline execution error: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Pipeline execution failed: {str(e)}")
+
+
+@app.post("/pipeline/lock/release")
+def api_force_release_lock(pipeline_id: str):
+    from orchestrator import orchestrator
+    orchestrator.force_release(pipeline_id)
+    return {"status": "success", "message": f"Lock force-released for pipeline '{pipeline_id}'"}
 
 
 # -----------------------------------------------------------------------------

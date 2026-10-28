@@ -1,19 +1,29 @@
 import React from 'react';
-import { Check, Sparkles, AlertTriangle } from 'lucide-react';
+import { Check, Sparkles, AlertTriangle, Database } from 'lucide-react';
 
 export default function RouterModalPanel({
+  sourceTable = '',
+  rulesCount = 0,
   routerThreshold,
   setRouterThreshold,
 }) {
   return (
     <div className="space-y-4">
-      <div>
-        <label className="block text-xs font-bold text-slate-800 mb-1">
-          In-Flight 3-Way Parallel Stream Splitter
-        </label>
-        <p className="text-xs text-slate-500">
-          Evaluates incoming row packets against active rule ontologies and routes each row without data loss.
-        </p>
+      {/* Header Banner */}
+      <div className="p-3 bg-purple-50/70 border border-purple-200 rounded-xl flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <span className="text-xs font-bold text-purple-950 block">In-Flight 3-Way Parallel Stream Splitter</span>
+          <span className="text-[11px] text-purple-700">
+            Evaluates incoming row packets against active rule ontologies and routes each row without data loss.
+          </span>
+        </div>
+        {sourceTable && (
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-md bg-white border border-purple-200 text-slate-700">
+            <Database className="w-3 h-3 text-purple-600" />
+            <span className="text-slate-500">Stream:</span>
+            <span className="font-mono font-bold text-purple-900">{sourceTable}</span>
+          </span>
+        )}
       </div>
 
       {/* 3 Stream Paths */}
@@ -33,7 +43,7 @@ export default function RouterModalPanel({
           </div>
           <div>
             <span className="text-xs font-bold text-blue-950 block">AI Remediated Stream</span>
-            <span className="text-[11px] text-blue-700">Auto-fixed rows (plant codes, calculation equalities) committed to target.</span>
+            <span className="text-[11px] text-blue-700">Auto-fixed rows (syntax repairs, normalization, calculation equalities) committed to target.</span>
           </div>
         </div>
         <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 flex items-start gap-3">
@@ -71,4 +81,3 @@ export default function RouterModalPanel({
     </div>
   );
 }
-

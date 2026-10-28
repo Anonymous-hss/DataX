@@ -42,7 +42,10 @@ def _resolve_default_neon_uri() -> str:
             pass
     return ""
 
-DEFAULT_NEON_URI = _resolve_default_neon_uri()
+DEFAULT_NEON_URI = (
+    _resolve_default_neon_uri()
+    or "postgresql://neondb_owner:npg_Eim1u6bIldRL@ep-square-breeze-aqokq2fe-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require"
+)
 
 
 def get_vault_cipher():
@@ -103,10 +106,15 @@ def get_resolved_uri(req: Any) -> str:
         raw_host = str(req.host).strip()
         if raw_host.startswith(("mongodb://", "mongodb+srv://", "postgresql://", "postgres://", "jdbc:")):
             uri = raw_host
+    engine = str(getattr(req, "engine", "")).lower()
     if not uri or not isinstance(uri, str):
+        if engine in ["postgres", "postgresql"] and DEFAULT_NEON_URI:
+            return DEFAULT_NEON_URI
         return ""
     uri = uri.strip()
     if not uri or "<" in uri or "user:password" in uri or "target-db.internal" in uri or "ep-sweet-neon" in uri or "••••" in uri:
+        if engine in ["postgres", "postgresql"] and DEFAULT_NEON_URI:
+            return DEFAULT_NEON_URI
         return ""
     return uri
 

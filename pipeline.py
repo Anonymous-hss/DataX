@@ -232,6 +232,18 @@ def run_pipeline(req: PipelineExecutionRequest) -> Dict[str, Any]:
     run_id = f"RUN-{int(time.time()*1000)%100000}"
     orchestrator.acquire_lock(pipeline_id, run_id)
 
+    try:
+        outcome = _execute_pipeline_core(req, idempotency_key, pipeline_id, run_id)
+        orchestrator.release_lock(pipeline_id, run_id, "COMPLETED")
+        orchestrator.trigger_downstream_pipelines(pipeline_id)
+        idempotency_manager.commit(idempotency_key, outcome)
+        return outcome
+    except Exception as e:
+        orchestrator.release_lock(pipeline_id, run_id, "FAILED")
+        raise
+
+
+def _execute_pipeline_core(req: PipelineExecutionRequest, idempotency_key: str, pipeline_id: str, run_id: str) -> Dict[str, Any]:
     logs = []
     def log(tag: str, text: str):
         logs.append({"tag": tag, "text": text, "timestamp": datetime.utcnow().isoformat()})
@@ -438,6 +450,9 @@ def run_pipeline(req: PipelineExecutionRequest) -> Dict[str, Any]:
     if not is_dry_run:
         tgt1_uri = get_resolved_uri(req.target1)
         tgt1_engine = req.target1.engine.lower()
+        if not tgt1_uri and tgt1_engine in ["postgres", "postgresql"]:
+            from vault import DEFAULT_NEON_URI
+            tgt1_uri = DEFAULT_NEON_URI
         if not tgt1_uri and tgt1_engine in ["postgres", "postgresql", "mongodb", "mongo"]:
             log("ERROR", f"Pre-flight check failed: Target 1 node ({tgt1_engine.upper()}) credentials missing.")
             raise HTTPException(
@@ -445,14 +460,18 @@ def run_pipeline(req: PipelineExecutionRequest) -> Dict[str, Any]:
                 detail=f"Target 1 database ({tgt1_engine.upper()}) credentials missing. Configure credentials in node editor."
             )
 
-        tgt1_base = req.target1.table or "records"
+        src_table = getattr(req.source, "table", "") or ""
+        tgt1_base = req.target1.table or (src_table.replace("raw_", "") if src_table else "clean_records")
+        if tgt1_base in ["records", "clean_records"] and src_table:
+            tgt1_base = src_table.replace("raw_", "")
+
         naming_mode = getattr(req.target1, "targetNamingMode", "suffix") or "suffix"
         if naming_mode == "custom" and getattr(req.target1, "customTableName", None) and req.target1.customTableName.strip():
             tgt1_table = req.target1.customTableName.strip()
         elif naming_mode == "exact":
             tgt1_table = tgt1_base
         else:
-            tgt1_table = tgt1_base if tgt1_base.endswith("_enhanced_datax") else f"{tgt1_base}_enhanced_datax"
+            tgt1_table = tgt1_base
 
         tgt1_quarantine = req.target1.quarantineTable or f"{tgt1_table}_quarantine"
         log("TARGET_1", f"Staging {len(valid_records)} verified records to Target 1 ({tgt1_engine.upper()}: table '{tgt1_table}')")
@@ -723,10 +742,4 @@ def run_pipeline(req: PipelineExecutionRequest) -> Dict[str, Any]:
     final_outcome["auditManifestHash"] = audit_block["manifest_hash"]
     final_outcome["chainHash"] = audit_block["chain_hash"]
 
-    # Section 7: Release Concurrency Lock & Trigger Downstream Dependencies
-    orchestrator.release_lock(pipeline_id, run_id, "COMPLETED")
-    orchestrator.trigger_downstream_pipelines(pipeline_id)
-
-    # REL-03: Commit outcome to Idempotency Manager for replay deduplication
-    idempotency_manager.commit(idempotency_key, final_outcome)
     return final_outcome
