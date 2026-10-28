@@ -501,9 +501,9 @@ def _execute_pipeline_core(req: PipelineExecutionRequest, idempotency_key: str, 
                                 primary_col = "id"
                                 cols_sql = '"id" VARCHAR(64) PRIMARY KEY, "raw_data" JSONB, "reconciled_at" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP'
 
-                            cur.execute(f'CREATE TABLE IF NOT EXISTS {tgt1_table} ({cols_sql});')
+                            cur.execute(f'CREATE TABLE IF NOT EXISTS "{tgt1_table}" ({cols_sql});')
                             cur.execute(f"""
-                                CREATE TABLE IF NOT EXISTS {tgt1_quarantine} (
+                                CREATE TABLE IF NOT EXISTS "{tgt1_quarantine}" (
                                     quarantine_id SERIAL PRIMARY KEY,
                                     record_id VARCHAR(64),
                                     source_system VARCHAR(64) DEFAULT 'DataX_Pipeline',
@@ -514,8 +514,8 @@ def _execute_pipeline_core(req: PipelineExecutionRequest, idempotency_key: str, 
                             """)
 
                             if req.target1.writeMode == "overwrite":
-                                cur.execute(f"DELETE FROM {tgt1_table};")
-                                cur.execute(f"DELETE FROM {tgt1_quarantine};")
+                                cur.execute(f'DELETE FROM "{tgt1_table}";')
+                                cur.execute(f'DELETE FROM "{tgt1_quarantine}";')
 
                             if quarantine_records:
                                 q_tuples = [
@@ -530,7 +530,7 @@ def _execute_pipeline_core(req: PipelineExecutionRequest, idempotency_key: str, 
                                 from psycopg2.extras import execute_values
                                 execute_values(
                                     cur,
-                                    f"INSERT INTO {tgt1_quarantine} (record_id, source_system, violations, raw_payload) VALUES %s;",
+                                    f'INSERT INTO "{tgt1_quarantine}" (record_id, source_system, violations, raw_payload) VALUES %s;',
                                     q_tuples,
                                     page_size=5000
                                 )

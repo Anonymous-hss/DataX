@@ -105,7 +105,7 @@ def bulk_upsert_chunked_pg(
         on_conflict = f'ON CONFLICT ("{primary_key}") DO NOTHING'
 
     query = f"""
-        INSERT INTO {table_name} ({col_names_str})
+        INSERT INTO "{table_name}" ({col_names_str})
         VALUES %s
         {on_conflict};
     """
