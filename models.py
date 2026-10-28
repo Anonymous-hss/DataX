@@ -118,8 +118,21 @@ class SampleDataRequest(BaseModel):
 class GenerateRulesRequest(BaseModel):
     tableName: Optional[str] = "MARA"
     columns: Optional[List[str]] = []
+    selectedColumns: Optional[List[str]] = None
+    sampleRows: Optional[List[Dict[str, Any]]] = []
     prompt: Optional[str] = "Line items must have positive quantities."
     engine: Optional[str] = "sap_bw"
+    governanceMode: Optional[str] = "balanced"
+
+
+class DraftPromptRequest(BaseModel):
+    tableName: Optional[str] = "source_table"
+    engine: Optional[str] = "mongodb"
+    columns: Optional[List[str]] = []
+    selectedColumns: Optional[List[str]] = None
+    sampleRows: Optional[List[Dict[str, Any]]] = []
+    governanceMode: Optional[str] = "balanced"
+
 
 
 class LoginRequest(BaseModel):

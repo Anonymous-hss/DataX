@@ -66,7 +66,7 @@ import { addNotification } from '../../services/notificationService';
 import { useNavigation } from '../../context/NavigationContext';
 import { useRuleEngine } from '../../context/RuleEngineContext';
 import { getTableCatalog, getTableData } from '../../data/sampleDatasets';
-import { callAiRuleEngine, getDefaultPromptForTable } from '../../utils/aiRuleSynthesizer';
+import { callAiRuleEngine, getDefaultPromptForTable, synthesizeSemanticRules } from '../../utils/aiRuleSynthesizer';
 import { TEMPLATE_AUTOFILLS, getWorkflowTemplate } from '../../data/workflowTemplates';
 
 export default function WorkflowCanvasBuilder({ onMoveToNext }) {
@@ -510,14 +510,31 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
         const cols = sampleRes.columns && sampleRes.columns.length > 0
           ? sampleRes.columns
           : Object.keys(sampleRes.rows[0]);
-        setPreviewRows(sampleRes.rows.slice(0, 5));
+        const sampleSlice = sampleRes.rows.slice(0, 5);
+        setPreviewRows(sampleSlice);
         setDiscoveredColumns(cols);
         setLiveTotalRows(sampleRes.totalRows || sampleRes.count || sampleRes.rows.length);
         setIsLiveSampleActive(true);
         if (sampleRes.database && sampleRes.database !== srcDbName) {
           setSrcDbName(sampleRes.database);
         }
-        setRulesPrompt(getDefaultPromptForTable(tableNameToSample, customConfig?.engine || activeEngineKey, cols));
+        const drafted = getDefaultPromptForTable(
+          tableNameToSample,
+          customConfig?.engine || activeEngineKey,
+          cols,
+          sampleSlice
+        );
+        setRulesPrompt(drafted);
+        const synthesized = synthesizeSemanticRules({
+          prompt: drafted,
+          columns: cols,
+          sampleRows: sampleSlice,
+          tableName: tableNameToSample,
+        });
+        if (synthesized?.length) {
+          setRulesList(synthesized);
+          setActiveRules(synthesized);
+        }
         return true;
       }
     } catch (err) {
@@ -538,11 +555,22 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       }
       const tableData = getTableData(srcTable, activeEngineKey, 5);
       if (!cancelled) {
-        setPreviewRows(tableData.rows || []);
-        setDiscoveredColumns(tableData.columns || []);
+        const rows = tableData.rows || [];
+        const cols = tableData.columns || [];
+        setPreviewRows(rows);
+        setDiscoveredColumns(cols);
         setIsLiveSampleActive(false);
-        if (!rulesPrompt || rulesPrompt.length < 10) {
-          setRulesPrompt(getDefaultPromptForTable(srcTable, activeEngineKey, tableData.columns));
+        const drafted = getDefaultPromptForTable(srcTable, activeEngineKey, cols, rows);
+        setRulesPrompt(drafted);
+        const synthesized = synthesizeSemanticRules({
+          prompt: drafted,
+          columns: cols,
+          sampleRows: rows,
+          tableName: srcTable,
+        });
+        if (synthesized?.length) {
+          setRulesList(synthesized);
+          setActiveRules(synthesized);
         }
       }
     };
@@ -2491,6 +2519,8 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                   srcTable={srcTable}
                   activeEngineKey={activeEngineKey}
                   discoveredColumns={discoveredColumns}
+                  previewRows={previewRows}
+                  isLiveSampleActive={isLiveSampleActive}
                   rulesList={rulesList}
                   setRulesList={setRulesList}
                   setActiveRules={setActiveRules}

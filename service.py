@@ -30,6 +30,7 @@ from models import (
     StoreCredentialRequest,
     SampleDataRequest,
     GenerateRulesRequest,
+    DraftPromptRequest,
     LoginRequest,
     RegisterRequest,
     RuleVerifyRequest,
@@ -1010,8 +1011,65 @@ def api_get_sbom():
 
 
 # -----------------------------------------------------------------------------
-# AI Rule Synthesis (With REL-01 Retries, REL-02 Breaker, REL-05 Offline Fallback)
+# AI Data Profiler & Prompt Drafting + Rule Synthesis
 # -----------------------------------------------------------------------------
+@app.post("/rules/draft-prompt")
+def api_draft_prompt(req: DraftPromptRequest):
+    """
+    Analyzes the user's selected table, selected columns, and live sample rows
+    to discover data quality anomalies and automatically draft a tailored prompt.
+    """
+    profile_result = offline_ai_heuristics.analyze_and_draft_prompt(
+        table_name=req.tableName or "source_table",
+        engine=req.engine or "mongodb",
+        columns=req.columns or [],
+        selected_columns=req.selectedColumns,
+        sample_rows=req.sampleRows or [],
+        governance_mode=req.governanceMode or "balanced"
+    )
+
+    from ai_governance import ai_governor
+    allowed, _ = ai_governor.check_llm_sharing_permission(tenant_id="default")
+    client, deployment = get_azure_openai_client() if allowed else (None, None)
+
+    if client and (req.columns or req.selectedColumns or req.sampleRows):
+        try:
+            target_cols = profile_result.get("analyzedColumns") or req.columns or []
+            anomalies_summary = "; ".join(
+                [f"{a['column']}: {a['issue']} (e.g. {a['sampleValue']})" for a in profile_result.get("anomalies", [])[:8]]
+            ) or "No obvious row-level corruption in first 5 rows; enforce schema & domain constraints."
+
+            prompt_msg = f"""You are the DataX Autonomous Data Quality Architect.
+Analyze the following source table and live sample anomalies, and write a concise, natural-language data validation prompt (2 to 5 sentences) that a Data Steward can review or edit before generating rules.
+Reference the exact column names and the specific data issues discovered.
+
+Table: {req.tableName} ({req.engine})
+Selected Columns to Analyze: {', '.join(target_cols)}
+Live Sample Anomalies Detected: {anomalies_summary}
+Baseline Draft: {profile_result.get('draftedPrompt')}
+
+Return ONLY the natural-language validation prompt text (no markdown, no quotes, no preamble)."""
+
+            res = openai_breaker.call(
+                lambda: client.chat.completions.create(
+                    model=deployment,
+                    messages=[{"role": "user", "content": prompt_msg}],
+                    max_completion_tokens=350,
+                    timeout=7.0
+                )
+            )
+            ai_draft = (res.choices[0].message.content or "").strip().strip('"')
+            if len(ai_draft) > 20:
+                profile_result["draftedPrompt"] = ai_draft
+                profile_result["engine"] = f"Azure OpenAI ({deployment})"
+                return {"success": True, **profile_result}
+        except Exception as e:
+            print(f"[AI PROMPT DRAFTER] Using deterministic deep profiler draft: {e}")
+
+    profile_result["engine"] = "DataX Deep Column & Sample Profiler"
+    return {"success": True, **profile_result}
+
+
 @app.post("/rules/generate")
 def api_generate_rules(req: GenerateRulesRequest):
     # SEC-04: Prompt & Expression Injection Defense
@@ -1021,12 +1079,22 @@ def api_generate_rules(req: GenerateRulesRequest):
         except ValueError as ve:
             raise HTTPException(status_code=400, detail=str(ve))
 
+    effective_cols = req.selectedColumns if (req.selectedColumns and len(req.selectedColumns) > 0) else (req.columns or [])
+
     # P0: Data-sharing control: check tenant opt-in privacy & budget cap
     from ai_governance import ai_governor
     allowed, reason = ai_governor.check_llm_sharing_permission(tenant_id="default")
     if not allowed:
         print(f"[AI GOVERNOR] {reason}")
-        fallback_rules = offline_ai_heuristics.synthesize_rules(req.tableName, req.engine, req.columns, req.prompt)
+        fallback_rules = offline_ai_heuristics.synthesize_rules(
+            req.tableName,
+            req.engine,
+            effective_cols,
+            req.prompt,
+            req.sampleRows,
+            req.selectedColumns,
+            req.governanceMode or "balanced"
+        )
         return {
             "success": True,
             "engine": "Intelligence Engine (Local Certified Ontology)",
@@ -1042,7 +1110,15 @@ def api_generate_rules(req: GenerateRulesRequest):
     # REL-05: If Azure OpenAI client is unavailable, fall back to offline certified heuristics
     if not client:
         print("[AI ENGINE] Azure OpenAI credentials unconfigured. Activating REL-05 Offline Certified Heuristics Fallback.")
-        fallback_rules = offline_ai_heuristics.synthesize_rules(req.tableName, req.engine, req.columns, req.prompt)
+        fallback_rules = offline_ai_heuristics.synthesize_rules(
+            req.tableName,
+            req.engine,
+            effective_cols,
+            req.prompt,
+            req.sampleRows,
+            req.selectedColumns,
+            req.governanceMode or "balanced"
+        )
         return {
             "success": True,
             "engine": "Intelligence Engine (Local Ontology Fallback)",
@@ -1053,16 +1129,21 @@ def api_generate_rules(req: GenerateRulesRequest):
             "circuit_breaker": openai_breaker.get_status()
         }
 
+    sample_snippet = ""
+    if req.sampleRows:
+        sample_snippet = f"\nLive Sample Rows (first 3): {json.dumps(req.sampleRows[:3], default=str)[:900]}"
+
     system_prompt = """You are the DataX Autonomous Intelligence Engine for enterprise data migration and quality assurance.
-Your goal is to inspect the table schema and user requirements, and synthesize 3 to 6 executable validation rules.
+Your goal is to inspect the table schema, selected columns, sample rows, and the user's exact natural-language prompt, and synthesize 3 to 7 executable validation rules that directly implement the user's prompt.
+IMPORTANT: Preserve the exact casing of column names in `field`, `condition`, and `code` (e.g. if the column is `customer_id` or `email`, use `customer_id` or `email`).
 Return ONLY a valid JSON array of objects with the following schema:
 [
   {
     "id": "r_<short_slug>",
     "name": "<Human Readable Rule Name>",
-    "field": "<COLUMN_NAME>",
+    "field": "<EXACT_COLUMN_NAME>",
     "severity": "Critical" or "Warning",
-    "condition": "<SQL or expression condition, e.g. QUANTITY > 0>",
+    "condition": "<SQL or expression condition, e.g. quantity > 0>",
     "code": "<Executable SQL / Expression>",
     "desc": "<Plain English explanation of what this rule validates and why>",
     "badge": "Azure OpenAI (gpt-5-mini)"
@@ -1072,10 +1153,11 @@ Do not wrap in markdown or backticks. Return raw JSON array only."""
 
     user_prompt = f"""Target Table: {req.tableName}
 Engine / System: {req.engine}
-Available Columns: {', '.join(req.columns) if req.columns else 'Auto-detect'}
+Selected Columns: {', '.join(effective_cols) if effective_cols else 'Auto-detect'}
+Governance Mode: {req.governanceMode or 'balanced'}{sample_snippet}
 User Business Constraints / Prompt: {req.prompt}
 
-Generate strict enterprise validation rules tailored to these exact columns and constraints."""
+Generate strict enterprise validation rules tailored to these exact columns and the user's prompt."""
 
     # REL-01 & REL-02: Exponential backoff with jitter and circuit breaker protection
     @retry_with_backoff(max_retries=2, base_delay=1.0, max_delay=4.0, jitter=True)
@@ -1117,7 +1199,15 @@ Generate strict enterprise validation rules tailored to these exact columns and 
         }
     except Exception as e:
         print(f"[RESILIENCE REL-05] Azure OpenAI call failed or circuit tripped: {e}. Activating Offline Certified Heuristics Fallback.")
-        fallback_rules = offline_ai_heuristics.synthesize_rules(req.tableName, req.engine, req.columns, req.prompt)
+        fallback_rules = offline_ai_heuristics.synthesize_rules(
+            req.tableName,
+            req.engine,
+            effective_cols,
+            req.prompt,
+            req.sampleRows,
+            req.selectedColumns,
+            req.governanceMode or "balanced"
+        )
         return {
             "success": True,
             "engine": "Intelligence Engine (Local Ontology Fallback)",
