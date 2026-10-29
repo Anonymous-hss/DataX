@@ -85,8 +85,12 @@ class ThreadCreateRequest(BaseModel):
 
 
 class QuarantineResolveRequest(BaseModel):
-    quarantineId: Any
-    action: str  # 'approve' | 'edit_and_commit' | 'discard'
+    quarantineId: Optional[Any] = None
+    quarantine_id: Optional[Any] = None
+    recordId: Optional[Any] = None
+    record_id: Optional[Any] = None
+    thread_id: Optional[str] = None
+    action: Optional[str] = "remediate"  # 'approve' | 'edit_and_commit' | 'discard' | 'remediate' | 'hitl_review' | 'reject'
     editedPayload: Optional[Dict[str, Any]] = None
     resolutionNotes: Optional[str] = None
 

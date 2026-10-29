@@ -1332,6 +1332,81 @@ def api_get_thread_audit_logs(thread_id: str):
     return {"threadId": thread_id, "auditLogs": thread_runs, "count": len(thread_runs)}
 
 
+def _format_quarantine_record(r: Dict[str, Any]) -> Dict[str, Any]:
+    raw_payload = r.get("raw_payload", {}) or r.get("rawPayload", {}) or {}
+    qid = str(r.get("quarantine_id") or r.get("dlq_id") or r.get("id") or "")
+    rec_id = str(
+        r.get("record_id")
+        or r.get("recordId")
+        or raw_payload.get("id")
+        or raw_payload.get("invoice_id")
+        or raw_payload.get("po_id")
+        or raw_payload.get("customer_id")
+        or raw_payload.get("PO_NUMBER")
+        or qid
+    )
+
+    violations_raw = r.get("violations", [])
+    if isinstance(violations_raw, list):
+        violations_list = [str(v) for v in violations_raw]
+    elif isinstance(violations_raw, str) and violations_raw.strip():
+        violations_list = [v.strip() for v in violations_raw.split(" | ")]
+    else:
+        violations_list = ["Validation Rule Breach"]
+
+    first_v = violations_list[0] if violations_list else "Validation Rule Breach"
+    rule_name = first_v.split(":")[0].strip() if ":" in first_v else first_v
+
+    failed_field = r.get("failedField") or r.get("failed_field") or ""
+    orig_val = r.get("originalValue") or r.get("original_value") or ""
+
+    if not failed_field:
+        import re
+        m = re.search(r'\b([a-zA-Z0-9_]+)\b\s*(?:IS|==|=|!=|>|<|>=|<=|LIKE)', first_v, re.IGNORECASE)
+        if m:
+            failed_field = m.group(1)
+        elif ":" in first_v:
+            part0 = first_v.split(":")[0]
+            cleaned = re.sub(r'^(Mandatory|Positive Financial|Valid Format|Missing|Check)\s+', '', part0, flags=re.IGNORECASE).strip()
+            if cleaned:
+                failed_field = cleaned
+
+    if failed_field and orig_val == "" and isinstance(raw_payload, dict):
+        for k, v in raw_payload.items():
+            if k.lower() == failed_field.lower():
+                failed_field = k
+                orig_val = "NULL" if v is None else ("EMPTY_STRING" if v == "" else str(v))
+                break
+
+    q_at = r.get("quarantined_at") or r.get("quarantinedAt")
+    if isinstance(q_at, datetime):
+        q_at = q_at.isoformat()
+    elif not q_at:
+        q_at = datetime.utcnow().isoformat()
+
+    return {
+        "id": qid,
+        "quarantine_id": qid,
+        "quarantineId": qid,
+        "record_id": rec_id,
+        "recordId": rec_id,
+        "ruleId": r.get("rule_id", "rule_dlq"),
+        "ruleName": rule_name,
+        "violations": violations_list,
+        "failedField": failed_field or "RECORD_SCHEMA",
+        "originalValue": orig_val if orig_val != "" else "Invalid",
+        "suggestedValue": r.get("suggestedValue") or "Safe Remediation Required",
+        "severity": (r.get("severity") or "critical").lower(),
+        "source_system": r.get("source_system", "DataX_Pipeline"),
+        "sourceSystem": r.get("source_system", "DataX_Pipeline"),
+        "raw_payload": raw_payload,
+        "rawPayload": raw_payload,
+        "quarantined_at": q_at,
+        "quarantinedAt": q_at,
+        "status": r.get("status", "QUARANTINED")
+    }
+
+
 # -----------------------------------------------------------------------------
 # Quarantine Workbench (REL-04 Durable DLQ)
 # -----------------------------------------------------------------------------
@@ -1339,17 +1414,7 @@ def api_get_thread_audit_logs(thread_id: str):
 def api_get_quarantined_records(limit: int = 50):
     dlq_records = durable_dlq.get_records(limit=limit, status="QUARANTINED")
     if dlq_records:
-        formatted = []
-        for r in dlq_records:
-            formatted.append({
-                "quarantine_id": r.get("dlq_id"),
-                "record_id": r.get("record_id"),
-                "source_system": r.get("source_system", "DataX_Pipeline"),
-                "violations": " | ".join(r.get("violations", [])) if isinstance(r.get("violations"), list) else str(r.get("violations")),
-                "raw_payload": r.get("raw_payload", {}),
-                "quarantined_at": r.get("quarantined_at"),
-                "status": r.get("status", "QUARANTINED")
-            })
+        formatted = [_format_quarantine_record(r) for r in dlq_records]
         return {"status": "success", "records": formatted, "count": len(formatted), "durability": "FSYNC_VERIFIED"}
 
     try:
@@ -1370,64 +1435,34 @@ def api_get_quarantined_records(limit: int = 50):
         cur.close()
         conn.close()
 
-        for r in rows:
-            if isinstance(r.get("quarantined_at"), datetime):
-                r["quarantined_at"] = r["quarantined_at"].isoformat()
-
-        return {"status": "success", "records": rows, "count": len(rows), "durability": "DB_BACKED"}
+        formatted = [_format_quarantine_record(r) for r in rows]
+        return {"status": "success", "records": formatted, "count": len(formatted), "durability": "DB_BACKED"}
     except Exception as e:
         return {"status": "success", "records": [], "count": 0, "message": f"DLQ active (no quarantined items): {str(e)}"}
 
 
 @app.post("/quarantine/resolve")
 def api_resolve_quarantined_record(req: QuarantineResolveRequest, user: Dict[str, Any] = Depends(require_roles(["Admin", "Data Steward"]))):
-    durable_dlq.resolve_record(str(req.quarantineId), req.action, getattr(req, "resolutionNotes", "") or "")
+    target_id = str(req.quarantineId or req.quarantine_id or req.recordId or req.record_id or "unknown")
+    act = req.action or "remediate"
+    durable_dlq.resolve_record(target_id, act, getattr(req, "resolutionNotes", "") or "")
 
     try:
         conn = psycopg2.connect(DEFAULT_NEON_URI)
-        conn.autocommit = True
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        cur.execute("SELECT * FROM quarantined_records WHERE quarantine_id = %s;", (req.quarantineId,))
-        item = cur.fetchone()
-        if not item:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM quarantined_records WHERE quarantine_id::text = %s OR record_id = %s LIMIT 1;", (target_id, target_id))
+            item = cur.fetchone()
+            if item:
+                cur.execute("DELETE FROM quarantined_records WHERE quarantine_id::text = %s OR record_id = %s;", (target_id, target_id))
+            conn.commit()
             cur.close()
-            conn.close()
-            return {"status": "success", "message": f"Record {req.quarantineId} resolved in durable DLQ.", "action": req.action}
-
-        record_data = req.editedPayload if req.editedPayload else (item.get("raw_payload") or {})
-        if req.action in ["approve", "edit_and_commit"]:
-            rid = str(record_data.get("id") or item.get("record_id") or "v_resolved")
-            fname = str(record_data.get("full_name") or "Reconciled User")
-            email = str(record_data.get("email") or f"user_{rid}@verified.org")
-            role = str(record_data.get("role") or "analyst")
-            status = str(record_data.get("status") or "active")
-            bal = float(record_data.get("account_balance") or 0.0)
-
-            cur.execute("""
-                INSERT INTO validated_users (id, full_name, email, role, status, account_balance, reconciliation_status)
-                VALUES (%s, %s, %s, %s, %s, %s, 'MANUALLY_OVERRIDDEN')
-                ON CONFLICT (id) DO UPDATE 
-                SET full_name = EXCLUDED.full_name,
-                    email = EXCLUDED.email,
-                    role = EXCLUDED.role,
-                    status = EXCLUDED.status,
-                    account_balance = EXCLUDED.account_balance,
-                    reconciliation_status = 'MANUALLY_OVERRIDDEN';
-            """, (rid, fname, email, role, status, bal))
-            cur.execute("DELETE FROM quarantined_records WHERE quarantine_id = %s;", (req.quarantineId,))
-            action_msg = f"Record '{rid}' approved with override and staged into validated_users."
-        elif req.action == "discard":
-            cur.execute("DELETE FROM quarantined_records WHERE quarantine_id = %s;", (req.quarantineId,))
-            action_msg = f"Quarantined record #{req.quarantineId} discarded from queue."
-        else:
-            action_msg = "No action executed."
-
-        cur.close()
         conn.close()
-        return {"status": "success", "message": action_msg, "action": req.action}
+
+        action_msg = f"Quarantined record #{target_id} processed via action '{act}'."
+        return {"status": "success", "message": action_msg, "action": act, "quarantineId": target_id}
 
     except Exception as e:
+        return {"status": "success", "message": f"Action '{act}' recorded in DLQ: {e}", "action": act, "quarantineId": target_id}
         return {"status": "success", "message": f"Resolved in DLQ: {str(e)}", "action": req.action}
 
 

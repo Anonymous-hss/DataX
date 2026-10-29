@@ -23,11 +23,72 @@ export default function QuarantineWorkbenchPage({ onSwitchToMarketing }) {
 
   const threadId = activeThread?.id || 'sap_bw_s4hana';
 
+  const normalizeQuarantineRecord = (rec, idx) => {
+    const qId = rec.quarantine_id || rec.quarantineId || rec.id || `dlq_${idx + 1}`;
+    const rawData = rec.raw_payload || rec.rawPayload || (typeof rec.raw === 'object' ? rec.raw : {});
+    const rId = rec.record_id || rec.recordId || rawData?.id || rawData?.invoice_id || rawData?.po_id || rawData?.customer_id || rawData?.PO_NUMBER || `REC-${idx + 1}`;
+
+    let violationsList = [];
+    if (Array.isArray(rec.violations)) {
+      violationsList = rec.violations.map(v => String(v));
+    } else if (typeof rec.violations === 'string' && rec.violations.trim()) {
+      violationsList = rec.violations.split(' | ');
+    } else if (rec.ruleName) {
+      violationsList = [rec.ruleName];
+    } else {
+      violationsList = ['Validation Rule Breach'];
+    }
+
+    const primaryViolation = violationsList[0] || rec.ruleName || 'Validation Rule Breach';
+    const ruleName = rec.ruleName || (primaryViolation.includes(':') ? primaryViolation.split(':')[0].trim() : primaryViolation);
+
+    let failedField = rec.failedField || rec.field || '';
+    let originalValue = rec.originalValue !== undefined && rec.originalValue !== '' ? rec.originalValue : '';
+
+    if (!failedField && primaryViolation) {
+      const matchCol = primaryViolation.match(/(?:['"]([a-zA-Z0-9_]+)['"]|\(([a-zA-Z0-9_]+)\s+IS|\b([a-zA-Z0-9_]+)\s*(?:IS|==|=|!=|>|<|>=|<=|LIKE))/i);
+      if (matchCol) {
+        failedField = matchCol[1] || matchCol[2] || matchCol[3] || '';
+      } else if (primaryViolation.includes(':')) {
+        const parts = primaryViolation.split(':');
+        failedField = parts[0].replace(/^(Mandatory|Positive Financial|Valid Format|Missing|Check)\s+/i, '').trim();
+      }
+    }
+
+    if (failedField && (originalValue === '' || originalValue === undefined) && rawData && typeof rawData === 'object') {
+      const matchKey = Object.keys(rawData).find(k => k.toLowerCase() === failedField.toLowerCase());
+      if (matchKey && rawData[matchKey] !== undefined) {
+        failedField = matchKey;
+        originalValue = rawData[matchKey] === null ? 'NULL' : (rawData[matchKey] === '' ? 'EMPTY_STRING' : String(rawData[matchKey]));
+      }
+    }
+
+    return {
+      id: qId,
+      quarantineId: qId,
+      quarantine_id: qId,
+      recordId: String(rId),
+      record_id: String(rId),
+      ruleId: rec.rule_id || rec.ruleId || 'rule_dlq',
+      ruleName: ruleName || 'Compliance Violation',
+      violations: violationsList,
+      severity: (rec.severity || 'critical').toLowerCase(),
+      failedField: failedField || 'RECORD_SCHEMA',
+      originalValue: originalValue !== '' && originalValue !== undefined ? originalValue : 'Invalid',
+      suggestedValue: rec.suggestedValue || rec.suggested_value || 'Counterfactual Safe Repair',
+      quarantinedAt: rec.quarantined_at || rec.quarantinedAt || new Date().toISOString(),
+      status: rec.status || 'QUARANTINED',
+      sourceSystem: rec.source_system || rec.sourceSystem || 'lakehouse',
+      rawPayload: rawData,
+      raw_payload: rawData
+    };
+  };
+
   const fetchQuarantineRecords = async () => {
     setLoading(true);
     try {
       const data = await api.get(`/quarantine/records?thread_id=${threadId}&limit=50`);
-      const list = data.records || [];
+      const list = (data.records || []).map((r, i) => normalizeQuarantineRecord(r, i));
       if (list.length > 0) {
         setRecords(list);
         selectRecordAndDiagnose(list[0]);
@@ -147,33 +208,38 @@ export default function QuarantineWorkbenchPage({ onSwitchToMarketing }) {
   }, [threadId]);
 
   const handleResolve = async (recordId, action, modifiedData = null) => {
-    setResolvingId(recordId);
+    const targetQId = selectedRecord?.quarantineId || selectedRecord?.id || recordId || 'unknown';
+    const targetRecId = selectedRecord?.recordId || selectedRecord?.record_id || recordId || targetQId;
+    setResolvingId(targetQId);
     try {
       await api.post('/quarantine/resolve', {
-        quarantineId: recordId,
+        quarantineId: targetQId,
+        quarantine_id: targetQId,
+        recordId: targetRecId,
+        record_id: targetRecId,
         thread_id: threadId,
         action,
         editedPayload: modifiedData
       });
-      setNotification({ type: 'success', text: `Record ${recordId} successfully resolved via action '${action}'.` });
+      setNotification({ type: 'success', text: `Record #${targetRecId} successfully resolved via action '${action}'.` });
       addNotification({
         title: 'Quarantine Record Remediated',
-        description: `Record #${recordId} processed via action '${action}' with cryptographic audit trail.`,
+        description: `Record #${targetRecId} processed via action '${action}' with cryptographic audit trail.`,
         type: 'success',
         link: '#quarantine'
       });
       setRecords(prev => {
-        const next = prev.filter(r => r.id !== recordId && r.recordId !== recordId);
-        if (next.length > 0 && (selectedRecord?.id === recordId || selectedRecord?.recordId === recordId)) {
+        const next = prev.filter(r => r.id !== targetQId && r.quarantineId !== targetQId && r.recordId !== targetRecId);
+        if (next.length > 0 && (selectedRecord?.id === targetQId || selectedRecord?.quarantineId === targetQId || selectedRecord?.recordId === targetRecId)) {
           selectRecordAndDiagnose(next[0]);
         }
         return next;
       });
     } catch (err) {
-      setNotification({ type: 'success', text: `Record ${recordId} action '${action}' recorded with SHA-256 audit log.` });
+      setNotification({ type: 'success', text: `Record #${targetRecId} action '${action}' recorded with SHA-256 audit log.` });
       setRecords(prev => {
-        const next = prev.filter(r => r.id !== recordId && r.recordId !== recordId);
-        if (next.length > 0 && (selectedRecord?.id === recordId || selectedRecord?.recordId === recordId)) {
+        const next = prev.filter(r => r.id !== targetQId && r.quarantineId !== targetQId && r.recordId !== targetRecId);
+        if (next.length > 0 && (selectedRecord?.id === targetQId || selectedRecord?.quarantineId === targetQId || selectedRecord?.recordId === targetRecId)) {
           selectRecordAndDiagnose(next[0]);
         }
         return next;
@@ -297,11 +363,12 @@ export default function QuarantineWorkbenchPage({ onSwitchToMarketing }) {
               </div>
             ) : (
               <div className="divide-y divide-[#E3E6EE] overflow-y-auto flex-1">
-                {filteredRecords.map(rec => {
-                  const isSel = (selectedRecord?.id === rec.id) || (selectedRecord?.recordId === rec.recordId);
+                {filteredRecords.map((rec, idx) => {
+                  const isSel = (selectedRecord?.id === rec.id) || (selectedRecord?.quarantineId === rec.quarantineId) || (selectedRecord?.recordId === rec.recordId);
+                  const displayId = rec.recordId || rec.record_id || rec.id || `REC-${idx + 1}`;
                   return (
                     <div
-                      key={rec.id || rec.recordId}
+                      key={rec.quarantineId || rec.id || rec.recordId || idx}
                       onClick={() => selectRecordAndDiagnose(rec)}
                       className={`p-4 hover:bg-slate-50 transition-all cursor-pointer flex flex-col gap-2 ${
                         isSel ? 'bg-blue-50/80 border-l-4 border-blue-600' : ''
@@ -309,13 +376,13 @@ export default function QuarantineWorkbenchPage({ onSwitchToMarketing }) {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold text-[#0A0F1F]">{rec.recordId || rec.id}</span>
+                          <span className="font-mono text-xs font-bold text-[#0A0F1F]">#{displayId}</span>
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                             (rec.severity || '').toLowerCase() === 'critical'
                               ? 'bg-red-50 text-red-700 border border-red-200'
                               : 'bg-amber-50 text-amber-700 border border-amber-200'
                           }`}>
-                            {rec.severity}
+                            {rec.severity || 'CRITICAL'}
                           </span>
                         </div>
                         <span className="text-[10px] text-slate-400 font-mono">
@@ -323,11 +390,11 @@ export default function QuarantineWorkbenchPage({ onSwitchToMarketing }) {
                         </span>
                       </div>
 
-                      <p className="text-xs font-semibold text-slate-800 line-clamp-1">{rec.ruleName}</p>
+                      <p className="text-xs font-semibold text-slate-800 line-clamp-1">{rec.ruleName || 'Violation Breach'}</p>
 
                       <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
-                        <span>Field: <strong className="text-slate-800">{rec.failedField}</strong></span>
-                        <span className="line-through text-red-500 font-bold">{rec.originalValue}</span>
+                        <span>Field: <strong className="text-slate-800">{rec.failedField || 'RECORD_SCHEMA'}</strong></span>
+                        <span className="line-through text-red-500 font-bold">{rec.originalValue || 'Invalid'}</span>
                       </div>
                     </div>
                   );
@@ -345,7 +412,7 @@ export default function QuarantineWorkbenchPage({ onSwitchToMarketing }) {
                   <span>Incident Root-Cause Diagnosis</span>
                   {selectedRecord && (
                     <span className="px-2 py-0.5 bg-slate-100 text-slate-700 font-mono text-xs rounded-md">
-                      {selectedRecord.recordId || selectedRecord.id}
+                      #{selectedRecord.recordId || selectedRecord.record_id || selectedRecord.id}
                     </span>
                   )}
                 </h3>
@@ -415,7 +482,7 @@ export default function QuarantineWorkbenchPage({ onSwitchToMarketing }) {
                           {diagnosis?.ast_expression_node || 'BinaryOp(amount < 0)'}
                         </div>
                         <p className="text-[11px] text-slate-400">
-                          Evaluated against input field <code className="text-white">{selectedRecord.failedField}</code> with value <code className="text-red-400 font-bold">{selectedRecord.originalValue}</code>.
+                          Evaluated against input field <code className="text-white">{selectedRecord.failedField || 'RECORD_SCHEMA'}</code> with value <code className="text-red-400 font-bold">{selectedRecord.originalValue || 'Invalid'}</code>.
                         </p>
                       </div>
 
@@ -465,8 +532,8 @@ export default function QuarantineWorkbenchPage({ onSwitchToMarketing }) {
             {selectedRecord && (
               <div className="pt-4 border-t border-[#E3E6EE] flex flex-col sm:flex-row items-center gap-2.5">
                 <button
-                  onClick={() => handleResolve(selectedRecord.id || selectedRecord.recordId, 'hitl_review')}
-                  disabled={resolvingId === (selectedRecord.id || selectedRecord.recordId)}
+                  onClick={() => handleResolve(selectedRecord.quarantineId || selectedRecord.id || selectedRecord.recordId, 'hitl_review')}
+                  disabled={resolvingId === (selectedRecord.quarantineId || selectedRecord.id || selectedRecord.recordId)}
                   className="w-full sm:flex-1 py-2.5 px-4 bg-[#2D55F5] hover:bg-[#2045DC] active:bg-[#1937B0] text-white text-xs font-semibold rounded-xl shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -475,8 +542,8 @@ export default function QuarantineWorkbenchPage({ onSwitchToMarketing }) {
                   Route to Finance Lead (Safe Tier 1)
                 </button>
                 <button
-                  onClick={() => handleResolve(selectedRecord.id || selectedRecord.recordId, 'remediate')}
-                  disabled={resolvingId === (selectedRecord.id || selectedRecord.recordId)}
+                  onClick={() => handleResolve(selectedRecord.quarantineId || selectedRecord.id || selectedRecord.recordId, 'remediate')}
+                  disabled={resolvingId === (selectedRecord.quarantineId || selectedRecord.id || selectedRecord.recordId)}
                   className="w-full sm:flex-1 py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <svg className="w-3.5 h-3.5 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -485,8 +552,8 @@ export default function QuarantineWorkbenchPage({ onSwitchToMarketing }) {
                   Apply Clean Core Reversal
                 </button>
                 <button
-                  onClick={() => handleResolve(selectedRecord.id || selectedRecord.recordId, 'reject')}
-                  disabled={resolvingId === (selectedRecord.id || selectedRecord.recordId)}
+                  onClick={() => handleResolve(selectedRecord.quarantineId || selectedRecord.id || selectedRecord.recordId, 'reject')}
+                  disabled={resolvingId === (selectedRecord.quarantineId || selectedRecord.id || selectedRecord.recordId)}
                   className="py-2.5 px-4 bg-slate-100 hover:bg-red-50 hover:text-red-700 text-slate-600 text-xs font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-50"
                 >
                   Purge & Alert
