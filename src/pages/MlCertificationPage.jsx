@@ -232,7 +232,7 @@ export default function MlCertificationPage() {
 
                   <div className="text-right font-mono text-xs">
                     <div>Max PSI: <strong className="text-red-700">{tabularCert.maxPsi}</strong></div>
-                    <div>SHA-256: <strong>{tabularCert.sha256DatasetHash.substring(0, 16)}...</strong></div>
+                    <div>SHA-256: <strong>{(tabularCert.sha256DatasetHash || '—').substring(0, 16)}...</strong></div>
                   </div>
                 </div>
 
@@ -376,7 +376,7 @@ export default function MlCertificationPage() {
 
                   <div className="text-right font-mono text-xs">
                     <div>Secret Leaks in Weights: <strong className="text-red-700">{sftCert.secretLeaksFound}</strong></div>
-                    <div>SHA-256: <strong>{sftCert.sha256DatasetHash.substring(0, 16)}...</strong></div>
+                    <div>SHA-256: <strong>{(sftCert.sha256DatasetHash || '—').substring(0, 16)}...</strong></div>
                   </div>
                 </div>
 

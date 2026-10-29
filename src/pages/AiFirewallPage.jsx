@@ -371,7 +371,7 @@ export default function AiFirewallPage() {
                     {/* Metadata Footer */}
                     <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between text-[11px] font-mono text-slate-500 gap-2">
                       <span>Shannon Entropy: <strong className="text-slate-700">{selectedChunk.entropy}</strong></span>
-                      <span>SHA-256 Seal: <strong className="text-slate-700">{selectedChunk.sha256Seal.substring(0, 20)}...</strong></span>
+                      <span>SHA-256 Seal: <strong className="text-slate-700">{(selectedChunk.sha256Seal || '—').substring(0, 20)}...</strong></span>
                       <span className="text-emerald-700 font-semibold">Persisted to Neon Postgres: datax_verified_rag_chunks</span>
                     </div>
                   </div>
@@ -511,7 +511,7 @@ export default function AiFirewallPage() {
                     )}
 
                     <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-mono text-slate-500">
-                      <span>Seal: <strong className="text-slate-700">{toolVerdict.sha256Seal.substring(0, 20)}...</strong></span>
+                      <span>Seal: <strong className="text-slate-700">{(toolVerdict.sha256Seal || '—').substring(0, 20)}...</strong></span>
                       <span className="text-emerald-700 font-semibold">Logged to datax_firewall_events</span>
                     </div>
                   </div>
