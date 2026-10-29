@@ -1450,6 +1450,16 @@ def api_resolve_quarantined_record(req: QuarantineResolveRequest, user: Dict[str
     try:
         conn = psycopg2.connect(DEFAULT_NEON_URI)
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS quarantined_records (
+                    quarantine_id SERIAL PRIMARY KEY,
+                    record_id VARCHAR(64),
+                    source_system VARCHAR(64) DEFAULT 'DataX_Pipeline',
+                    violations TEXT,
+                    raw_payload JSONB,
+                    quarantined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
             cur.execute("SELECT * FROM quarantined_records WHERE quarantine_id::text = %s OR record_id = %s LIMIT 1;", (target_id, target_id))
             item = cur.fetchone()
             if item:
