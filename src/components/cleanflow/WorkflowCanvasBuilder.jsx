@@ -597,6 +597,48 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       }
     }
   }, []);
+  // Synchronize local modal & context states with persisted canvas nodes on mount
+  useEffect(() => {
+    const srcNode = nodes.find(n => n.type === 'source');
+    if (srcNode) {
+      if (srcNode.table && srcNode.table !== '0PUR_C01' && srcTable === '0PUR_C01') {
+        setSrcTable(srcNode.table);
+      }
+      const sysLower = String(srcNode.system || '').toLowerCase();
+      if (sysLower.includes('mongo') && srcDbType === 'SAP BW') {
+        setSrcDbType('MongoDB');
+        setSourceConfig(prev => ({
+          ...prev,
+          engine: 'mongodb',
+          table: srcNode.table || prev.table || 'raw_invoices',
+          database: prev.database || 'datax_staging'
+        }));
+      } else if (sysLower.includes('postgres') && srcDbType === 'SAP BW') {
+        setSrcDbType('PostgreSQL');
+        setSourceConfig(prev => ({
+          ...prev,
+          engine: 'postgres',
+          table: srcNode.table || prev.table
+        }));
+      }
+    }
+    const tgtNode = nodes.find(n => n.type === 'target');
+    if (tgtNode) {
+      if (tgtNode.table && tgtNode.table !== '0PUR_C01_clean' && tgtTable === '0PUR_C01_clean') {
+        setTgtTable(tgtNode.table);
+      }
+      const tSysLower = String(tgtNode.system || '').toLowerCase();
+      if (tSysLower.includes('postgres') && tgtDbType.includes('SAP')) {
+        setTgtDbType('PostgreSQL');
+        setTargetConfig(prev => ({
+          ...prev,
+          engine: 'postgres',
+          table: tgtNode.table || prev.table || 'raw_invoices_clean'
+        }));
+      }
+    }
+  }, [nodes, srcTable, srcDbType, tgtTable, tgtDbType, setSourceConfig, setTargetConfig]);
+
   // Hash synchronization: Select relevant node without auto-popping modal (popup only on settings icon click)
   useEffect(() => {
     const hash = (window.location.hash || '').toLowerCase();
@@ -802,10 +844,10 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           nodeExecutions: normalizedDagExecs,
           traceLogs: res.traceLogs || [],
           elapsedMs: res.elapsedMs || null,
-          sourceTable: srcTable,
-          sourceEngine: srcDbType,
-          targetTable: tgtTable,
-          targetEngine: tgtDbType,
+          sourceTable: (nodes.find(n => n.type === 'source')?.table && nodes.find(n => n.type === 'source')?.table !== '0PUR_C01') ? nodes.find(n => n.type === 'source').table : srcTable,
+          sourceEngine: nodes.find(n => n.type === 'source')?.system || srcDbType,
+          targetTable: (nodes.find(n => n.type === 'target')?.table && nodes.find(n => n.type === 'target')?.table !== '0PUR_C01_clean') ? nodes.find(n => n.type === 'target').table : tgtTable,
+          targetEngine: nodes.find(n => n.type === 'target')?.system || tgtDbType,
           columns: discoveredColumns,
           isLive: false
         });
@@ -891,10 +933,10 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           nodeExecutions: normalizedDagExecs,
           traceLogs: res.traceLogs || [],
           elapsedMs: res.elapsedMs || null,
-          sourceTable: srcTable,
-          sourceEngine: srcDbType,
-          targetTable: tgtTable,
-          targetEngine: tgtDbType,
+          sourceTable: (nodes.find(n => n.type === 'source')?.table && nodes.find(n => n.type === 'source')?.table !== '0PUR_C01') ? nodes.find(n => n.type === 'source').table : srcTable,
+          sourceEngine: nodes.find(n => n.type === 'source')?.system || srcDbType,
+          targetTable: (nodes.find(n => n.type === 'target')?.table && nodes.find(n => n.type === 'target')?.table !== '0PUR_C01_clean') ? nodes.find(n => n.type === 'target').table : tgtTable,
+          targetEngine: nodes.find(n => n.type === 'target')?.system || tgtDbType,
           columns: discoveredColumns,
           docNo: res.docNo || s4hanaDocNumber || '#COMMIT-SUCCESS',
           isLive: true

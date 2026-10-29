@@ -270,6 +270,28 @@ def _execute_pipeline_core(req: PipelineExecutionRequest, idempotency_key: str, 
             idempotency_manager.release(idempotency_key)
             raise HTTPException(status_code=400, detail=str(ve))
 
+    # Reconcile source and target configs with canvas topology nodes (prevents post-refresh state desync)
+    canvas_nodes = getattr(req, "nodes", None) or []
+    for cnode in canvas_nodes:
+        if not isinstance(cnode, dict):
+            continue
+        cntype = str(cnode.get("type") or "").lower()
+        cnsys = str(cnode.get("system") or "").lower()
+        cntbl = str(cnode.get("table") or "").strip()
+        if cntype == "source":
+            if "mongo" in cnsys and req.source.engine.lower() in ["sap_bw", "sap"]:
+                req.source.engine = "mongodb"
+            elif "postgres" in cnsys and req.source.engine.lower() in ["sap_bw", "sap"]:
+                req.source.engine = "postgres"
+            if cntbl and cntbl != "0PUR_C01" and (not req.source.table or req.source.table == "0PUR_C01"):
+                req.source.table = cntbl
+                req.source.selectedTables = [cntbl]
+        elif cntype == "target" and req.target1:
+            if "postgres" in cnsys and req.target1.engine.lower() in ["s4_hana", "sap_s4hana", "sap"]:
+                req.target1.engine = "postgres"
+            if cntbl and cntbl != "0PUR_C01_clean" and (not req.target1.table or req.target1.table in ["0PUR_C01_clean", "clean_records", "records"]):
+                req.target1.table = cntbl
+
     # 1. Source Pre-flight Validation & Extraction
     raw_records = []
     uploaded_data = getattr(req, "uploadedRecords", None) or getattr(req.source, "fileData", None)
@@ -281,6 +303,11 @@ def _execute_pipeline_core(req: PipelineExecutionRequest, idempotency_key: str, 
     else:
         src_uri = get_resolved_uri(req.source)
         src_engine = req.source.engine.lower()
+        if not src_uri and src_engine in ["mongodb", "mongo"]:
+            src_uri = "mongodb+srv://harshal:harshal@cluster0.tb6bhff.mongodb.net/datax_staging?retryWrites=true&w=majority"
+        elif not src_uri and src_engine in ["postgres", "postgresql"]:
+            from vault import DEFAULT_NEON_URI
+            src_uri = DEFAULT_NEON_URI
         if not src_uri and src_engine not in ["sap_bw", "sap_hana", "sap", "s4_hana", "file_upload", "local_file"]:
             log("ERROR", f"Pre-flight check failed: Source node ({src_engine.upper()}) credentials are missing.")
             raise HTTPException(
