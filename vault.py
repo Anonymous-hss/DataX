@@ -19,29 +19,10 @@ AUDIT_LOGS_FILE = os.path.join(VAULT_DIR, ".audit_logs.json")
 RUNS_STORE_FILE = os.path.join(VAULT_DIR, ".runs_store.json")
 
 def _resolve_default_neon_uri() -> str:
-    env_uri = os.environ.get("DATAX_NEON_URI") or os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_DB_URI")
+    env_uri = os.environ.get("DATAX_NEON_URI") or os.environ.get("DATABASE_URL")
     if env_uri and "<" not in env_uri and "neon-host" not in env_uri:
         return env_uri
-
-    env_file = '/home/azureuserSDH/Production/nexlayer-backend/.env'
-    if os.path.exists(env_file):
-        try:
-            env = {}
-            with open(env_file, 'r', encoding='utf-8') as f:
-                for line in f:
-                    line = line.strip()
-                    if '=' in line and not line.startswith('#'):
-                        k, v = line.split('=', 1)
-                        env[k.strip()] = v.strip().replace('"', '').replace("'", "")
-            if env.get('POSTGRES_DB_URI') and "<" not in env['POSTGRES_DB_URI'] and "neon-host" not in env['POSTGRES_DB_URI']:
-                return env['POSTGRES_DB_URI']
-            if env.get('PGHOST') and env.get('PGUSER') and env.get('PGPASSWORD'):
-                if "<" not in env['PGHOST'] and "neon-host" not in env['PGHOST']:
-                    ssl_mode = f"?sslmode={env.get('PGSSLMODE', 'require')}" if env.get('PGSSLMODE') else ""
-                    return f"postgresql://{env['PGUSER']}:{env['PGPASSWORD']}@{env['PGHOST']}:{env.get('PGPORT', 5432)}/{env.get('PGDATABASE', 'postgres')}{ssl_mode}"
-        except Exception:
-            pass
-    return ""
+    return "postgresql://neondb_owner:npg_Eim1u6bIldRL@ep-square-breeze-aqokq2fe-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require"
 
 DEFAULT_NEON_URI = (
     _resolve_default_neon_uri()
