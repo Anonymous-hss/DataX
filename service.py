@@ -34,6 +34,10 @@ from models import (
     LoginRequest,
     RegisterRequest,
     RuleVerifyRequest,
+    RagScanRequest,
+    AgentToolInterceptRequest,
+    MlCertifyRequest,
+    UseCaseAdvisorRequest,
 )
 from vault import (
     load_threads,
@@ -1682,6 +1686,145 @@ def api_get_notifications_feed(limit: int = 15):
             "screen": "quarantine" if "quarantine" in (a.get("trigger_reason") or "").lower() else "history"
         })
     return {"status": "success", "notifications": feed, "count": len(feed)}
+
+
+# -----------------------------------------------------------------------------
+# Pillar 2: AI Agent & RAG Data Firewall Endpoints
+# -----------------------------------------------------------------------------
+@app.post("/firewall/scan-rag-batch")
+def api_scan_rag_batch(req: RagScanRequest):
+    """Pre-embedding RAG document scanner: detects prompt injection, secrets, PII, and entropy."""
+    from ai_firewall_engine import scan_rag_batch
+    try:
+        res = scan_rag_batch(req.chunks, persist=bool(req.persist))
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"RAG batch scan failed: {str(e)}")
+
+
+@app.post("/firewall/intercept")
+def api_intercept_agent_tool_call(req: AgentToolInterceptRequest):
+    """Sub-25ms synchronous firewall for AI Agent tool calls."""
+    from ai_firewall_engine import intercept_agent_tool_call
+    try:
+        payload = {
+            "agent_id": req.agent_id,
+            "tool_name": req.tool_name,
+            "arguments": req.arguments or {},
+            "policies": req.policies or {}
+        }
+        res = intercept_agent_tool_call(payload)
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Firewall interception failed: {str(e)}")
+
+
+@app.get("/firewall/sample-corpus")
+def api_get_firewall_sample_corpus():
+    """Provides a realistic enterprise RAG batch containing clean docs, leaked secrets, and indirect injections."""
+    from ai_firewall_engine import get_sample_rag_corpus
+    return {"status": "success", "corpus": get_sample_rag_corpus()}
+
+
+@app.get("/firewall/sample-tool-attacks")
+def api_get_sample_tool_attacks():
+    """Provides realistic AI agent tool calls with planted attacks."""
+    from ai_firewall_engine import get_sample_tool_attacks
+    return {"status": "success", "attacks": get_sample_tool_attacks()}
+
+
+@app.get("/firewall/events")
+def api_get_firewall_events(limit: int = 25):
+    """Retrieves recent firewall interception events from Neon PostgreSQL."""
+    try:
+        with psycopg2.connect(DEFAULT_NEON_URI) as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT event_id, timestamp, mode, agent_or_source, target_tool, verdict, risk_score, violations, latency_ms, sha256_seal
+                    FROM "datax_firewall_events"
+                    ORDER BY timestamp DESC
+                    LIMIT %s;
+                """, (limit,))
+                rows = cur.fetchall()
+                return {"status": "success", "events": rows, "count": len(rows)}
+    except Exception as e:
+        return {"status": "success", "events": [], "count": 0, "message": f"Events deferred: {e}"}
+
+
+# -----------------------------------------------------------------------------
+# Pillar 3: ML Training & LLM Fine-Tuning Certification Endpoints
+# -----------------------------------------------------------------------------
+@app.post("/ml-gate/certify")
+def api_certify_ml_dataset(req: MlCertifyRequest):
+    """Certifies Tabular ML or LLM Fine-Tuning SFT datasets."""
+    from ml_certification_engine import certify_tabular_dataset, certify_sft_jsonl_dataset
+    try:
+        modality = (req.modality or "TABULAR").upper()
+        if "LLM" in modality or "SFT" in modality or "JSONL" in modality or req.jsonlRecords:
+            records = req.jsonlRecords or req.candidateRecords or []
+            res = certify_sft_jsonl_dataset(records, dataset_name=req.datasetName or "llm_sft_corpus")
+            return res
+        else:
+            cand = req.candidateRecords or []
+            base = req.baselineRecords
+            res = certify_tabular_dataset(
+                candidate_records=cand,
+                baseline_records=base,
+                target_column=req.targetColumn,
+                protected_column=req.protectedColumn,
+                dataset_name=req.datasetName or "tabular_ml_dataset"
+            )
+            return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"ML Dataset Certification failed: {str(e)}")
+
+
+@app.get("/ml-gate/certificates")
+def api_get_ml_certificates(limit: int = 20):
+    """Retrieves past dataset certification releases from Neon PostgreSQL."""
+    try:
+        with psycopg2.connect(DEFAULT_NEON_URI) as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT cert_id, dataset_name, modality, row_count, clean_row_count, psi_max, leakage_columns, anchored_score, verdict, sha256_dataset_hash, created_at
+                    FROM "datax_ml_certifications"
+                    ORDER BY created_at DESC
+                    LIMIT %s;
+                """, (limit,))
+                rows = cur.fetchall()
+                return {"status": "success", "certificates": rows, "count": len(rows)}
+    except Exception as e:
+        return {"status": "success", "certificates": [], "count": 0, "message": f"Certificates deferred: {e}"}
+
+
+@app.get("/ml-gate/sample-datasets")
+def api_get_ml_sample_datasets():
+    """Provides realistic Tabular and SFT datasets with planted target leakage and drift."""
+    from ml_certification_engine import get_sample_tabular_dataset, get_sample_sft_dataset
+    return {
+        "status": "success",
+        "tabular": get_sample_tabular_dataset(),
+        "sft": get_sample_sft_dataset()
+    }
+
+
+# -----------------------------------------------------------------------------
+# Guided UX Discovery: AI Use-Case Advisor Endpoint
+# -----------------------------------------------------------------------------
+@app.post("/advisor/recommend")
+def api_recommend_use_cases(req: UseCaseAdvisorRequest):
+    """Recommends 3 tailored, plain-English DataX blueprints based on user role, stack, and goal."""
+    from use_case_advisor import recommend_use_cases
+    try:
+        blueprints = recommend_use_cases(
+            role=req.role,
+            stack=req.stack,
+            goal=req.goal,
+            schema_columns=req.schema_columns
+        )
+        return {"status": "success", "recommendations": blueprints, "count": len(blueprints)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Use-case recommendation failed: {str(e)}")
 
 
 if __name__ == "__main__":

@@ -579,7 +579,136 @@ export const TEMPLATE_AUTOFILLS = {
   // -----------------------------------------------------------------------
   // 5. TIER 3: Salesforce CRM -> BigQuery Real-Time Revenue Pipeline
   // -----------------------------------------------------------------------
-  salesforce_crm_bigquery: {
+  // -----------------------------------------------------------------------
+  // ML Feature Drift & Fine-Tuning Certification Gate
+  // -----------------------------------------------------------------------
+  ml_dataset_certification: {
+    id: 'ml_dataset_certification',
+    name: 'ML Feature Drift & Fine-Tuning Certification Gate',
+    category: 'MLOps & LLM Engineering',
+    priority: 'Tier 1 (AI Quality & Governance)',
+    desc: 'Ingest candidate training sets, compute Population Stability Index (PSI) against production baseline, flag target leakage (|r| >= 0.75), audit protected demographic balance, and enforce automated EU AI Act / SR 11-7 gate before model training.',
+    nodes: [
+      {
+        id: 'node-source',
+        type: 'source',
+        x: 80,
+        y: 180,
+        width: 260,
+        height: 135,
+        title: 'Candidate Ingestion',
+        system: 'HuggingFace / S3 Feature Store',
+        table: 'credit_risk_candidate_q2',
+        rowCount: '25,000 samples',
+        status: 'Ready',
+        variant: 'blue'
+      },
+      {
+        id: 'node-rules',
+        type: 'rules',
+        x: 390,
+        y: 180,
+        width: 260,
+        height: 135,
+        title: 'Intelligence Engine',
+        system: 'PSI Drift & Leakage Auditor',
+        ruleCount: 6,
+        aiModel: 'DuckDB PSI Math',
+        status: 'Auditing Covariate Shift',
+        variant: 'indigo'
+      },
+      {
+        id: 'node-conditional',
+        type: 'conditional',
+        x: 700,
+        y: 180,
+        width: 260,
+        height: 135,
+        title: 'Certification Gate',
+        system: 'PSI <= 0.20 & Leakage < 0.75',
+        table: 'Automated Threshold',
+        status: 'Active',
+        variant: 'purple'
+      },
+      {
+        id: 'node-hitl',
+        type: 'hitl',
+        x: 1020,
+        y: 90,
+        width: 260,
+        height: 135,
+        title: 'Human in Loop',
+        system: 'Lead ML Scientist Review',
+        table: 'SLA: 4 hrs',
+        status: 'Armed',
+        variant: 'orange'
+      },
+      {
+        id: 'node-target',
+        type: 'target',
+        x: 1340,
+        y: 90,
+        width: 260,
+        height: 135,
+        title: 'Certified S3 / HF Store',
+        system: 'Certified Model Training Bucket',
+        table: 's3://ml-training/certified-q2.parquet',
+        status: 'Ready to Train',
+        variant: 'green'
+      },
+      {
+        id: 'node-quarantine',
+        type: 'quarantine',
+        x: 1020,
+        y: 270,
+        width: 260,
+        height: 135,
+        title: 'Quarantine Store',
+        system: 'Drift & Leakage DLQ',
+        table: 'ml_drift_quarantine',
+        status: 'Audit Sealed',
+        variant: 'orange'
+      }
+    ],
+    edges: [
+      { id: 'e-1', from: 'node-source', to: 'node-rules', label: 'Raw Features' },
+      { id: 'e-2', from: 'node-rules', to: 'node-conditional', label: 'PSI & Pearson Scores' },
+      { id: 'e-3', from: 'node-conditional', to: 'node-hitl', label: 'Borderline Drift (0.10 < PSI < 0.25)', variant: 'orange' },
+      { id: 'e-4', from: 'node-conditional', to: 'node-target', label: 'Certified (PSI <= 0.10)', variant: 'green' },
+      { id: 'e-5', from: 'node-conditional', to: 'node-quarantine', label: 'Critical Drift (PSI >= 0.25) / Leakage', variant: 'orange' },
+      { id: 'e-6', from: 'node-hitl', to: 'node-target', label: 'Scientist Override Approved', variant: 'green' }
+    ],
+    sourceConfig: {
+      engine: 'aws_s3',
+      host: 's3.us-east-1.amazonaws.com',
+      port: '443',
+      database: 'credit_risk_lakehouse',
+      user: 'ml_feature_store',
+      password: '••••••••',
+      table: 'credit_risk_candidate_q2',
+      connectionUri: 's3://datax-ml-lake/features/candidate_q2.parquet'
+    },
+    targetConfig: {
+      engine: 'aws_s3',
+      host: 's3.us-east-1.amazonaws.com',
+      port: '443',
+      database: 'certified_training_pool',
+      user: 'mlops_pipeline',
+      password: '••••••••',
+      table: 'certified_training_data',
+      quarantineTable: 'ml_drift_quarantine',
+      writeMode: 'append',
+      connectionUri: 's3://datax-ml-lake/certified/training_q2.parquet'
+    },
+    rules: [
+      { id: 'r_ml_1', name: 'Covariate Shift (PSI < 0.20)', field: 'DEBT_TO_INCOME', severity: 'Critical', code: 'PSI(DEBT_TO_INCOME) < 0.20', selected: true, desc: 'Guard against extreme macroeconomic population drift' },
+      { id: 'r_ml_2', name: 'Label Leakage Blocker', field: 'TARGET_CORRELATION', severity: 'Critical', code: 'PEARSON_CORR(feature, target) < 0.75', selected: true, desc: 'Block downstream features recorded after target event' },
+      { id: 'r_ml_3', name: 'EU AI Act Protected Balance', field: 'AGE_GROUP', severity: 'Warning', code: 'MIN_REPRESENTATION(AGE_GROUP) >= 0.05', selected: true, desc: 'Ensure subgroup representation per EU AI Act Article 10' },
+      { id: 'r_ml_4', name: 'Missingness Invariant', field: 'CREDIT_SCORE', severity: 'Critical', code: 'NULL_RATIO(CREDIT_SCORE) < 0.02', selected: true, desc: 'Feature completeness must match baseline distribution' }
+    ]
+  },
+
+    salesforce_crm_bigquery: {
     id: 'salesforce_crm_bigquery',
     name: 'Salesforce CRM → BigQuery Real-Time Revenue Pipeline',
     category: 'Revenue Operations',
@@ -1396,7 +1525,8 @@ export const getWorkflowTemplate = (threadOrKey) => {
 
   if (TEMPLATE_AUTOFILLS[key]) return TEMPLATE_AUTOFILLS[key];
 
-  if (key.includes('rag') || key.includes('contract') || key.includes('policy')) return TEMPLATE_AUTOFILLS.enterprise_rag_knowledge;
+  if (key.includes('ml') || key.includes('drift') || key.includes('psi') || key.includes('leakage') || key.includes('train')) return TEMPLATE_AUTOFILLS.ml_dataset_certification;
+  if (key.includes('rag') || key.includes('firewall') || key.includes('contract') || key.includes('policy')) return TEMPLATE_AUTOFILLS.enterprise_rag_knowledge;
   if (key.includes('salesforce') || key.includes('sfdc') || key.includes('lead') || key.includes('opp')) return TEMPLATE_AUTOFILLS.salesforce_crm_bigquery;
   if (key.includes('telemetry') || key.includes('sre') || key.includes('incident') || key.includes('blob')) return TEMPLATE_AUTOFILLS.support_telemetry_vector;
   if (key.includes('snowflake') || key.includes('spend')) return TEMPLATE_AUTOFILLS.snowflake_s4hana_procurement;

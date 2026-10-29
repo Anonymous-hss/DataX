@@ -15,7 +15,10 @@ import {
   Zap,
   Menu,
   X,
-  Check
+  Check,
+  Shield,
+  Cpu,
+  Sparkles
 } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
 import { useRuleEngine } from '../../context/RuleEngineContext';
@@ -25,6 +28,7 @@ import DataXUserMenu from './DataXUserMenu';
 import AmbientBackgroundFlow from './AmbientBackgroundFlow';
 import GlobalSearchModal from './GlobalSearchModal';
 import OnboardingWizard from './OnboardingWizard';
+import UseCaseAdvisorModal from './UseCaseAdvisorModal';
 
 export default function DataXAppShell({ 
   children, 
@@ -38,6 +42,7 @@ export default function DataXAppShell({
 
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [advisorModalOpen, setAdvisorModalOpen] = useState(false);
   const [threadPickerOpen, setThreadPickerOpen] = useState(false);
   const [governDropdownOpen, setGovernDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -76,6 +81,8 @@ export default function DataXAppShell({
   // Core Operations Nav Items (Always directly visible on desktop, zero horizontal scrollbar)
   const CORE_NAV_ITEMS = [
     { id: 'workflows', label: 'Workflows', screen: 'workflows', icon: Activity },
+    { id: 'ai-firewall', label: 'AI Firewall', screen: 'ai-firewall', icon: Shield, badge: 'AI' },
+    { id: 'ml-certify', label: 'ML Certify', screen: 'ml-certify', icon: Cpu, badge: 'Gate' },
     { id: 'templates', label: 'Templates', screen: 'templates', icon: Layers },
     { id: 'connections', label: 'Connections', screen: 'connections', icon: Network },
     { id: 'quarantine', label: 'Quarantine', screen: 'quarantine', icon: SlidersHorizontal, badge: '14' },
@@ -92,6 +99,8 @@ export default function DataXAppShell({
 
   const isNavActive = (screenKey) => {
     if (screenKey === 'workflows' && (currentScreen === 'workflows' || currentScreen === 'threads' || currentScreen === 'home' || currentScreen === '')) return true;
+    if (screenKey === 'ai-firewall' && (currentScreen === 'ai-firewall' || currentScreen === 'firewall' || currentScreen === 'rag-firewall' || currentScreen === 'agent-guard')) return true;
+    if (screenKey === 'ml-certify' && (currentScreen === 'ml-certify' || currentScreen === 'ml-certification' || currentScreen === 'ml-gate')) return true;
     if (screenKey === 'templates' && (currentScreen === 'templates' || currentScreen === 'domain-packs')) return true;
     if (screenKey === 'history' && (currentScreen === 'history' || currentScreen === 'runs')) return true;
     return currentScreen === screenKey;
@@ -215,6 +224,18 @@ export default function DataXAppShell({
 
           {/* Right Controls: Command Search, Help, Notifications, User Menu, Mobile Toggle */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* Interactive Blueprint & Use Case Advisor Trigger */}
+            <button
+              type="button"
+              onClick={() => setAdvisorModalOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-violet-500/10 hover:from-blue-500/20 hover:to-violet-500/20 text-[#2D55F5] dark:text-[#60A5FA] border border-[#2D55F5]/30 hover:border-[#2D55F5]/60 text-xs font-semibold shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+              title="Interactive Use Case Blueprint Advisor"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#2D55F5] dark:text-[#60A5FA] animate-pulse" />
+              <span>Find My Use Case</span>
+              <span className="text-[9px] bg-[#2D55F5] text-white px-1.5 py-0.2 rounded-full font-bold">AI</span>
+            </button>
+
             {/* Global Search Bar (Adaptive width to protect navigation space) */}
             <button
               type="button"
@@ -400,6 +421,10 @@ export default function DataXAppShell({
       <OnboardingWizard 
         isOpen={onboardingOpen} 
         onClose={() => setOnboardingOpen(false)} 
+      />
+      <UseCaseAdvisorModal 
+        isOpen={advisorModalOpen} 
+        onClose={() => setAdvisorModalOpen(false)} 
       />
     </div>
   );

@@ -155,3 +155,33 @@ class RegisterRequest(BaseModel):
 class RuleVerifyRequest(BaseModel):
     rules: List[Dict[str, Any]]
     sample_records: Optional[List[Dict[str, Any]]] = None
+
+
+class RagScanRequest(BaseModel):
+    chunks: List[Dict[str, Any]]
+    persist: Optional[bool] = True
+
+
+class AgentToolInterceptRequest(BaseModel):
+    agent_id: Optional[str] = "autonomous_agent"
+    tool_name: Optional[str] = "unspecified_tool"
+    arguments: Optional[Dict[str, Any]] = None
+    policies: Optional[Dict[str, Any]] = None
+
+
+class MlCertifyRequest(BaseModel):
+    modality: Optional[str] = "TABULAR"
+    candidateRecords: Optional[List[Dict[str, Any]]] = None
+    baselineRecords: Optional[List[Dict[str, Any]]] = None
+    jsonlRecords: Optional[List[Dict[str, Any]]] = None
+    targetColumn: Optional[str] = None
+    protectedColumn: Optional[str] = None
+    datasetName: Optional[str] = "dataset_candidate"
+
+
+class UseCaseAdvisorRequest(BaseModel):
+    role: Optional[str] = None
+    stack: Optional[List[str]] = None
+    goal: Optional[str] = None
+    schema_columns: Optional[List[str]] = None
+

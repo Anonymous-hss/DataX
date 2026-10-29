@@ -8,6 +8,8 @@ import GlobalSearchModal from '../components/common/GlobalSearchModal';
 import OnboardingWizard from '../components/common/OnboardingWizard';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import EmptyState from '../components/common/EmptyState';
+import UseCaseAdvisorModal from '../components/common/UseCaseAdvisorModal';
+import { Sparkles, ArrowRight, ShieldCheck, Cpu, Database, Bot } from 'lucide-react';
 
 // --- Figma-Exact Icons & Illustrations with User Brand Logo ---
 
@@ -192,6 +194,7 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
 
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [advisorOpen, setAdvisorOpen] = useState(false);
   const [threadToDelete, setThreadToDelete] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 7;
@@ -321,6 +324,135 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
                   {autoFixEnabled ? 'On' : 'Off'}
                 </p>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Enterprise Paradigm Discovery Hub: What You Can Guarantee with DataX */}
+        <section className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-2xs space-y-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
+                  Core Engine Paradigms
+                </span>
+                <span className="text-xs text-slate-500 font-medium">Beyond simple ETL — Built for Mission-Critical Data, AI & ML</span>
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mt-1">
+                What do you want DataX to guarantee for your team?
+              </h3>
+            </div>
+
+            {/* Direct Advisor Trigger */}
+            <button
+              onClick={() => setAdvisorOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white text-xs font-semibold shadow-xs hover:shadow transition-all cursor-pointer shrink-0"
+            >
+              <Sparkles className="w-4 h-4 animate-pulse" />
+              <span>Launch Use Case Advisor</span>
+              <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded font-mono font-bold">30s Match</span>
+            </button>
+          </div>
+
+          {/* 3 Pillar Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Pillar 1: Core Database & ERP Migrations */}
+            <div className="border border-slate-200 rounded-xl p-4.5 bg-slate-50/50 hover:bg-white hover:border-blue-300 hover:shadow-xs transition-all flex flex-col justify-between group">
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                    <Database className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-mono font-semibold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+                    DuckDB AST
+                  </span>
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-slate-900 group-hover:text-blue-600 transition-colors">
+                    1. Core Database & ERP Migrations
+                  </h4>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    Eliminate corrupted cross-database syncs between MongoDB, PostgreSQL, Snowflake, and SAP. Enforce deterministic AST rules, auto-quarantine DLQ, and human-in-the-loop approvals.
+                  </p>
+                </div>
+                <div className="pt-2 border-t border-slate-100 flex items-center gap-2 text-[11px] text-slate-500">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <span>Active across enterprise pipelines</span>
+                </div>
+              </div>
+              <button
+                onClick={() => navigateTo('new-workflow')}
+                className="mt-4 w-full py-2 px-3 rounded-lg bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <span>Open Pipeline Canvas</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Pillar 2: AI Agent & RAG Data Firewall */}
+            <div className="border border-slate-200 rounded-xl p-4.5 bg-slate-50/50 hover:bg-white hover:border-indigo-300 hover:shadow-xs transition-all flex flex-col justify-between group relative overflow-hidden">
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                    <Bot className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
+                    &lt; 25ms Real-Time
+                  </span>
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-slate-900 group-hover:text-indigo-600 transition-colors">
+                    2. AI Agent & RAG Data Firewall
+                  </h4>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    Stop prompt injections and redact secrets/PII before vector embeddings. Synchronously intercept autonomous agent tool calls to block $5k+ financial drain and destructive SQL drops.
+                  </p>
+                </div>
+                <div className="pt-2 border-t border-slate-100 flex items-center gap-2 text-[11px] text-slate-500">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                  <span>Pre-embedding + In-flight tool guards</span>
+                </div>
+              </div>
+              <button
+                onClick={() => navigateTo('ai-firewall')}
+                className="mt-4 w-full py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <span>Launch AI Firewall Studio</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Pillar 3: ML Training & Fine-Tuning Gate */}
+            <div className="border border-slate-200 rounded-xl p-4.5 bg-slate-50/50 hover:bg-white hover:border-violet-300 hover:shadow-xs transition-all flex flex-col justify-between group">
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="w-9 h-9 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center font-bold">
+                    <Cpu className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-mono font-bold text-violet-700 bg-violet-50 border border-violet-200 px-2 py-0.5 rounded-full">
+                    EU AI Act Art. 10
+                  </span>
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-slate-900 group-hover:text-violet-600 transition-colors">
+                    3. ML Training & Fine-Tuning Gate
+                  </h4>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    Never waste $50k+ GPU training on drifted data. Compute 10-quantile PSI drift, catch target leakage (|r| &ge; 0.75), audit demographic bias, and cleanse SFT JSONL datasets.
+                  </p>
+                </div>
+                <div className="pt-2 border-t border-slate-100 flex items-center gap-2 text-[11px] text-slate-500">
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+                  <span>Cryptographic SHA-256 Release Card</span>
+                </div>
+              </div>
+              <button
+                onClick={() => navigateTo('ml-certify')}
+                className="mt-4 w-full py-2 px-3 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <span>Launch ML Certify Gate</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
         </section>
@@ -557,6 +689,10 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
       <OnboardingWizard 
         isOpen={onboardingOpen} 
         onClose={() => setOnboardingOpen(false)} 
+      />
+      <UseCaseAdvisorModal 
+        isOpen={advisorOpen} 
+        onClose={() => setAdvisorOpen(false)} 
       />
       <ConfirmDialog
         isOpen={!!threadToDelete}

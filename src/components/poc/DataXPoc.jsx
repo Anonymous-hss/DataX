@@ -21,6 +21,8 @@ import ExecutiveRoiPage from '../../pages/ExecutiveRoiPage';
 import SettingsPage from '../../pages/SettingsPage';
 import HelpCenterPage from '../../pages/HelpCenterPage';
 import NotFoundPage from '../../pages/NotFoundPage';
+import AiFirewallPage from '../../pages/AiFirewallPage';
+import MlCertificationPage from '../../pages/MlCertificationPage';
 
 function ScreenRenderer({ onBackToWebsite }) {
   const { currentScreen, navigateTo } = useNavigation();
@@ -210,6 +212,26 @@ function ScreenRenderer({ onBackToWebsite }) {
     case 'runs':
       return (
         <RunHistoryPage 
+          onSwitchToMarketing={onBackToWebsite}
+        />
+      );
+
+    case 'ai-firewall':
+    case 'firewall':
+    case 'rag-firewall':
+    case 'agent-guard':
+      return (
+        <AiFirewallPage 
+          onSwitchToMarketing={onBackToWebsite}
+        />
+      );
+
+    case 'ml-certify':
+    case 'ml-certification':
+    case 'ml-gate':
+    case 'drift-gate':
+      return (
+        <MlCertificationPage 
           onSwitchToMarketing={onBackToWebsite}
         />
       );

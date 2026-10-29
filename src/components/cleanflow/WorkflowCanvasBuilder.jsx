@@ -1685,13 +1685,19 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           >
             Legal RAG
           </button>
+          <button
+            onClick={() => handleAutofillTemplate('ml_dataset_certification')}
+            className="px-2.5 py-1 rounded-lg text-xs font-semibold hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
+          >
+            ML Gate
+          </button>
           {/* All 10 Templates Dropdown Trigger */}
           <div className="relative">
             <button
               onClick={() => setIsTemplatesDropdownOpen(prev => !prev)}
               className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer flex items-center gap-1"
             >
-              <span>All Templates (10)</span>
+              <span>All Templates ({Object.keys(TEMPLATE_AUTOFILLS).length})</span>
               <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isTemplatesDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {/* Dropdown Popover */}
@@ -1701,7 +1707,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="px-2 py-1.5 border-b border-slate-100 flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Enterprise Catalog (10)</span>
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Enterprise Catalog ({Object.keys(TEMPLATE_AUTOFILLS).length})</span>
                   <button
                     onClick={() => setIsTemplatesDropdownOpen(false)}
                     className="text-xs text-slate-400 hover:text-slate-600"
@@ -1710,7 +1716,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                   </button>
                 </div>
                 <div className="divide-y divide-slate-100">
-                  {Object.values(TEMPLATE_AUTOFILLS).slice(0, 10).map((t) => (
+                  {Object.values(TEMPLATE_AUTOFILLS).map((t) => (
                     <button
                       key={t.id}
                       onClick={() => {
@@ -2110,6 +2116,18 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                     className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 hover:border-blue-300 transition-all cursor-pointer"
                   >
                     🏥 Healthcare HIPAA
+                  </button>
+                  <button
+                    onClick={() => handleAutofillTemplate('enterprise_rag_knowledge')}
+                    className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 text-xs font-semibold border border-slate-200 hover:border-indigo-300 transition-all cursor-pointer"
+                  >
+                    🛡️ AI RAG Firewall
+                  </button>
+                  <button
+                    onClick={() => handleAutofillTemplate('ml_dataset_certification')}
+                    className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-violet-50 text-slate-700 hover:text-violet-700 text-xs font-semibold border border-slate-200 hover:border-violet-300 transition-all cursor-pointer"
+                  >
+                    📊 ML Gate & Drift
                   </button>
                 </div>
               </div>
