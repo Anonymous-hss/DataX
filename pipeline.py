@@ -323,7 +323,13 @@ def _execute_pipeline_core(req: PipelineExecutionRequest, idempotency_key: str, 
                                 db_name = d
                                 break
                     coll = client[db_name][tbl_name]
-                    limit_val = req.source.limit or 500
+                    total_docs = coll.count_documents({})
+                    if req.source.limit and req.source.limit > 1420:
+                        limit_val = req.source.limit
+                    elif total_docs > 1420:
+                        limit_val = min(total_docs, 50000)
+                    else:
+                        limit_val = req.source.limit or 500
                     docs = []
                     for doc in coll.find({}, {"_id": 0}).limit(limit_val):
                         docs.append(dict(doc))
