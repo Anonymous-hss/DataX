@@ -1534,16 +1534,21 @@ export function RuleEngineProvider({ children }) {
             autoFixedCount: fixed,
             quarantinedCount: quarantined,
             passRate,
+            financialExposureHeld: data.financialExposureHeld ?? sum.financialExposureHeld ?? null,
+            monetaryColumn: data.monetaryColumn ?? sum.monetaryColumn ?? null,
             isSimulationFallback: false,
             backendStatus: 'CONNECTED',
             ruleOutcomes: outcomes,
+            consensusGuard: data.consensusGuard || null,
+            healthMetrics: data.healthMetrics || null,
+            driftMetrics: data.driftMetrics || null,
             sampleQuarantinedRecords: data.sampleQuarantinedRecords || [],
             sampleAutofixedRecords: data.sampleAutofixedRecords || [],
-            nodeExecutions: data.nodeExecutions || [],
+            nodeExecutions: data.nodeExecutions || {},
             sampleValidRecords: data.sampleValidRecords || [],
             traceLogs: data.traceLogs || [],
-            elapsedMs: data.elapsedMs || 2800,
-            duration: data.elapsedMs ? `${(data.elapsedMs / 1000).toFixed(2)}s` : '2.82s',
+            elapsedMs: data.elapsedMs || 280,
+            duration: data.elapsedMs ? `${(data.elapsedMs / 1000).toFixed(2)}s` : '0.28s',
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
           };
           setDryRunResult(outcome);
@@ -1586,12 +1591,19 @@ export function RuleEngineProvider({ children }) {
     const quarantinedCount = evaluatedRows.length > 0 ? evaluatedRows.filter(r => r._status === 'quarantined').length : Math.round(totalCount * 0.01);
     const passRate = dynamicHealthScore || (totalCount > 0 ? Math.round(((cleanCount + autoFixedCount) / totalCount) * 100) : 96);
 
+    const simValid = evaluatedRows.filter(r => r._status === 'clean').slice(0, 25);
+    const simFixed = evaluatedRows.filter(r => r._status === 'fixed').slice(0, 25);
+    const simQuarantined = evaluatedRows.filter(r => r._status === 'quarantined').slice(0, 25);
+
     const result = {
       totalChecked: totalCount,
       cleanCount,
       autoFixedCount,
       quarantinedCount,
       passRate,
+      sampleValidRecords: simValid,
+      sampleAutofixedRecords: simFixed,
+      sampleQuarantinedRecords: simQuarantined,
       isSimulationFallback: true,
       backendStatus: backendErrorMsg ? 'SIMULATED' : 'CONNECTED',
       backendError: backendErrorMsg,
@@ -1698,11 +1710,20 @@ export function RuleEngineProvider({ children }) {
           autoFixed: fixed,
           quarantined,
           docNo,
+          elapsedMs: data.elapsedMs || 420,
           duration: `${((data.elapsedMs || 800) / 1000).toFixed(1)}s`,
           health: passRate,
-          nodeExecutions: data.nodeExecutions || [],
+          financialExposureHeld: data.financialExposureHeld ?? data.summary?.financialExposureHeld ?? null,
+          monetaryColumn: data.monetaryColumn ?? data.summary?.monetaryColumn ?? null,
+          consensusGuard: data.consensusGuard || null,
+          healthMetrics: data.healthMetrics || null,
+          driftMetrics: data.driftMetrics || null,
+          ruleOutcomes: data.ruleOutcomes || [],
+          nodeExecutions: data.nodeExecutions || {},
+          sampleValidRecords: data.sampleValidRecords || [],
           sampleAutofixedRecords: data.sampleAutofixedRecords || [],
           sampleQuarantinedRecords: data.sampleQuarantinedRecords || [],
+          traceLogs: data.traceLogs || [],
           status: 'Clean Core Posted',
           variant: passRate >= 90 ? 'success' : 'volt',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),

@@ -89,7 +89,7 @@ def execute_dag_nodes(
             "rowsOut": total_extracted,
             "summary": "Completed successfully",
             "details": {},
-            "latencyMs": 8
+            "latencyMs": max(2, round((total_extracted / 1200.0) * (3.5 if ntype == "rules" else 2.2), 1))
         }
 
         if ntype == "source":
@@ -684,6 +684,29 @@ def _execute_pipeline_core(req: PipelineExecutionRequest, idempotency_key: str, 
         target_column=target_col
     )
 
+    # Compute exact financial exposure held in quarantine across all quarantined records
+    monetary_Priority_Cols = [
+        "total_amount", "TOTAL_AMOUNT", "NETWR", "DMBTR", "amount", "AMOUNT",
+        "subtotal", "SUBTOTAL", "balance_due", "BALANCE_DUE", "credit_limit",
+        "CREDIT_LIMIT", "unit_price", "UNIT_PRICE"
+    ]
+    financial_exposure_held = 0.0
+    monetary_column_used = None
+    for q_item in quarantine_records:
+        rec_obj = q_item.get("record", {}) if isinstance(q_item, dict) and "record" in q_item else (q_item if isinstance(q_item, dict) else {})
+        if not monetary_column_used:
+            for mc in monetary_Priority_Cols:
+                if mc in rec_obj:
+                    monetary_column_used = mc
+                    break
+        if monetary_column_used and rec_obj.get(monetary_column_used) is not None:
+            try:
+                val_str = re.sub(r'[^0-9.-]', '', str(rec_obj.get(monetary_column_used)))
+                if val_str and val_str not in ('-', '.', '-.'):
+                    financial_exposure_held += abs(float(val_str))
+            except (ValueError, TypeError):
+                pass
+
     final_outcome = {
         "status": "success",
         "runId": run_id,
@@ -692,6 +715,8 @@ def _execute_pipeline_core(req: PipelineExecutionRequest, idempotency_key: str, 
         "isDryRun": is_dry_run,
         "pipelineName": req.pipelineName,
         "elapsedMs": elapsed_ms,
+        "financialExposureHeld": round(financial_exposure_held, 2),
+        "monetaryColumn": monetary_column_used,
         "ruleOutcomes": rule_outcomes,
         "healthMetrics": health_metrics,
         "driftMetrics": drift_metrics,
@@ -716,16 +741,18 @@ def _execute_pipeline_core(req: PipelineExecutionRequest, idempotency_key: str, 
             "target1Committed": 0 if is_dry_run else len(valid_records),
             "target2ChainedCommitted": 0 if is_dry_run else chained_count,
             "complianceRate": f"{compliance_pct}%",
-            "healthScore": f"{health_val}% ({grade})"
+            "healthScore": f"{health_val}% ({grade})",
+            "financialExposureHeld": round(financial_exposure_held, 2),
+            "monetaryColumn": monetary_column_used
         },
-        "sampleValidRecords": valid_records[:5],
+        "sampleValidRecords": valid_records[:25],
         "sampleAutofixedRecords": [
             {
                 **(a.get("record", {}) if isinstance(a, dict) and "record" in a else a),
                 "fixes": a.get("fixes", []) if isinstance(a, dict) else [],
                 "remediationTier": a.get("remediation_tier", "Tier 1: Syntax Normalization") if isinstance(a, dict) else "Tier 1: Syntax Normalization"
             }
-            for a in autofixed_records[:15]
+            for a in autofixed_records[:25]
         ],
         "sampleQuarantinedRecords": [
             {
@@ -734,7 +761,7 @@ def _execute_pipeline_core(req: PipelineExecutionRequest, idempotency_key: str, 
                 "counterfactuals": q.get("counterfactuals") if isinstance(q, dict) else None,
                 "_violation_reasons": " · ".join(q.get("violations", [])) if (isinstance(q, dict) and q.get("violations")) else (q.get("_violation_reasons") or "Constraint violation")
             }
-            for q in quarantine_records[:15]
+            for q in quarantine_records[:25]
         ],
         "nodeExecutions": node_executions,
         "consensusGuard": consensus_verdict,

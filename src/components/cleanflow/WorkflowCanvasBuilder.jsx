@@ -772,13 +772,17 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
         });
       } else if (res) {
         const total = res.totalChecked ?? ((res.cleanCount || 0) + (res.autoFixedCount || 0) + (res.quarantinedCount || 0));
-        // Store DAG node executions from backend
-        if (res.nodeExecutions && Array.isArray(res.nodeExecutions)) {
-          const execMap = {};
-          res.nodeExecutions.forEach(ne => {
-            execMap[ne.nodeId] = ne;
-          });
-          setDagNodeExecutions(execMap);
+        // Store DAG node executions from backend (supports both Array and Object map)
+        let normalizedDagExecs = {};
+        if (res.nodeExecutions) {
+          if (Array.isArray(res.nodeExecutions)) {
+            res.nodeExecutions.forEach(ne => {
+              if (ne && ne.nodeId) normalizedDagExecs[ne.nodeId] = ne;
+            });
+          } else if (typeof res.nodeExecutions === 'object') {
+            normalizedDagExecs = res.nodeExecutions;
+          }
+          setDagNodeExecutions(normalizedDagExecs);
         }
         setExecutionSummary({
           total,
@@ -786,6 +790,23 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           fixed: res.autoFixedCount ?? 0,
           quarantined: res.quarantinedCount ?? 0,
           health: res.passRate ?? 0,
+          financialExposureHeld: res.financialExposureHeld ?? null,
+          monetaryColumn: res.monetaryColumn ?? null,
+          consensusGuard: res.consensusGuard || null,
+          healthMetrics: res.healthMetrics || null,
+          driftMetrics: res.driftMetrics || null,
+          ruleOutcomes: res.ruleOutcomes || [],
+          sampleValidRecords: res.sampleValidRecords || [],
+          sampleAutofixedRecords: res.sampleAutofixedRecords || [],
+          sampleQuarantinedRecords: res.sampleQuarantinedRecords || [],
+          nodeExecutions: normalizedDagExecs,
+          traceLogs: res.traceLogs || [],
+          elapsedMs: res.elapsedMs || null,
+          sourceTable: srcTable,
+          sourceEngine: srcDbType,
+          targetTable: tgtTable,
+          targetEngine: tgtDbType,
+          columns: discoveredColumns,
           isLive: false
         });
         // Update live stats across canvas node cards
@@ -840,13 +861,17 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
         runPhasedStages(true)
       ]);
       if (res) {
-        // Store DAG node executions from backend
-        if (res.nodeExecutions && Array.isArray(res.nodeExecutions)) {
-          const execMap = {};
-          res.nodeExecutions.forEach(ne => {
-            execMap[ne.nodeId] = ne;
-          });
-          setDagNodeExecutions(execMap);
+        // Store DAG node executions from backend (supports both Array and Object map)
+        let normalizedDagExecs = {};
+        if (res.nodeExecutions) {
+          if (Array.isArray(res.nodeExecutions)) {
+            res.nodeExecutions.forEach(ne => {
+              if (ne && ne.nodeId) normalizedDagExecs[ne.nodeId] = ne;
+            });
+          } else if (typeof res.nodeExecutions === 'object') {
+            normalizedDagExecs = res.nodeExecutions;
+          }
+          setDagNodeExecutions(normalizedDagExecs);
         }
         setExecutionSummary({
           total: res.rows ?? 0,
@@ -854,6 +879,23 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           fixed: res.autoFixed ?? 0,
           quarantined: res.quarantined ?? 0,
           health: res.health ?? 0,
+          financialExposureHeld: res.financialExposureHeld ?? null,
+          monetaryColumn: res.monetaryColumn ?? null,
+          consensusGuard: res.consensusGuard || null,
+          healthMetrics: res.healthMetrics || null,
+          driftMetrics: res.driftMetrics || null,
+          ruleOutcomes: res.ruleOutcomes || [],
+          sampleValidRecords: res.sampleValidRecords || [],
+          sampleAutofixedRecords: res.sampleAutofixedRecords || [],
+          sampleQuarantinedRecords: res.sampleQuarantinedRecords || [],
+          nodeExecutions: normalizedDagExecs,
+          traceLogs: res.traceLogs || [],
+          elapsedMs: res.elapsedMs || null,
+          sourceTable: srcTable,
+          sourceEngine: srcDbType,
+          targetTable: tgtTable,
+          targetEngine: tgtDbType,
+          columns: discoveredColumns,
           docNo: res.docNo || s4hanaDocNumber || '#COMMIT-SUCCESS',
           isLive: true
         });
@@ -2977,13 +3019,20 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           </div>
         </div>
       )}
-      {/* Palantir-Grade Telemetry Cockpit Drawer */}
+      {/* Pipeline Execution & Consensus Telemetry Drawer */}
       <CanvasTelemetryDrawer
         isOpen={isTelemetryDrawerOpen}
         onClose={() => setIsTelemetryDrawerOpen(false)}
         summary={executionSummary}
         dagExecutions={dagNodeExecutions}
         consensusData={executionSummary?.consensusGuard}
+        activeRules={activeRules}
+        workflowNodes={nodes}
+        sourceTable={executionSummary?.sourceTable || srcTable}
+        sourceEngine={executionSummary?.sourceEngine || srcDbType}
+        targetTable={executionSummary?.targetTable || tgtTable}
+        targetEngine={executionSummary?.targetEngine || tgtDbType}
+        discoveredColumns={executionSummary?.columns || discoveredColumns}
       />
     </div>
   );
