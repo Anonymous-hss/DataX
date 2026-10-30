@@ -329,16 +329,16 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
         </section>
 
         {/* Enterprise Paradigm Discovery Hub: What You Can Guarantee with DataX */}
-        <section className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-2xs space-y-5">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <section className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-[#2D55F5] border border-blue-200/70">
                   Core Engine Paradigms
                 </span>
                 <span className="text-xs text-slate-500 font-medium">Beyond simple ETL — Built for Mission-Critical Data, AI & ML</span>
               </div>
-              <h3 className="text-lg font-bold text-slate-900 mt-1">
+              <h3 className="text-xl font-bold text-slate-900 tracking-tight mt-1.5">
                 What do you want DataX to guarantee for your team?
               </h3>
             </div>
@@ -346,112 +346,112 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
             {/* Direct Advisor Trigger */}
             <button
               onClick={() => setAdvisorOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white text-xs font-semibold shadow-xs hover:shadow transition-all cursor-pointer shrink-0"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white text-xs font-semibold shadow-xs hover:shadow transition-all cursor-pointer shrink-0 border border-slate-800"
             >
-              <Sparkles className="w-4 h-4 animate-pulse" />
+              <Sparkles className="w-4 h-4 text-amber-300" />
               <span>Launch Use Case Advisor</span>
-              <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded font-mono font-bold">30s Match</span>
+              <span className="text-[10px] bg-white/15 px-1.5 py-0.5 rounded font-mono font-bold text-slate-200">30s Match</span>
             </button>
           </div>
 
-          {/* 3 Pillar Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* 3 Pillar Cards - Unified Light Enterprise Studio Theme */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {/* Pillar 1: Core Database & ERP Migrations */}
-            <div className="border border-slate-200 rounded-xl p-4.5 bg-slate-50/50 hover:bg-white hover:border-blue-300 hover:shadow-xs transition-all flex flex-col justify-between group">
-              <div className="space-y-2.5">
+            <div className="border border-slate-200 rounded-2xl p-5 bg-white hover:border-[#2D55F5]/40 hover:shadow-md transition-all flex flex-col justify-between group">
+              <div className="space-y-3.5">
                 <div className="flex items-center justify-between">
-                  <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#2D55F5] flex items-center justify-center font-bold border border-blue-100">
                     <Database className="w-5 h-5" />
                   </div>
-                  <span className="text-[10px] font-mono font-semibold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-mono font-bold text-slate-600 bg-slate-100/80 border border-slate-200/80 px-2.5 py-1 rounded-full">
                     DuckDB AST
                   </span>
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm text-slate-900 group-hover:text-blue-600 transition-colors">
+                  <h4 className="font-bold text-base text-slate-900 group-hover:text-[#2D55F5] transition-colors">
                     1. Core Database & ERP Migrations
                   </h4>
-                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                  <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
                     Eliminate corrupted cross-database syncs between MongoDB, PostgreSQL, Snowflake, and SAP. Enforce deterministic AST rules, auto-quarantine DLQ, and human-in-the-loop approvals.
                   </p>
                 </div>
-                <div className="pt-2 border-t border-slate-100 flex items-center gap-2 text-[11px] text-slate-500">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <div className="pt-3 border-t border-slate-100 flex items-center gap-2 text-[11px] text-slate-500 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
                   <span>Active across enterprise pipelines</span>
                 </div>
               </div>
               <button
                 onClick={() => navigateTo('new-workflow')}
-                className="mt-4 w-full py-2 px-3 rounded-lg bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                className="mt-5 w-full py-2.5 px-3.5 rounded-xl bg-slate-50 hover:bg-[#2D55F5] text-slate-700 hover:text-white border border-slate-200 hover:border-[#2D55F5] text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs group/btn"
               >
                 <span>Open Pipeline Canvas</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
               </button>
             </div>
 
             {/* Pillar 2: AI Agent & RAG Data Firewall */}
-            <div className="border border-slate-200 rounded-xl p-4.5 bg-slate-50/50 hover:bg-white hover:border-indigo-300 hover:shadow-xs transition-all flex flex-col justify-between group relative overflow-hidden">
-              <div className="space-y-2.5">
+            <div className="border border-slate-200 rounded-2xl p-5 bg-white hover:border-[#2D55F5]/40 hover:shadow-md transition-all flex flex-col justify-between group">
+              <div className="space-y-3.5">
                 <div className="flex items-center justify-between">
-                  <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#2D55F5] flex items-center justify-center font-bold border border-blue-100">
                     <Bot className="w-5 h-5" />
                   </div>
-                  <span className="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-mono font-bold text-[#2D55F5] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full">
                     &lt; 25ms Real-Time
                   </span>
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm text-slate-900 group-hover:text-indigo-600 transition-colors">
+                  <h4 className="font-bold text-base text-slate-900 group-hover:text-[#2D55F5] transition-colors">
                     2. AI Agent & RAG Data Firewall
                   </h4>
-                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                  <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
                     Stop prompt injections and redact secrets/PII before vector embeddings. Synchronously intercept autonomous agent tool calls to block $5k+ financial drain and destructive SQL drops.
                   </p>
                 </div>
-                <div className="pt-2 border-t border-slate-100 flex items-center gap-2 text-[11px] text-slate-500">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                <div className="pt-3 border-t border-slate-100 flex items-center gap-2 text-[11px] text-slate-500 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-[#2D55F5] animate-pulse" />
                   <span>Pre-embedding + In-flight tool guards</span>
                 </div>
               </div>
               <button
                 onClick={() => navigateTo('ai-firewall')}
-                className="mt-4 w-full py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                className="mt-5 w-full py-2.5 px-3.5 rounded-xl bg-slate-50 hover:bg-[#2D55F5] text-slate-700 hover:text-white border border-slate-200 hover:border-[#2D55F5] text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs group/btn"
               >
                 <span>Launch AI Firewall Studio</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
               </button>
             </div>
 
             {/* Pillar 3: ML Training & Fine-Tuning Gate */}
-            <div className="border border-slate-200 rounded-xl p-4.5 bg-slate-50/50 hover:bg-white hover:border-violet-300 hover:shadow-xs transition-all flex flex-col justify-between group">
-              <div className="space-y-2.5">
+            <div className="border border-slate-200 rounded-2xl p-5 bg-white hover:border-[#2D55F5]/40 hover:shadow-md transition-all flex flex-col justify-between group">
+              <div className="space-y-3.5">
                 <div className="flex items-center justify-between">
-                  <div className="w-9 h-9 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center font-bold">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#2D55F5] flex items-center justify-center font-bold border border-blue-100">
                     <Cpu className="w-5 h-5" />
                   </div>
-                  <span className="text-[10px] font-mono font-bold text-violet-700 bg-violet-50 border border-violet-200 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-mono font-bold text-slate-600 bg-slate-100/80 border border-slate-200/80 px-2.5 py-1 rounded-full">
                     EU AI Act Art. 10
                   </span>
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm text-slate-900 group-hover:text-violet-600 transition-colors">
+                  <h4 className="font-bold text-base text-slate-900 group-hover:text-[#2D55F5] transition-colors">
                     3. ML Training & Fine-Tuning Gate
                   </h4>
-                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                  <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
                     Never waste $50k+ GPU training on drifted data. Compute 10-quantile PSI drift, catch target leakage (|r| &ge; 0.75), audit demographic bias, and cleanse SFT JSONL datasets.
                   </p>
                 </div>
-                <div className="pt-2 border-t border-slate-100 flex items-center gap-2 text-[11px] text-slate-500">
-                  <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+                <div className="pt-3 border-t border-slate-100 flex items-center gap-2 text-[11px] text-slate-500 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-slate-700" />
                   <span>Cryptographic SHA-256 Release Card</span>
                 </div>
               </div>
               <button
                 onClick={() => navigateTo('ml-certify')}
-                className="mt-4 w-full py-2 px-3 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                className="mt-5 w-full py-2.5 px-3.5 rounded-xl bg-slate-50 hover:bg-[#2D55F5] text-slate-700 hover:text-white border border-slate-200 hover:border-[#2D55F5] text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs group/btn"
               >
                 <span>Launch ML Certify Gate</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
               </button>
             </div>
           </div>
