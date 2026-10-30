@@ -44,15 +44,20 @@ export default function DataXAppShell({
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [advisorModalOpen, setAdvisorModalOpen] = useState(false);
   const [threadPickerOpen, setThreadPickerOpen] = useState(false);
+  const [opsDropdownOpen, setOpsDropdownOpen] = useState(false);
   const [governDropdownOpen, setGovernDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const opsRef = useRef(null);
   const governRef = useRef(null);
   const threadPickerRef = useRef(null);
 
   // Close dropdowns on click outside
   useEffect(() => {
     const handleOutsideClick = (e) => {
+      if (opsRef.current && !opsRef.current.contains(e.target)) {
+        setOpsDropdownOpen(false);
+      }
       if (governRef.current && !governRef.current.contains(e.target)) {
         setGovernDropdownOpen(false);
       }
@@ -76,21 +81,25 @@ export default function DataXAppShell({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const currentThreadName = activeThread?.name || 'SAP BW InfoCube 0PUR_C01 → S/4HANA';
+  const currentThreadName = activeThread?.name || 'Active Workspace Pipeline';
 
-  // Core Operations Nav Items (Always directly visible on desktop, zero horizontal scrollbar)
-  const CORE_NAV_ITEMS = [
+  // Primary SaaS Pillars (Directly visible on desktop, zero static badges, zero overlap)
+  const PRIMARY_NAV_ITEMS = [
     { id: 'workflows', label: 'Workflows', screen: 'workflows', icon: Activity },
-    { id: 'ai-firewall', label: 'AI Firewall', screen: 'ai-firewall', icon: Shield, badge: 'AI' },
-    { id: 'ml-certify', label: 'ML Certify', screen: 'ml-certify', icon: Cpu, badge: 'Gate' },
-    { id: 'templates', label: 'Templates', screen: 'templates', icon: Layers },
+    { id: 'ai-firewall', label: 'AI Firewall', screen: 'ai-firewall', icon: Shield },
+    { id: 'ml-certify', label: 'ML Certify', screen: 'ml-certify', icon: Cpu },
     { id: 'connections', label: 'Connections', screen: 'connections', icon: Network },
-    { id: 'quarantine', label: 'Quarantine', screen: 'quarantine', icon: SlidersHorizontal, badge: '14' },
-    { id: 'shadow', label: 'Shadow Parity', screen: 'shadow', icon: Zap },
-    { id: 'history', label: 'Runs', screen: 'history', icon: Clock },
   ];
 
-  // Secondary Governance & Assurance Items (in clean "Govern ▾" dropdown on desktop, fully accessible without scroll)
+  // Pipeline Operations Dropdown ("Operations ▾")
+  const OPERATIONS_NAV_ITEMS = [
+    { id: 'templates', label: 'Templates', screen: 'templates', icon: Layers, desc: 'Certified pipeline blueprints' },
+    { id: 'quarantine', label: 'Quarantine DLQ', screen: 'quarantine', icon: SlidersHorizontal, desc: 'Dead-letter isolation & remediation' },
+    { id: 'shadow', label: 'Shadow Parity', screen: 'shadow', icon: Zap, desc: 'Legacy vs DataX parity reconciliation' },
+    { id: 'history', label: 'Run History', screen: 'history', icon: Clock, desc: 'Execution & commit telemetry' },
+  ];
+
+  // Enterprise Governance & Settings Dropdown ("Govern ▾")
   const GOVERN_NAV_ITEMS = [
     { id: 'audit', label: 'Audit Trail', screen: 'audit', icon: ShieldCheck, desc: 'Cryptographic SHA-256 ledger' },
     { id: 'roi', label: 'Executive ROI', screen: 'roi', icon: TrendingUp, desc: 'Financial risk & board dossier' },
@@ -106,6 +115,9 @@ export default function DataXAppShell({
     return currentScreen === screenKey;
   };
 
+  const isOpsActive = OPERATIONS_NAV_ITEMS.some(item => isNavActive(item.screen));
+  const activeOpsItem = OPERATIONS_NAV_ITEMS.find(item => isNavActive(item.screen));
+
   const isGovernActive = GOVERN_NAV_ITEMS.some(item => isNavActive(item.screen));
   const activeGovernItem = GOVERN_NAV_ITEMS.find(item => isNavActive(item.screen));
 
@@ -115,11 +127,11 @@ export default function DataXAppShell({
       <AmbientBackgroundFlow />
 
       {/* 2. Top Universal Studio Navigation Bar */}
-      <header className="sticky top-0 z-40 w-full bg-white/85 dark:bg-[#18181C]/85 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/[0.08] transition-colors">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
+      <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-[#18181C]/90 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/[0.08] transition-colors">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-2 lg:gap-4">
           
           {/* Brand Logo & Studio Navigation */}
-          <div className="flex items-center gap-4 xl:gap-6 min-w-0">
+          <div className="flex items-center gap-3 xl:gap-5 shrink-0">
             {/* Logo */}
             <button
               type="button"
@@ -132,15 +144,15 @@ export default function DataXAppShell({
                 <span className="font-bold text-slate-900 dark:text-white text-base tracking-tight font-display">
                   DataX
                 </span>
-                <span className="hidden xl:inline-block px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-slate-400 border border-slate-200/60 dark:border-white/[0.06]">
+                <span className="hidden 2xl:inline-block px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-slate-400 border border-slate-200/60 dark:border-white/[0.06]">
                   Studio
                 </span>
               </div>
             </button>
 
-            {/* Desktop Navigation (Zero horizontal scrollbars, perfectly sized for all screens) */}
-            <nav className="hidden lg:flex items-center gap-1 shrink-0">
-              {CORE_NAV_ITEMS.map((item) => {
+            {/* Desktop Navigation (Guaranteed zero overlap across all viewport widths) */}
+            <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 shrink-0">
+              {PRIMARY_NAV_ITEMS.map((item) => {
                 const active = isNavActive(item.screen);
                 const Icon = item.icon;
                 return (
@@ -148,35 +160,91 @@ export default function DataXAppShell({
                     key={item.id}
                     type="button"
                     onClick={() => navigateTo(item.screen)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer shrink-0 ${
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer shrink-0 whitespace-nowrap ${
                       active
                         ? 'bg-[#1473E6]/10 text-[#1473E6] dark:bg-[#1473E6]/20 dark:text-[#60A5FA] font-bold shadow-2xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/70 dark:hover:bg-white/[0.05]'
                     }`}
                   >
-                    <Icon className={`w-3.5 h-3.5 ${active ? 'text-[#1473E6] dark:text-[#60A5FA]' : 'text-slate-400 dark:text-slate-500'}`} />
+                    <Icon className={`w-3.5 h-3.5 shrink-0 ${active ? 'text-[#1473E6] dark:text-[#60A5FA]' : 'text-slate-400 dark:text-slate-500'}`} />
                     <span>{item.label}</span>
-                    {item.badge && (
-                      <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-[#B86E24]/15 text-[#B86E24] dark:bg-[#D48B3F]/20 dark:text-[#FBBF24]">
-                        {item.badge}
-                      </span>
-                    )}
                   </button>
                 );
               })}
 
-              {/* Governance & Assurance Dropdown Menu (Clean, zero-scroll access to Audit, ROI, and Settings) */}
+              {/* Operations Dropdown Menu (Templates, Quarantine, Shadow Parity, Runs) */}
+              <div className="relative shrink-0" ref={opsRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpsDropdownOpen(!opsDropdownOpen);
+                    setGovernDropdownOpen(false);
+                  }}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
+                    isOpsActive
+                      ? 'bg-[#1473E6]/10 text-[#1473E6] dark:bg-[#1473E6]/20 dark:text-[#60A5FA] font-bold shadow-2xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/70 dark:hover:bg-white/[0.05]'
+                  }`}
+                >
+                  <Layers className={`w-3.5 h-3.5 shrink-0 ${isOpsActive ? 'text-[#1473E6] dark:text-[#60A5FA]' : 'text-slate-400 dark:text-slate-500'}`} />
+                  <span>{activeOpsItem ? activeOpsItem.label : 'Operations'}</span>
+                  <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-150 ${opsDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {opsDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-1.5 w-64 bg-white dark:bg-[#1C1C22] border border-slate-200/90 dark:border-white/[0.1] rounded-xl shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+                    <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-white/[0.06] mb-1">
+                      Pipeline Operations
+                    </div>
+                    {OPERATIONS_NAV_ITEMS.map((item) => {
+                      const active = isNavActive(item.screen);
+                      const Icon = item.icon;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            navigateTo(item.screen);
+                            setOpsDropdownOpen(false);
+                          }}
+                          className={`w-full flex items-start gap-2.5 px-3 py-2 text-xs transition-colors cursor-pointer text-left ${
+                            active
+                              ? 'bg-[#1473E6]/10 text-[#1473E6] dark:text-[#60A5FA] font-semibold'
+                              : 'hover:bg-slate-50 dark:hover:bg-white/[0.05] text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${active ? 'text-[#1473E6]' : 'text-slate-400'}`} />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold">{item.label}</span>
+                              {active && <Check className="w-3 h-3 text-[#1473E6]" />}
+                            </div>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                              {item.desc}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Governance & Assurance Dropdown Menu (Audit, ROI, Settings) */}
               <div className="relative shrink-0" ref={governRef}>
                 <button
                   type="button"
-                  onClick={() => setGovernDropdownOpen(!governDropdownOpen)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                  onClick={() => {
+                    setGovernDropdownOpen(!governDropdownOpen);
+                    setOpsDropdownOpen(false);
+                  }}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
                     isGovernActive
                       ? 'bg-[#1473E6]/10 text-[#1473E6] dark:bg-[#1473E6]/20 dark:text-[#60A5FA] font-bold shadow-2xs'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/70 dark:hover:bg-white/[0.05]'
                   }`}
                 >
-                  <ShieldCheck className={`w-3.5 h-3.5 ${isGovernActive ? 'text-[#1473E6] dark:text-[#60A5FA]' : 'text-slate-400 dark:text-slate-500'}`} />
+                  <ShieldCheck className={`w-3.5 h-3.5 shrink-0 ${isGovernActive ? 'text-[#1473E6] dark:text-[#60A5FA]' : 'text-slate-400 dark:text-slate-500'}`} />
                   <span>{activeGovernItem ? activeGovernItem.label : 'Govern'}</span>
                   <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-150 ${governDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -222,30 +290,30 @@ export default function DataXAppShell({
             </nav>
           </div>
 
-          {/* Right Controls: Command Search, Help, Notifications, User Menu, Mobile Toggle */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Right Controls: Advisor, Search, Help, Notifications, User Menu, Mobile Toggle */}
+          <div className="flex items-center gap-1.5 xl:gap-2 shrink-0">
             {/* Interactive Blueprint & Use Case Advisor Trigger */}
             <button
               type="button"
               onClick={() => setAdvisorModalOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-violet-500/10 hover:from-blue-500/20 hover:to-violet-500/20 text-[#2D55F5] dark:text-[#60A5FA] border border-[#2D55F5]/30 hover:border-[#2D55F5]/60 text-xs font-semibold shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+              className="hidden sm:flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-[#2D55F5]/8 hover:bg-[#2D55F5]/15 text-[#2D55F5] dark:text-[#60A5FA] border border-[#2D55F5]/25 hover:border-[#2D55F5]/50 text-xs font-semibold transition-all cursor-pointer shrink-0 whitespace-nowrap"
               title="Interactive Use Case Blueprint Advisor"
             >
-              <Sparkles className="w-3.5 h-3.5 text-[#2D55F5] dark:text-[#60A5FA] animate-pulse" />
-              <span>Find My Use Case</span>
-              <span className="text-[9px] bg-[#2D55F5] text-white px-1.5 py-0.2 rounded-full font-bold">AI</span>
+              <Sparkles className="w-3.5 h-3.5 text-[#2D55F5] dark:text-[#60A5FA] shrink-0" />
+              <span className="hidden 2xl:inline">Use Case Advisor</span>
+              <span className="2xl:hidden">Advisor</span>
             </button>
 
-            {/* Global Search Bar (Adaptive width to protect navigation space) */}
+            {/* Global Search Bar (Compact responsive width) */}
             <button
               type="button"
               onClick={() => setSearchModalOpen(true)}
-              className="relative hidden sm:flex items-center w-32 md:w-40 xl:w-44 h-8 px-2.5 rounded-lg bg-slate-100/80 dark:bg-white/[0.05] border border-slate-200/70 dark:border-white/[0.08] text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-white/[0.15] transition-all cursor-pointer text-left"
+              className="relative hidden sm:flex items-center gap-1.5 xl:w-36 h-8 px-2.5 rounded-lg bg-slate-100/80 dark:bg-white/[0.05] border border-slate-200/70 dark:border-white/[0.08] text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-white/[0.15] transition-all cursor-pointer text-left shrink-0"
               title="Search workflows, tables, and settings (⌘K)"
             >
-              <Search className="w-3.5 h-3.5 mr-1.5 shrink-0" />
-              <span className="truncate">Search...</span>
-              <kbd className="ml-auto text-[10px] font-mono text-slate-400 dark:text-slate-500 bg-white dark:bg-white/[0.08] px-1 py-0.5 rounded border border-slate-200 dark:border-white/[0.06]">
+              <Search className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden xl:inline truncate">Search...</span>
+              <kbd className="xl:ml-auto text-[10px] font-mono text-slate-400 dark:text-slate-500 bg-white dark:bg-white/[0.08] px-1 py-0.5 rounded border border-slate-200 dark:border-white/[0.06]">
                 ⌘K
               </kbd>
             </button>
@@ -254,7 +322,7 @@ export default function DataXAppShell({
             <button
               type="button"
               onClick={() => setOnboardingOpen(true)}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors cursor-pointer shrink-0"
               title="First-Run Studio Guide"
               aria-label="Open Onboarding Guide"
             >
@@ -265,7 +333,7 @@ export default function DataXAppShell({
             <NotificationCenter />
 
             {/* Dynamic Governance Profile & Theme Hub */}
-            <div className="pl-1 border-l border-slate-200/80 dark:border-white/[0.08]">
+            <div className="pl-1 border-l border-slate-200/80 dark:border-white/[0.08] shrink-0">
               <DataXUserMenu onSwitchToMarketing={onSwitchToMarketing} />
             </div>
 
@@ -273,7 +341,7 @@ export default function DataXAppShell({
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
+              className="lg:hidden p-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors cursor-pointer shrink-0"
               aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -284,8 +352,20 @@ export default function DataXAppShell({
         {/* Mobile / Tablet Full Navigation Drawer */}
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-slate-200/80 dark:border-white/[0.08] bg-white/95 dark:bg-[#18181C]/95 backdrop-blur-xl px-4 py-3 space-y-1 animate-in slide-in-from-top-2 duration-150">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 px-2">Core Operations</div>
-            {CORE_NAV_ITEMS.map((item) => {
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setAdvisorModalOpen(true);
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 mb-2 rounded-lg text-xs font-bold bg-[#2D55F5]/10 text-[#2D55F5] cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Use Case Advisor</span>
+            </button>
+
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 px-2">Core Pillars</div>
+            {PRIMARY_NAV_ITEMS.map((item) => {
               const active = isNavActive(item.screen);
               const Icon = item.icon;
               return (
@@ -296,19 +376,34 @@ export default function DataXAppShell({
                     navigateTo(item.screen);
                     setMobileMenuOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer ${
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer ${
                     active ? 'bg-[#1473E6]/10 text-[#1473E6]' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.05]'
                   }`}
                 >
-                  <span className="flex items-center gap-2">
-                    <Icon className="w-4 h-4" />
-                    {item.label}
-                  </span>
-                  {item.badge && (
-                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#B86E24]/15 text-[#B86E24]">
-                      {item.badge}
-                    </span>
-                  )}
+                  <Icon className="w-4 h-4" />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-3 mb-1 px-2">Pipeline Operations</div>
+            {OPERATIONS_NAV_ITEMS.map((item) => {
+              const active = isNavActive(item.screen);
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    navigateTo(item.screen);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer ${
+                    active ? 'bg-[#1473E6]/10 text-[#1473E6]' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.05]'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{item.label}</span>
                 </button>
               );
             })}

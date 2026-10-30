@@ -35,7 +35,13 @@ from models import (
     RegisterRequest,
     RuleVerifyRequest,
     RagScanRequest,
+    FirewallUrlFetchRequest,
+    FirewallPolicyUpdateRequest,
+    FirewallEventResolveRequest,
     AgentToolInterceptRequest,
+    StudioDbListRequest,
+    StudioDbExtractRequest,
+    StudioDbCommitRequest,
     MlCertifyRequest,
     UseCaseAdvisorRequest,
 )
@@ -1689,17 +1695,122 @@ def api_get_notifications_feed(limit: int = 15):
 
 
 # -----------------------------------------------------------------------------
-# Pillar 2: AI Agent & RAG Data Firewall Endpoints
+# Studio Real Database I/O Endpoints (PostgreSQL & MongoDB Extraction & Commit)
 # -----------------------------------------------------------------------------
+@app.post("/studio/db/tables")
+def api_studio_list_db_tables(req: StudioDbListRequest):
+    """Discovers live tables or collections from a connected PostgreSQL or MongoDB database."""
+    from studio_io_engine import list_database_tables
+    try:
+        return list_database_tables(
+            engine=req.engine or "postgres",
+            connection_uri=req.connectionUri,
+            credential_id=req.credentialId,
+            database=req.database,
+            use_workspace_db=bool(req.useWorkspaceDb),
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database table discovery failed: {str(e)}")
+
+
+@app.post("/studio/db/extract")
+def api_studio_extract_db_records(req: StudioDbExtractRequest):
+    """Extracts up to 25,000 real records from a PostgreSQL table or MongoDB collection."""
+    from studio_io_engine import extract_database_records
+    try:
+        return extract_database_records(
+            engine=req.engine or "postgres",
+            table_name=req.tableName,
+            connection_uri=req.connectionUri,
+            credential_id=req.credentialId,
+            database=req.database,
+            limit=req.limit or 5000,
+            use_workspace_db=bool(req.useWorkspaceDb),
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database record extraction failed: {str(e)}")
+
+
+@app.post("/studio/db/commit")
+def api_studio_commit_db_records(req: StudioDbCommitRequest):
+    """Commits sanitized RAG chunks or certified ML/SFT datasets directly into PostgreSQL or MongoDB."""
+    from studio_io_engine import commit_records_to_database
+    try:
+        return commit_records_to_database(
+            engine=req.engine or "postgres",
+            table_name=req.tableName,
+            records=req.records,
+            connection_uri=req.connectionUri,
+            credential_id=req.credentialId,
+            database=req.database,
+            write_mode=req.writeMode or "replace",
+            use_workspace_db=bool(req.useWorkspaceDb),
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database commit failed: {str(e)}")
+
+
+# -----------------------------------------------------------------------------
+# Pillar 2: AI Agent & RAG Data Firewall Endpoints (Zero Dummy Data)
+# -----------------------------------------------------------------------------
+@app.post("/firewall/fetch-url")
+def api_firewall_fetch_url(req: FirewallUrlFetchRequest):
+    """Fetches a public URL with SSRF protection, strips HTML boilerplate, and chunks text."""
+    from studio_io_engine import fetch_url_and_chunk
+    try:
+        return fetch_url_and_chunk(
+            url=req.url,
+            chunk_size=req.chunkSize or 1200,
+            chunk_overlap=req.chunkOverlap or 120,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"URL document fetch failed: {str(e)}")
+
+
 @app.post("/firewall/scan-rag-batch")
 def api_scan_rag_batch(req: RagScanRequest):
-    """Pre-embedding RAG document scanner: detects prompt injection, secrets, PII, and entropy."""
+    """Pre-embedding RAG document scanner with configurable sanitization policy."""
     from ai_firewall_engine import scan_rag_batch
     try:
-        res = scan_rag_batch(req.chunks, persist=bool(req.persist))
-        return res
+        return scan_rag_batch(req.chunks, policy=req.policy, persist=bool(req.persist))
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"RAG batch scan failed: {str(e)}")
+
+
+@app.get("/firewall/rag-ledger")
+def api_get_verified_rag_ledger(limit: int = 100):
+    """Retrieves verified & sanitized RAG chunks persisted in Neon PostgreSQL."""
+    from ai_firewall_engine import get_verified_rag_ledger
+    rows = get_verified_rag_ledger(limit=limit)
+    return {"status": "success", "chunks": rows, "count": len(rows)}
+
+
+@app.get("/firewall/policy")
+def api_get_firewall_policy():
+    """Loads active workspace AI Agent firewall policy from Neon PostgreSQL."""
+    from ai_firewall_engine import get_active_firewall_policy
+    return {"status": "success", "policy": get_active_firewall_policy("default")}
+
+
+@app.post("/firewall/policy")
+def api_save_firewall_policy(req: FirewallPolicyUpdateRequest):
+    """Saves active workspace AI Agent firewall policy to Neon PostgreSQL."""
+    from ai_firewall_engine import save_active_firewall_policy
+    try:
+        saved = save_active_firewall_policy(req.policy, "default")
+        return {"status": "success", "policy": saved}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save firewall policy: {str(e)}")
 
 
 @app.post("/firewall/intercept")
@@ -1711,101 +1822,125 @@ def api_intercept_agent_tool_call(req: AgentToolInterceptRequest):
             "agent_id": req.agent_id,
             "tool_name": req.tool_name,
             "arguments": req.arguments or {},
-            "policies": req.policies or {}
+            "policies": req.policies or {},
         }
-        res = intercept_agent_tool_call(payload)
-        return res
+        return intercept_agent_tool_call(payload)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Firewall interception failed: {str(e)}")
 
 
-@app.get("/firewall/sample-corpus")
-def api_get_firewall_sample_corpus():
-    """Provides a realistic enterprise RAG batch containing clean docs, leaked secrets, and indirect injections."""
-    from ai_firewall_engine import get_sample_rag_corpus
-    return {"status": "success", "corpus": get_sample_rag_corpus()}
-
-
-@app.get("/firewall/sample-tool-attacks")
-def api_get_sample_tool_attacks():
-    """Provides realistic AI agent tool calls with planted attacks."""
-    from ai_firewall_engine import get_sample_tool_attacks
-    return {"status": "success", "attacks": get_sample_tool_attacks()}
+@app.post("/firewall/events/{event_id}/resolve")
+def api_resolve_firewall_event(event_id: str, req: FirewallEventResolveRequest):
+    """Human-in-the-loop resolution (Approve / Reject) for HOLD_FOR_HITL agent tool calls."""
+    from ai_firewall_engine import resolve_firewall_event
+    try:
+        return resolve_firewall_event(event_id=event_id, decision=req.decision, reviewer_note=req.note or "")
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to resolve firewall event: {str(e)}")
 
 
 @app.get("/firewall/events")
-def api_get_firewall_events(limit: int = 25):
+def api_get_firewall_events(limit: int = 50):
     """Retrieves recent firewall interception events from Neon PostgreSQL."""
     try:
-        with psycopg2.connect(DEFAULT_NEON_URI) as conn:
+        with psycopg2.connect(DEFAULT_NEON_URI, connect_timeout=6) as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("""
-                    SELECT event_id, timestamp, mode, agent_or_source, target_tool, verdict, risk_score, violations, latency_ms, sha256_seal
+                    SELECT event_id, timestamp, mode, agent_or_source, target_tool, verdict, risk_score,
+                           violations, original_payload, sanitized_payload, latency_ms, sha256_seal
                     FROM "datax_firewall_events"
                     ORDER BY timestamp DESC
                     LIMIT %s;
-                """, (limit,))
+                """, (min(max(int(limit or 50), 1), 500),))
                 rows = cur.fetchall()
-                return {"status": "success", "events": rows, "count": len(rows)}
+                serialized = []
+                for r in rows:
+                    d = dict(r)
+                    if d.get("timestamp") is not None:
+                        d["timestamp"] = d["timestamp"].isoformat()
+                    if d.get("risk_score") is not None:
+                        d["risk_score"] = float(d["risk_score"])
+                    if d.get("latency_ms") is not None:
+                        d["latency_ms"] = float(d["latency_ms"])
+                    serialized.append(d)
+                return {"status": "success", "events": serialized, "count": len(serialized)}
     except Exception as e:
         return {"status": "success", "events": [], "count": 0, "message": f"Events deferred: {e}"}
 
 
 # -----------------------------------------------------------------------------
-# Pillar 3: ML Training & LLM Fine-Tuning Certification Endpoints
+# Pillar 3: ML Training & LLM Fine-Tuning Certification Endpoints (Zero Dummy Data)
 # -----------------------------------------------------------------------------
 @app.post("/ml-gate/certify")
 def api_certify_ml_dataset(req: MlCertifyRequest):
-    """Certifies Tabular ML or LLM Fine-Tuning SFT datasets."""
+    """Certifies and optionally remediates Tabular ML or LLM Fine-Tuning SFT datasets."""
     from ml_certification_engine import certify_tabular_dataset, certify_sft_jsonl_dataset
     try:
         modality = (req.modality or "TABULAR").upper()
+        include_rec = True if req.includeRecords is None else bool(req.includeRecords)
         if "LLM" in modality or "SFT" in modality or "JSONL" in modality or req.jsonlRecords:
-            records = req.jsonlRecords or req.candidateRecords or []
-            res = certify_sft_jsonl_dataset(records, dataset_name=req.datasetName or "llm_sft_corpus")
-            return res
+            records = req.jsonlRecords if req.jsonlRecords is not None else (req.candidateRecords or [])
+            return certify_sft_jsonl_dataset(
+                jsonl_records=records,
+                dataset_name=req.datasetName or "llm_sft_corpus",
+                prompt_column=req.promptColumn,
+                completion_column=req.completionColumn,
+                system_prompt=req.systemPrompt,
+                remediate_options=req.remediateOptions,
+                include_records=include_rec,
+            )
         else:
             cand = req.candidateRecords or []
             base = req.baselineRecords
-            res = certify_tabular_dataset(
+            return certify_tabular_dataset(
                 candidate_records=cand,
                 baseline_records=base,
                 target_column=req.targetColumn,
                 protected_column=req.protectedColumn,
-                dataset_name=req.datasetName or "tabular_ml_dataset"
+                dataset_name=req.datasetName or "tabular_ml_dataset",
+                psi_threshold=req.psiThreshold if req.psiThreshold is not None else 0.25,
+                leakage_threshold=req.leakageThreshold if req.leakageThreshold is not None else 0.75,
+                excluded_columns=req.excludedColumns,
+                baseline_split_ratio=req.baselineSplitRatio if req.baselineSplitRatio is not None else 0.30,
+                remediate_options=req.remediateOptions,
+                include_records=include_rec,
             )
-            return res
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"ML Dataset Certification failed: {str(e)}")
 
 
 @app.get("/ml-gate/certificates")
-def api_get_ml_certificates(limit: int = 20):
+def api_get_ml_certificates(limit: int = 50):
     """Retrieves past dataset certification releases from Neon PostgreSQL."""
     try:
-        with psycopg2.connect(DEFAULT_NEON_URI) as conn:
+        with psycopg2.connect(DEFAULT_NEON_URI, connect_timeout=6) as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("""
-                    SELECT cert_id, dataset_name, modality, row_count, clean_row_count, psi_max, leakage_columns, anchored_score, verdict, sha256_dataset_hash, created_at
+                    SELECT cert_id, dataset_name, modality, row_count, clean_row_count, psi_max,
+                           leakage_columns, pii_leaks_found, anchored_score, verdict,
+                           sha256_dataset_hash, certificate_json, created_at
                     FROM "datax_ml_certifications"
                     ORDER BY created_at DESC
                     LIMIT %s;
-                """, (limit,))
+                """, (min(max(int(limit or 50), 1), 500),))
                 rows = cur.fetchall()
-                return {"status": "success", "certificates": rows, "count": len(rows)}
+                serialized = []
+                for r in rows:
+                    d = dict(r)
+                    if d.get("created_at") is not None:
+                        d["created_at"] = d["created_at"].isoformat()
+                    if d.get("psi_max") is not None:
+                        d["psi_max"] = float(d["psi_max"])
+                    if d.get("anchored_score") is not None:
+                        d["anchored_score"] = float(d["anchored_score"])
+                    serialized.append(d)
+                return {"status": "success", "certificates": serialized, "count": len(serialized)}
     except Exception as e:
         return {"status": "success", "certificates": [], "count": 0, "message": f"Certificates deferred: {e}"}
-
-
-@app.get("/ml-gate/sample-datasets")
-def api_get_ml_sample_datasets():
-    """Provides realistic Tabular and SFT datasets with planted target leakage and drift."""
-    from ml_certification_engine import get_sample_tabular_dataset, get_sample_sft_dataset
-    return {
-        "status": "success",
-        "tabular": get_sample_tabular_dataset(),
-        "sft": get_sample_sft_dataset()
-    }
 
 
 # -----------------------------------------------------------------------------

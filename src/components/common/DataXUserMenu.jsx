@@ -202,13 +202,13 @@ export default function DataXUserMenu({ compact = false }) {
     <div className="relative shrink-0 font-sans" ref={menuRef}>
       {isSignedIn ? (
         <div className="flex min-w-0 items-center gap-2">
-          {/* Detailed user profile trigger pill */}
+          {/* Detailed user profile trigger pill (Adaptive width to prevent navbar crowding) */}
           {!compact && (
             <button
               type="button"
               onClick={() => setDropdownOpen(!dropdownOpen)}
               aria-expanded={dropdownOpen}
-              className="hidden lg:flex min-w-0 max-w-[calc(100vw-2rem)] items-center gap-2 px-2.5 py-1 rounded-full border border-slate-200 dark:border-[#1E293B] bg-white dark:bg-[#0F172A] hover:bg-slate-50 dark:hover:bg-[#1E293B] transition-all text-left cursor-pointer shadow-xs hover:shadow-sm"
+              className="hidden lg:flex min-w-0 items-center gap-2 px-2 py-1 rounded-full border border-slate-200 dark:border-[#1E293B] bg-white dark:bg-[#0F172A] hover:bg-slate-50 dark:hover:bg-[#1E293B] transition-all text-left cursor-pointer shadow-xs hover:shadow-sm shrink-0"
             >
               <div className="w-6 h-6 rounded-full overflow-hidden border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 text-[10px] font-bold flex items-center justify-center shrink-0">
                 {user?.imageUrl ? (
@@ -217,11 +217,11 @@ export default function DataXUserMenu({ compact = false }) {
                   <span>{initials}</span>
                 )}
               </div>
-              <div className="w-44 min-w-0 leading-tight">
+              <div className="max-w-[96px] xl:max-w-[128px] 2xl:max-w-[168px] min-w-0 leading-tight">
                 <p className="truncate text-[11px] font-bold text-slate-900 dark:text-slate-100">{fullName}</p>
-                <p className="truncate text-[10px] text-slate-400 dark:text-slate-500 font-mono" title={email}>{email}</p>
+                <p className="hidden 2xl:block truncate text-[10px] text-slate-400 dark:text-slate-500 font-mono" title={email}>{email}</p>
               </div>
-              <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-200 ml-0.5 ${dropdownOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-200 shrink-0 ${dropdownOpen ? 'rotate-180' : ''}`} />
             </button>
           )}
 

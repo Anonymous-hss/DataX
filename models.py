@@ -138,7 +138,6 @@ class DraftPromptRequest(BaseModel):
     governanceMode: Optional[str] = "balanced"
 
 
-
 class LoginRequest(BaseModel):
     email: str
     password: Optional[str] = "admin"
@@ -159,7 +158,23 @@ class RuleVerifyRequest(BaseModel):
 
 class RagScanRequest(BaseModel):
     chunks: List[Dict[str, Any]]
+    policy: Optional[Dict[str, Any]] = None
     persist: Optional[bool] = True
+
+
+class FirewallUrlFetchRequest(BaseModel):
+    url: str
+    chunkSize: Optional[int] = 1200
+    chunkOverlap: Optional[int] = 120
+
+
+class FirewallPolicyUpdateRequest(BaseModel):
+    policy: Dict[str, Any]
+
+
+class FirewallEventResolveRequest(BaseModel):
+    decision: str
+    note: Optional[str] = ""
 
 
 class AgentToolInterceptRequest(BaseModel):
@@ -167,6 +182,35 @@ class AgentToolInterceptRequest(BaseModel):
     tool_name: Optional[str] = "unspecified_tool"
     arguments: Optional[Dict[str, Any]] = None
     policies: Optional[Dict[str, Any]] = None
+
+
+class StudioDbListRequest(BaseModel):
+    engine: Optional[str] = "postgres"
+    connectionUri: Optional[str] = None
+    credentialId: Optional[str] = None
+    database: Optional[str] = None
+    useWorkspaceDb: Optional[bool] = False
+
+
+class StudioDbExtractRequest(BaseModel):
+    engine: Optional[str] = "postgres"
+    tableName: str
+    connectionUri: Optional[str] = None
+    credentialId: Optional[str] = None
+    database: Optional[str] = None
+    limit: Optional[int] = 5000
+    useWorkspaceDb: Optional[bool] = False
+
+
+class StudioDbCommitRequest(BaseModel):
+    engine: Optional[str] = "postgres"
+    tableName: str
+    records: List[Dict[str, Any]]
+    connectionUri: Optional[str] = None
+    credentialId: Optional[str] = None
+    database: Optional[str] = None
+    writeMode: Optional[str] = "replace"
+    useWorkspaceDb: Optional[bool] = False
 
 
 class MlCertifyRequest(BaseModel):
@@ -177,6 +221,15 @@ class MlCertifyRequest(BaseModel):
     targetColumn: Optional[str] = None
     protectedColumn: Optional[str] = None
     datasetName: Optional[str] = "dataset_candidate"
+    psiThreshold: Optional[float] = 0.25
+    leakageThreshold: Optional[float] = 0.75
+    excludedColumns: Optional[List[str]] = None
+    baselineSplitRatio: Optional[float] = 0.30
+    promptColumn: Optional[str] = None
+    completionColumn: Optional[str] = None
+    systemPrompt: Optional[str] = None
+    remediateOptions: Optional[Dict[str, Any]] = None
+    includeRecords: Optional[bool] = True
 
 
 class UseCaseAdvisorRequest(BaseModel):
@@ -184,4 +237,3 @@ class UseCaseAdvisorRequest(BaseModel):
     stack: Optional[List[str]] = None
     goal: Optional[str] = None
     schema_columns: Optional[List[str]] = None
-
