@@ -1,0 +1,10 @@
+Component	Runs where	Touches customer data?	What may leave the customer network	Tech
+Control Plane (SaaS)	DataX cloud	No	Receives: workflow definitions it authored, run status, aggregate counts (if Metadata-only mode is enabled)	FastAPI, Postgres, React
+Data-Plane Runner	Customer VPC / on-prem / K8s	Yes - all record processing	Nothing in Off mode. Metadata-only mode: counts, scores, hashes, versions	FastAPI, DuckDB, local Postgres, container
+Browser UI path	User browser	Yes (renders records)	Talks directly to the runner; SaaS UI only loads static assets and metadata	React, Vite
+Credential Vault	Customer side	Holds DB creds	Never	Env / K8s Secrets / HashiCorp Vault
+Privacy Gateway	Customer side (sidecar or gateway)	Yes - sees raw prompts	Only sanitised prompts go to the external LLM provider	FastAPI/ASGI proxy, Presidio/spaCy/GLiNER, AES-GCM token vault
+Token Vault (placeholder map)	Customer side, encrypted, TTL	Holds PII<->placeholder map	Never	In-memory + encrypted local store
+Local LLM (optional)	Customer side	Yes	Never	Ollama / vLLM / TGI
+Audit Ledger	Customer side	Hashes + metadata only	Optional SIEM export to customer SIEM	Postgres hash-chain, syslog/Splunk
+Graph Execution Engine	Runner	Yes	Never	Python DAG executor, DuckDB

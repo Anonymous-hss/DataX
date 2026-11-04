@@ -18,16 +18,7 @@ THREADS_STORE_FILE = os.path.join(VAULT_DIR, ".threads_store.json")
 AUDIT_LOGS_FILE = os.path.join(VAULT_DIR, ".audit_logs.json")
 RUNS_STORE_FILE = os.path.join(VAULT_DIR, ".runs_store.json")
 
-def _resolve_default_neon_uri() -> str:
-    env_uri = os.environ.get("DATAX_NEON_URI") or os.environ.get("DATABASE_URL")
-    if env_uri and "<" not in env_uri and "neon-host" not in env_uri:
-        return env_uri
-    return "postgresql://neondb_owner:npg_Eim1u6bIldRL@ep-square-breeze-aqokq2fe-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require"
-
-DEFAULT_NEON_URI = (
-    _resolve_default_neon_uri()
-    or "postgresql://neondb_owner:npg_Eim1u6bIldRL@ep-square-breeze-aqokq2fe-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require"
-)
+from db_config import get_storage_uri, DEFAULT_STORAGE_URI, DEFAULT_NEON_URI
 
 
 def get_vault_cipher():
@@ -90,13 +81,13 @@ def get_resolved_uri(req: Any) -> str:
             uri = raw_host
     engine = str(getattr(req, "engine", "")).lower()
     if not uri or not isinstance(uri, str):
-        if engine in ["postgres", "postgresql"] and DEFAULT_NEON_URI:
-            return DEFAULT_NEON_URI
+        if engine in ["postgres", "postgresql"]:
+            return get_storage_uri()
         return ""
     uri = uri.strip()
     if not uri or "<" in uri or "user:password" in uri or "target-db.internal" in uri or "ep-sweet-neon" in uri or "••••" in uri:
-        if engine in ["postgres", "postgresql"] and DEFAULT_NEON_URI:
-            return DEFAULT_NEON_URI
+        if engine in ["postgres", "postgresql"]:
+            return get_storage_uri()
         return ""
     return uri
 

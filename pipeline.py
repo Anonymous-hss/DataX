@@ -306,8 +306,8 @@ def _execute_pipeline_core(req: PipelineExecutionRequest, idempotency_key: str, 
         if not src_uri and src_engine in ["mongodb", "mongo"]:
             src_uri = "mongodb+srv://harshal:harshal@cluster0.tb6bhff.mongodb.net/datax_staging?retryWrites=true&w=majority"
         elif not src_uri and src_engine in ["postgres", "postgresql"]:
-            from vault import DEFAULT_NEON_URI
-            src_uri = DEFAULT_NEON_URI
+            from db_config import get_storage_uri
+            src_uri = get_storage_uri()
         if not src_uri and src_engine not in ["sap_bw", "sap_hana", "sap", "s4_hana", "file_upload", "local_file"]:
             log("ERROR", f"Pre-flight check failed: Source node ({src_engine.upper()}) credentials are missing.")
             raise HTTPException(
@@ -484,8 +484,8 @@ def _execute_pipeline_core(req: PipelineExecutionRequest, idempotency_key: str, 
         tgt1_uri = get_resolved_uri(req.target1)
         tgt1_engine = req.target1.engine.lower()
         if not tgt1_uri and tgt1_engine in ["postgres", "postgresql"]:
-            from vault import DEFAULT_NEON_URI
-            tgt1_uri = DEFAULT_NEON_URI
+            from db_config import get_storage_uri
+            tgt1_uri = get_storage_uri()
         if not tgt1_uri and tgt1_engine in ["postgres", "postgresql", "mongodb", "mongo"]:
             log("ERROR", f"Pre-flight check failed: Target 1 node ({tgt1_engine.upper()}) credentials missing.")
             raise HTTPException(

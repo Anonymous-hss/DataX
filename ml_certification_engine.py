@@ -18,6 +18,7 @@ from collections import Counter
 from typing import Dict, Any, List, Optional, Tuple
 
 import psycopg2
+from db_config import get_storage_uri, get_storage_connection
 from vault import DEFAULT_NEON_URI
 from ai_firewall_engine import (
     SECRET_PATTERNS,
@@ -29,9 +30,9 @@ from ai_firewall_engine import (
 
 
 def init_ml_tables():
-    """Idempotently ensures datax_ml_certifications exists in Neon PostgreSQL."""
+    """Idempotently ensures datax_ml_certifications exists in DataX On-Prem Storage."""
     try:
-        with psycopg2.connect(DEFAULT_NEON_URI, connect_timeout=6) as conn:
+        with get_storage_connection(connect_timeout=6) as conn:
             with conn.cursor() as cur:
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS "datax_ml_certifications" (
@@ -688,7 +689,7 @@ def certify_tabular_dataset(
 
     # Persist lightweight certificate metadata (without raw row payload) to Neon PostgreSQL
     try:
-        with psycopg2.connect(DEFAULT_NEON_URI, connect_timeout=6) as conn:
+        with get_storage_connection(connect_timeout=6) as conn:
             with conn.cursor() as cur:
                 cur.execute("""
                     INSERT INTO "datax_ml_certifications"
@@ -1043,7 +1044,7 @@ def certify_sft_jsonl_dataset(
     }
 
     try:
-        with psycopg2.connect(DEFAULT_NEON_URI, connect_timeout=6) as conn:
+        with get_storage_connection(connect_timeout=6) as conn:
             with conn.cursor() as cur:
                 cur.execute("""
                     INSERT INTO "datax_ml_certifications"

@@ -15,6 +15,7 @@ import hashlib
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from typing import Dict, Any, List, Optional
+from db_config import get_storage_uri, get_storage_connection
 from vault import DEFAULT_NEON_URI
 from studio_io_engine import chunk_text_with_overlap
 
@@ -77,9 +78,9 @@ def calculate_shannon_entropy(text: str) -> float:
 
 
 def init_firewall_tables():
-    """Idempotently ensures firewall persistence tables exist in Neon PostgreSQL."""
+    """Idempotently ensures firewall persistence tables exist in DataX On-Prem Storage."""
     try:
-        with psycopg2.connect(DEFAULT_NEON_URI, connect_timeout=6) as conn:
+        with get_storage_connection(connect_timeout=6) as conn:
             with conn.cursor() as cur:
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS "datax_verified_rag_chunks" (
@@ -129,7 +130,7 @@ def get_active_firewall_policy(policy_id: str = "default") -> Dict[str, Any]:
     """Loads persisted firewall policy from Neon PostgreSQL, falling back to clean defaults."""
     merged = dict(DEFAULT_FIREWALL_POLICY)
     try:
-        with psycopg2.connect(DEFAULT_NEON_URI, connect_timeout=5) as conn:
+        with get_storage_connection(connect_timeout=5) as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
                     'SELECT policy_json, updated_at FROM "datax_firewall_policies" WHERE policy_id = %s;',
@@ -154,7 +155,7 @@ def save_active_firewall_policy(policy_updates: Dict[str, Any], policy_id: str =
         if v is not None:
             current[k] = v
 
-    with psycopg2.connect(DEFAULT_NEON_URI, connect_timeout=6) as conn:
+    with get_storage_connection(connect_timeout=6) as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO "datax_firewall_policies" (policy_id, policy_json, updated_at)
@@ -173,7 +174,7 @@ def resolve_firewall_event(event_id: str, decision: str, reviewer_note: str = ""
     norm = (decision or "").upper().strip()
     new_verdict = "APPROVED_BY_HUMAN" if norm in ["APPROVE", "APPROVED", "ALLOW", "APPROVED_BY_HUMAN"] else "REJECTED_BY_HUMAN"
 
-    with psycopg2.connect(DEFAULT_NEON_URI, connect_timeout=6) as conn:
+    with get_storage_connection(connect_timeout=6) as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute('SELECT violations FROM "datax_firewall_events" WHERE event_id = %s;', (event_id,))
             existing = cur.fetchone()
@@ -405,7 +406,7 @@ def scan_rag_batch(
 
     if persist and (verified_count > 0 or redacted_count > 0):
         try:
-            with psycopg2.connect(DEFAULT_NEON_URI, connect_timeout=6) as conn:
+            with get_storage_connection(connect_timeout=6) as conn:
                 with conn.cursor() as cur:
                     for r in results:
                         if r["verdict"] in ["VERIFIED", "REDACTED_PASS"]:
@@ -620,7 +621,7 @@ def intercept_agent_tool_call(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     try:
-        with psycopg2.connect(DEFAULT_NEON_URI, connect_timeout=5) as conn:
+        with get_storage_connection(connect_timeout=5) as conn:
             with conn.cursor() as cur:
                 cur.execute("""
                     INSERT INTO "datax_firewall_events"
@@ -649,7 +650,7 @@ def intercept_agent_tool_call(payload: Dict[str, Any]) -> Dict[str, Any]:
 def get_verified_rag_ledger(limit: int = 100) -> List[Dict[str, Any]]:
     """Fetches persisted verified/redacted RAG chunks from Neon PostgreSQL."""
     try:
-        with psycopg2.connect(DEFAULT_NEON_URI, connect_timeout=5) as conn:
+        with get_storage_connection(connect_timeout=5) as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("""
                     SELECT chunk_id, source_doc, clean_text, redactions_count, trust_score, verdict, violations, sha256_seal, indexed_at

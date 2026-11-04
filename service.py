@@ -52,6 +52,14 @@ from vault import (
     load_audit_logs,
     DEFAULT_NEON_URI,
 )
+from db_config import (
+    get_storage_uri,
+    get_storage_connection,
+    get_storage_info,
+    init_all_storage_tables,
+    is_on_prem_storage,
+    DEFAULT_STORAGE_URI,
+)
 from sap_generator import DOMAIN_PACKS
 from connectors import test_database_connection, sample_table_data
 from pipeline import run_pipeline
@@ -436,7 +444,7 @@ def api_test_alert(user: Dict[str, Any] = Depends(require_roles(["Admin", "Data 
 @app.post("/governance/indexes/optimize")
 def api_optimize_indexes(targetUri: Optional[str] = None, user: Dict[str, Any] = Depends(require_roles(["Admin"]))):
     """ARC-03: Optimizes database composite indexes for sub-50ms lookups."""
-    uri = targetUri or DEFAULT_NEON_URI
+    uri = targetUri or get_storage_uri()
     if not uri or "<" in uri:
         return {
             "status": "success",
@@ -1428,7 +1436,7 @@ def api_get_quarantined_records(limit: int = 50):
         return {"status": "success", "records": formatted, "count": len(formatted), "durability": "FSYNC_VERIFIED"}
 
     try:
-        conn = psycopg2.connect(DEFAULT_NEON_URI)
+        conn = get_storage_connection()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS quarantined_records (
@@ -1458,7 +1466,7 @@ def api_resolve_quarantined_record(req: QuarantineResolveRequest, user: Dict[str
     durable_dlq.resolve_record(target_id, act, getattr(req, "resolutionNotes", "") or "")
 
     try:
-        conn = psycopg2.connect(DEFAULT_NEON_URI)
+        conn = get_storage_connection()
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS quarantined_records (
@@ -1843,9 +1851,9 @@ def api_resolve_firewall_event(event_id: str, req: FirewallEventResolveRequest):
 
 @app.get("/firewall/events")
 def api_get_firewall_events(limit: int = 50):
-    """Retrieves recent firewall interception events from Neon PostgreSQL."""
+    """Retrieves recent firewall interception events from DataX On-Prem Storage."""
     try:
-        with psycopg2.connect(DEFAULT_NEON_URI, connect_timeout=6) as conn:
+        with get_storage_connection(connect_timeout=6) as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("""
                     SELECT event_id, timestamp, mode, agent_or_source, target_tool, verdict, risk_score,
@@ -1915,9 +1923,9 @@ def api_certify_ml_dataset(req: MlCertifyRequest):
 
 @app.get("/ml-gate/certificates")
 def api_get_ml_certificates(limit: int = 50):
-    """Retrieves past dataset certification releases from Neon PostgreSQL."""
+    """Retrieves past dataset certification releases from DataX On-Prem Storage."""
     try:
-        with psycopg2.connect(DEFAULT_NEON_URI, connect_timeout=6) as conn:
+        with get_storage_connection(connect_timeout=6) as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("""
                     SELECT cert_id, dataset_name, modality, row_count, clean_row_count, psi_max,
@@ -1946,6 +1954,23 @@ def api_get_ml_certificates(limit: int = 50):
 # -----------------------------------------------------------------------------
 # Guided UX Discovery: AI Use-Case Advisor Endpoint
 # -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# Pillar 0: Storage & Architecture Telemetry (Task D-02 On-Prem Configuration)
+# -----------------------------------------------------------------------------
+@app.get("/storage/info")
+def api_get_storage_info():
+    """Returns telemetry on current DataX storage mode (On-Prem vs Cloud) and table metrics."""
+    return get_storage_info()
+
+
+@app.on_event("startup")
+def on_startup_storage_init():
+    try:
+        init_all_storage_tables()
+    except Exception as e:
+        logger.warning(f"Storage startup migration note: {e}")
+
 @app.post("/advisor/recommend")
 def api_recommend_use_cases(req: UseCaseAdvisorRequest):
     """Recommends 3 tailored, plain-English DataX blueprints based on user role, stack, and goal."""

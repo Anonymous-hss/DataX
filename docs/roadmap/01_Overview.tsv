@@ -1,0 +1,9 @@
+DataX - Next Phase Implementation & Sprint Plan
+Prepared	2026-11-03
+Scope	(1) Interactive canvas for AI Firewall, Agent Guard and ML Gate  (2) On-prem / hybrid architecture so customer data is never exposed to DataX  (3) Privacy Gateway so external LLM APIs can be used without sending raw PII
+Timeline	8 sprints x 2 weeks, 9 Nov 2026 -> 26 Feb 2027 (Sprint 4 at reduced capacity for holidays)
+Team assumption	7 FTE: 2 backend, 2 frontend, 1 DevOps, 1 ML/security engineer, 1 QA; part-time PM/design. Re-baseline after Sprint 2.
+Estimation	Story points (1 pt ~ half a developer-day). Total planned points: 340
+Product rule	No dummy/sample data shipped in product. Test data generators live in the test suite only.
+Honest limitation	PII detection can reduce, not eliminate, leakage. The gateway is positioned as risk reduction with measurable recall, not an absolute guarantee.
+Tabs	Epics | Roadmap | Sprint Plan | Task Backlog | Architecture | Deployment Tiers | Risks | KPIs | Decisions Needed

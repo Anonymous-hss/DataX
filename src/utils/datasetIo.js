@@ -276,3 +276,4 @@ export function exportRecordsToFile(records = [], baseFileName = 'datax_output',
   const csvContent = '\uFEFF' + XLSX.utils.sheet_to_csv(worksheet);
   downloadTextFile(csvContent, `${cleanBase}.csv`, 'text/csv;charset=utf-8');
 }
+

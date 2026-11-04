@@ -1,0 +1,5 @@
+Deployment tier	Where UI + control plane run	Where data is processed	Data leaves customer network?	Best for	Internet needed?
+SaaS (today)	DataX cloud	DataX cloud	Yes (to DataX)	Trials, startups, non-sensitive data	Yes
+Hybrid (recommended default)	DataX cloud (metadata only)	Customer runner	No (optional metadata)	Most enterprises	Outbound-only HTTPS
+Self-hosted	Customer	Customer	No	Regulated industries	Optional
+Air-gapped	Customer	Customer	No	Defence, banking core, government	No (offline licence + image bundle)

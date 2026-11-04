@@ -21,7 +21,8 @@ import psycopg2
 from psycopg2.extras import RealDictCursor, execute_values
 from pymongo import MongoClient
 
-from vault import DEFAULT_NEON_URI, get_credential_uri
+from db_config import get_storage_uri
+from vault import get_credential_uri, DEFAULT_NEON_URI
 
 
 def _resolve_studio_uri(
@@ -41,7 +42,7 @@ def _resolve_studio_uri(
         return uri
 
     if use_workspace_db and eng in ["postgres", "postgresql"]:
-        return DEFAULT_NEON_URI
+        return get_storage_uri()
 
     return ""
 
@@ -495,3 +496,4 @@ def fetch_url_and_chunk(url: str, chunk_size: int = 1200, chunk_overlap: int = 1
         "chunkCount": len(chunks),
         "chunks": chunks
     }
+

@@ -1,0 +1,12 @@
+Area	Metric	Target	How measured
+On-prem	Install time from zero to running workflow	< 30 minutes (docker-compose), < 2 hours (Helm)	Timed install in pilot
+On-prem	Outbound calls in Off telemetry mode	0	Egress-block automated test (D-15)
+On-prem	Record-level data transiting DataX cloud in Hybrid mode	0 bytes	Network capture + audit
+Gateway	PII recall on held-out benchmark (structured entities)	>= 99%	Red-team evaluation (G-17)
+Gateway	PII recall on free-text names/addresses	>= 90% (publish actual figure)	Red-team evaluation (G-17)
+Gateway	Added p95 latency (regex tier / NER tier)	< 50 ms / < 150 ms at 200 req/s	Load test (G-15)
+Gateway	Round-trip fidelity (de-tokenised reply equals expectation)	>= 99.5% on test prompts	Automated replay
+Canvas	Time for a new user to build and run first graph	< 10 minutes	Usability sessions
+Canvas	Graph run success rate on pilot data	>= 98%	Run history
+Quality	Critical/High pen-test findings open at GA	0	Pen-test report
+Delivery	Sprint commitment reliability	>= 85% of committed points	Sprint reports

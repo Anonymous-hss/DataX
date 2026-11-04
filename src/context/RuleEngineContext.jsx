@@ -295,7 +295,6 @@ export const isCredentialConfigured = (cfg) => {
 
 // Target Resolver: Resolves valid destination parameters and Neon PostgreSQL fallbacks
 export const resolveEffectiveTarget = (cfg, srcCfg) => {
-  const defaultNeon = 'postgresql://neondb_owner:npg_Eim1u6bIldRL@ep-square-breeze-aqokq2fe-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require';
   const isSrcMongoOrPg = (srcCfg?.engine || '').includes('mongo') || (srcCfg?.engine || '').includes('postgres');
   
   let engine = cfg?.engine || (isSrcMongoOrPg ? 'postgres' : 'postgres');
@@ -303,7 +302,7 @@ export const resolveEffectiveTarget = (cfg, srcCfg) => {
   if (!uri || uri.includes('••••') || uri.includes('pg-warehouse.internal') || (isSrcMongoOrPg && uri.includes('s4h.corp.ondemand.com'))) {
     if (engine === 'postgres' || engine === 'postgresql' || isSrcMongoOrPg) {
       engine = 'postgres';
-      uri = defaultNeon;
+      uri = ''; // Empty defaults to DataX On-Prem Storage on backend
     }
   }
   
@@ -320,9 +319,9 @@ export const resolveEffectiveTarget = (cfg, srcCfg) => {
   return {
     engine,
     connectionUri: uri || undefined,
-    host: cfg?.host || (engine === 'postgres' ? 'ep-square-breeze-aqokq2fe-pooler.c-8.us-east-1.aws.neon.tech' : undefined),
+    host: cfg?.host || (engine === 'postgres' ? '127.0.0.1' : undefined),
     port: cfg?.port ? String(cfg.port) : (engine === 'postgres' ? '5432' : undefined),
-    database: cfg?.database || (engine === 'postgres' ? 'neondb' : 'reconciled_db'),
+    database: cfg?.database || (engine === 'postgres' ? 'datax' : 'reconciled_db'),
     table,
     quarantineTable: cfg?.quarantineTable || `${table}_quarantine`,
     writeMode: cfg?.writeMode || 'append'

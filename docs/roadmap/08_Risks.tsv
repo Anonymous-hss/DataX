@@ -1,0 +1,11 @@
+ID	Risk	Likelihood	Impact	Mitigation	Owner
+R1	PII detection misses entities (names, context, free text) so some PII still reaches the cloud LLM	High	High	Layered detection, locale packs, fail-closed policy for restricted classes, local-LLM routing for sensitive prompts, measured recall targets, honest customer-facing limitations. Do NOT market as "100% safe".	ML / Security
+R2	Gateway latency hurts user experience	Medium	Medium	Tiered detectors (fast regex first, NER only when needed), async batching, p95 targets in CI load test	Backend
+R3	Streaming rehydration bugs corrupt answers	Medium	Medium	Chunk-boundary buffering, fuzz tests, fallback to non-streaming per policy	Backend
+R4	Customer-run installs create heavy support load	High	Medium	Docker/Helm with preflight checks, diagnostic bundle command, runbooks, supported-version matrix	DevOps
+R5	Canvas scope creep (too many node types)	High	Medium	MVP node set per module; extensibility via node registry; defer connectors to backlog	Product
+R6	Compliance claims outpace actual certifications	Medium	High	Describe "mapped to / supports" not "certified"; start SOC 2 readiness separately	PM
+R7	No design-partner available for pilot	Medium	High	Start outreach in Sprint 2; offer discounted pilot; use internal pilot as fallback	PM
+R8	Hidden dependency on managed cloud services (Neon, CDN, fonts) breaks air-gap	Medium	High	D-02 removes hard-wired Neon; D-15 egress-block test in CI	DevOps
+R9	Year-end holiday reduces Sprint 4 capacity	High	Low	Sprint 4 planned at ~70% capacity	PM
+R10	Team capacity assumption (7 FTE) not met	Medium	High	Re-baseline after Sprint 2 velocity; P2 items are the first to drop	PM
