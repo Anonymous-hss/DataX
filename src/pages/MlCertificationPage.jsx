@@ -1,3 +1,5 @@
+import MlGateCanvas from '../components/mlgate/MlGateCanvas';
+import { ArrowRight } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
 import DataXAppShell from '../components/common/DataXAppShell';
 import StudioDatabaseExtractor from '../components/common/StudioDatabaseExtractor';
@@ -30,6 +32,7 @@ import {
 } from '../utils/datasetIo';
 
 export default function MlCertificationPage({ onSwitchToMarketing } = {}) {
+  const [viewMode, setViewMode] = useState('canvas'); // 'canvas' | 'studio'
   const [activeTab, setActiveTab] = useState('tabular'); // 'tabular' | 'sft' | 'ledger'
 
   // =========================================================================
@@ -355,7 +358,58 @@ export default function MlCertificationPage({ onSwitchToMarketing } = {}) {
 
   return (
     <DataXAppShell onSwitchToMarketing={onSwitchToMarketing}>
-      <main className="max-w-[1360px] mx-auto px-6 py-8 space-y-6">
+      {viewMode === 'canvas' ? (
+        <div className="h-[calc(100vh-65px)] w-full flex flex-col bg-[#0A0E17]">
+          {/* Executive Subheader with View Switcher */}
+          <div className="shrink-0 bg-slate-900 border-b border-slate-800 px-6 py-2.5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-white uppercase tracking-wider">Module Mode:</span>
+                <div className="inline-flex rounded-lg border border-slate-700 bg-slate-800 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('canvas')}
+                    className="px-3 py-1 rounded-md text-xs font-bold bg-emerald-600 text-white shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <span>🎨 Interactive Canvas Flow</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('studio')}
+                    className="px-3 py-1 rounded-md text-xs font-medium text-slate-300 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <span>⚡ Classic Studio Mode</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="text-xs text-slate-400 font-mono hidden md:block">
+              Drag &amp; Drop 10-Bin PSI • Target Leakage • Demographic Fairness • EU AI Act Art. 10 Gate
+            </div>
+          </div>
+
+          {/* Full Interactive Canvas */}
+          <div className="flex-1 w-full h-full min-h-0 relative">
+            <MlGateCanvas onSwitchToStudio={() => setViewMode('studio')} />
+          </div>
+        </div>
+      ) : (
+        <main className="max-w-[1360px] mx-auto px-6 py-8 space-y-6">
+          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-900">
+            <div className="flex items-center gap-2">
+              <span className="font-bold">✨ Interactive Canvas Available:</span>
+              <span>Design, connect, and audit 10-bin PSI drift, target leakage, and fairness parity visually.</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setViewMode('canvas')}
+              className="px-3 py-1.5 rounded-lg font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center gap-1 shadow-2xs cursor-pointer"
+            >
+              <span>Switch to Visual Canvas</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         {/* Page Header */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-5">
           <div>
@@ -1814,6 +1868,7 @@ export default function MlCertificationPage({ onSwitchToMarketing } = {}) {
           </section>
         )}
       </main>
+      )}
     </DataXAppShell>
   );
 }

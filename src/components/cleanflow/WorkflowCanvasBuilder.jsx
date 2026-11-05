@@ -217,6 +217,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const [liveNodeStats, setLiveNodeStats] = useState({});
   // Selection & Dragging
   const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const [showMinimap, setShowMinimap] = useState(true);
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
   const [draggingNodeId, setDraggingNodeId] = useState(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
@@ -1154,6 +1155,32 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
     }
     setDrawingEdge(null);
   };
+  // Keyboard Shortcuts (Task 34: Canvas Usability Polish)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedNodeId) {
+          setEdges(prev => prev.filter(ed => ed.from !== selectedNodeId && ed.to !== selectedNodeId));
+          setNodes(prev => prev.filter(n => n.id !== selectedNodeId));
+          setSelectedNodeId(null);
+        } else if (selectedEdgeId) {
+          setEdges(prev => prev.filter(ed => ed.id !== selectedEdgeId));
+          setSelectedEdgeId(null);
+        }
+      } else if (e.key === 'Escape') {
+        setSelectedNodeId(null);
+        setSelectedEdgeId(null);
+        setDrawingEdge(null);
+        setIsTelemetryDrawerOpen(false);
+      } else if (e.key === 'f' || e.key === 'F') {
+        handleFitToWindow();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNodeId, selectedEdgeId, setNodes, setEdges, handleFitToWindow]);
+
   const handleDeleteEdge = (edgeId) => {
     setEdges(prev => prev.filter(e => e.id !== edgeId));
     setSelectedEdgeId(null);
@@ -2342,6 +2369,34 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           })}
         </div>
       </div>
+      
+      {/* Floating Canvas Minimap (Task 34) */}
+      {showMinimap && (
+        <div className="absolute bottom-16 right-5 w-44 h-28 bg-white/95 rounded-xl border border-slate-200/90 shadow-lg p-2 z-30 pointer-events-none hidden md:flex flex-col justify-between backdrop-blur-xs">
+          <div className="flex items-center justify-between text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+            <span>Canvas Radar</span>
+            <span className="text-blue-600">{nodes.length} Nodes</span>
+          </div>
+          <div className="relative w-full h-18 bg-slate-50 rounded border border-slate-200/70 overflow-hidden">
+            {nodes.map(n => (
+              <div
+                key={n.id}
+                style={{
+                  left: `${Math.min(88, Math.max(5, (n.x / 1400) * 100))}%`,
+                  top: `${Math.min(78, Math.max(5, (n.y / 500) * 100))}%`
+                }}
+                className={`absolute w-3 h-2 rounded-2xs ${
+                  selectedNodeId === n.id ? 'bg-blue-600 ring-1 ring-blue-400' : 'bg-slate-400'
+                }`}
+              />
+            ))}
+          </div>
+          <div className="text-[8px] text-slate-400 font-mono text-right">
+            Press F to fit • Del to remove
+          </div>
+        </div>
+      )}
+
       {/* Floating Bottom Toolbar Dock - ALWAYS fits within window viewport */}
       <div className="absolute bottom-3 inset-x-3 sm:inset-x-5 flex flex-wrap md:flex-nowrap items-center justify-between gap-2 pointer-events-none z-30">
         {/* Left Action: Run Simulation / Dry Run directly on canvas */}
@@ -2386,6 +2441,16 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
             <Hand className="w-3.5 h-3.5" />
             Pan
           </button>
+                    <button
+            onClick={() => setShowMinimap(!showMinimap)}
+            className={`w-5 h-5 flex items-center justify-center rounded cursor-pointer ${
+              showMinimap ? 'text-blue-600 bg-blue-50' : 'text-slate-400 hover:text-slate-600'
+            }`}
+            title="Toggle Minimap Radar"
+          >
+            <Eye className="w-3 h-3" />
+          </button>
+          <span className="h-3.5 w-px bg-slate-200 mx-0.5" />
           <button
             onClick={handleFitToWindow}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
@@ -2431,6 +2496,16 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
             title="Zoom in"
           >
             +
+          </button>
+          <span className="h-3.5 w-px bg-slate-200 mx-0.5" />
+                    <button
+            onClick={() => setShowMinimap(!showMinimap)}
+            className={`w-5 h-5 flex items-center justify-center rounded cursor-pointer ${
+              showMinimap ? 'text-blue-600 bg-blue-50' : 'text-slate-400 hover:text-slate-600'
+            }`}
+            title="Toggle Minimap Radar"
+          >
+            <Eye className="w-3 h-3" />
           </button>
           <span className="h-3.5 w-px bg-slate-200 mx-0.5" />
           <button

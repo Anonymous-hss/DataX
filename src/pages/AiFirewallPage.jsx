@@ -1,3 +1,5 @@
+import AiFirewallCanvas from '../components/firewall/AiFirewallCanvas';
+import { ArrowRight } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
 import DataXAppShell from '../components/common/DataXAppShell';
 import StudioDatabaseExtractor from '../components/common/StudioDatabaseExtractor';
@@ -34,6 +36,7 @@ import {
 } from '../utils/datasetIo';
 
 export default function AiFirewallPage({ onSwitchToMarketing } = {}) {
+  const [viewMode, setViewMode] = useState('canvas'); // 'canvas' | 'studio'
   const [activeTab, setActiveTab] = useState('rag'); // 'rag' | 'tool_call' | 'integration'
 
   // =========================================================================
@@ -625,7 +628,58 @@ def sanitize_before_embedding(chunks: list[dict]) -> list[dict]:
 
   return (
     <DataXAppShell onSwitchToMarketing={onSwitchToMarketing}>
-      <main className="max-w-[1360px] mx-auto px-6 py-8 space-y-6">
+      {viewMode === 'canvas' ? (
+        <div className="h-[calc(100vh-65px)] w-full flex flex-col bg-[#0B0F19]">
+          {/* Executive Subheader with View Switcher */}
+          <div className="shrink-0 bg-slate-900 border-b border-slate-800 px-6 py-2.5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-white uppercase tracking-wider">Module Mode:</span>
+                <div className="inline-flex rounded-lg border border-slate-700 bg-slate-800 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('canvas')}
+                    className="px-3 py-1 rounded-md text-xs font-bold bg-[#2D55F5] text-white shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <span>🎨 Interactive Canvas Flow</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('studio')}
+                    className="px-3 py-1 rounded-md text-xs font-medium text-slate-300 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <span>⚡ Classic Studio Mode</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="text-xs text-slate-400 font-mono hidden md:block">
+              Drag &amp; Drop AST Defense Nodes • Pre-Embedding &amp; Agent Tool Gates • Local On-Prem Runner
+            </div>
+          </div>
+
+          {/* Full Interactive Canvas */}
+          <div className="flex-1 w-full h-full min-h-0 relative">
+            <AiFirewallCanvas onSwitchToStudio={() => setViewMode('studio')} />
+          </div>
+        </div>
+      ) : (
+        <main className="max-w-[1360px] mx-auto px-6 py-8 space-y-6">
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between text-xs text-blue-900">
+            <div className="flex items-center gap-2">
+              <span className="font-bold">✨ Interactive Canvas Available:</span>
+              <span>Design, connect, and simulate full RAG &amp; Agent guard flows visually.</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setViewMode('canvas')}
+              className="px-3 py-1.5 rounded-lg font-bold bg-[#2D55F5] text-white hover:bg-[#2345d8] transition-colors flex items-center gap-1 shadow-2xs cursor-pointer"
+            >
+              <span>Switch to Visual Canvas</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         {/* Page Header */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-5">
           <div>
@@ -1853,6 +1907,7 @@ def sanitize_before_embedding(chunks: list[dict]) -> list[dict]:
           </div>
         )}
       </main>
+      )}
     </DataXAppShell>
   );
 }
