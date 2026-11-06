@@ -12,13 +12,18 @@ import {
   ArrowRight, 
   SlidersHorizontal,
   ChevronDown,
+  ChevronRight,
   Zap,
   Menu,
   X,
   Check,
   Shield,
   Cpu,
-  Sparkles
+  Sparkles,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
+  Workflow
 } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
 import { useRuleEngine } from '../../context/RuleEngineContext';
@@ -40,27 +45,37 @@ export default function DataXAppShell({
   const ruleEngine = useRuleEngine?.() || {};
   const { activeThread, threads = [], selectThread } = ruleEngine;
 
+  // Persistent sliding sidebar state (defaults to open on desktop)
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    try {
+      const saved = localStorage.getItem('datax_sidebar_open');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [advisorModalOpen, setAdvisorModalOpen] = useState(false);
   const [threadPickerOpen, setThreadPickerOpen] = useState(false);
-  const [opsDropdownOpen, setOpsDropdownOpen] = useState(false);
-  const [governDropdownOpen, setGovernDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const opsRef = useRef(null);
-  const governRef = useRef(null);
   const threadPickerRef = useRef(null);
+
+  const toggleSidebar = () => {
+    setSidebarOpen(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('datax_sidebar_open', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
 
   // Close dropdowns on click outside
   useEffect(() => {
     const handleOutsideClick = (e) => {
-      if (opsRef.current && !opsRef.current.contains(e.target)) {
-        setOpsDropdownOpen(false);
-      }
-      if (governRef.current && !governRef.current.contains(e.target)) {
-        setGovernDropdownOpen(false);
-      }
       if (threadPickerRef.current && !threadPickerRef.current.contains(e.target)) {
         setThreadPickerOpen(false);
       }
@@ -69,41 +84,44 @@ export default function DataXAppShell({
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
-  // Global ⌘K / Ctrl+K keyboard shortcut
+  // Global keyboard shortcuts: ⌘K (Search) & ⌘B (Toggle Sliding Sidebar)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setSearchModalOpen(prev => !prev);
       }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        toggleSidebar();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const currentThreadName = activeThread?.name || 'Active Workspace Pipeline';
+  const currentThreadName = activeThread?.name || 'SAP BW ➔ S/4HANA Clean Core';
 
-  // Primary SaaS Pillars (Directly visible on desktop, zero static badges, zero overlap)
-  const PRIMARY_NAV_ITEMS = [
-    { id: 'workflows', label: 'Workflows', screen: 'workflows', icon: Activity },
-    { id: 'ai-firewall', label: 'AI Firewall', screen: 'ai-firewall', icon: Shield },
-    { id: 'ml-certify', label: 'ML Certify', screen: 'ml-certify', icon: Cpu },
-    { id: 'connections', label: 'Connections', screen: 'connections', icon: Network },
+  // Organized Sidebar Navigation Groups
+  const CORE_PILLARS = [
+    { id: 'workflows', label: 'Workflows', screen: 'workflows', icon: Activity, badge: threads.length || 5, desc: 'Autonomous Data & AI Pipelines' },
+    { id: 'ai-firewall', label: 'AI Firewall', screen: 'ai-firewall', icon: Shield, badge: 'Zero-Egress', badgeColor: 'blue', desc: 'Reverse Proxy & Prompt Guard' },
+    { id: 'ml-certify', label: 'ML Certify', screen: 'ml-certify', icon: Cpu, badge: 'PSI Gate', desc: 'Drift, Leakage & SFT Certification' },
+    { id: 'connections', label: 'Connections', screen: 'connections', icon: Network, desc: 'Enterprise Data & Secret Vault' },
   ];
 
-  // Pipeline Operations Dropdown ("Operations ▾")
-  const OPERATIONS_NAV_ITEMS = [
-    { id: 'templates', label: 'Templates', screen: 'templates', icon: Layers, desc: 'Certified pipeline blueprints' },
-    { id: 'quarantine', label: 'Quarantine DLQ', screen: 'quarantine', icon: SlidersHorizontal, desc: 'Dead-letter isolation & remediation' },
-    { id: 'shadow', label: 'Shadow Parity', screen: 'shadow', icon: Zap, desc: 'Legacy vs DataX parity reconciliation' },
-    { id: 'history', label: 'Run History', screen: 'history', icon: Clock, desc: 'Execution & commit telemetry' },
+  const PIPELINE_OPERATIONS = [
+    { id: 'canvas', label: 'Visual Canvas', screen: 'canvas', icon: Workflow, desc: 'Interactive DAG Rule Builder' },
+    { id: 'templates', label: 'Domain Templates', screen: 'templates', icon: Layers, desc: 'Certified Industry Blueprints' },
+    { id: 'quarantine', label: 'Quarantine DLQ', screen: 'quarantine', icon: SlidersHorizontal, desc: 'Dead-Letter Isolation & Fix' },
+    { id: 'shadow', label: 'Shadow Parity', screen: 'shadow', icon: Zap, desc: 'Dual-Twin Reconciliation' },
+    { id: 'history', label: 'Run Telemetry', screen: 'history', icon: Clock, desc: 'Execution & Commit History' },
   ];
 
-  // Enterprise Governance & Settings Dropdown ("Govern ▾")
-  const GOVERN_NAV_ITEMS = [
-    { id: 'audit', label: 'Audit Trail', screen: 'audit', icon: ShieldCheck, desc: 'Cryptographic SHA-256 ledger' },
-    { id: 'roi', label: 'Executive ROI', screen: 'roi', icon: TrendingUp, desc: 'Financial risk & board dossier' },
-    { id: 'settings', label: 'Settings', screen: 'settings', icon: Settings, desc: 'RBAC, cron schedules & vault' },
+  const GOVERNANCE_ITEMS = [
+    { id: 'audit', label: 'Audit Ledger', screen: 'audit', icon: ShieldCheck, desc: 'SHA-256 Tamper-Evident SIEM' },
+    { id: 'roi', label: 'Executive ROI', screen: 'roi', icon: TrendingUp, desc: 'Board Risk & Value Dossier' },
+    { id: 'settings', label: 'Settings & RBAC', screen: 'settings', icon: Settings, desc: 'Tenant, SSO, Cron & API Keys' },
   ];
 
   const isNavActive = (screenKey) => {
@@ -115,398 +133,369 @@ export default function DataXAppShell({
     return currentScreen === screenKey;
   };
 
-  const isOpsActive = OPERATIONS_NAV_ITEMS.some(item => isNavActive(item.screen));
-  const activeOpsItem = OPERATIONS_NAV_ITEMS.find(item => isNavActive(item.screen));
+  const allNavItems = [...CORE_PILLARS, ...PIPELINE_OPERATIONS, ...GOVERNANCE_ITEMS];
+  const activeNavObj = allNavItems.find(item => isNavActive(item.screen)) || CORE_PILLARS[0];
 
-  const isGovernActive = GOVERN_NAV_ITEMS.some(item => isNavActive(item.screen));
-  const activeGovernItem = GOVERN_NAV_ITEMS.find(item => isNavActive(item.screen));
+  const renderSidebarNavButton = (item) => {
+    const active = isNavActive(item.screen);
+    const Icon = item.icon;
+    return (
+      <button
+        key={item.id}
+        type="button"
+        onClick={() => {
+          navigateTo(item.screen);
+          setMobileMenuOpen(false);
+        }}
+        className={`w-full group flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl text-xs transition-all duration-150 cursor-pointer text-left relative ${
+          active
+            ? 'bg-[#2D55F5] text-white font-semibold shadow-sm shadow-[#2D55F5]/20'
+            : 'text-[#474E61] dark:text-slate-300 hover:bg-[#EEF2FF]/70 dark:hover:bg-white/[0.06] hover:text-[#0A0F1F] dark:hover:text-white font-medium'
+        }`}
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+            active 
+              ? 'bg-white/20 text-white' 
+              : 'bg-[#F5F6FA] dark:bg-white/[0.05] text-[#5F6678] dark:text-slate-400 group-hover:bg-white group-hover:text-[#2D55F5]'
+          }`}>
+            <Icon className="w-3.5 h-3.5" />
+          </div>
+          <div className="truncate">
+            <div className="leading-tight truncate">{item.label}</div>
+            <div className={`text-[10px] truncate mt-0.5 ${
+              active ? 'text-blue-100/90 font-normal' : 'text-[#8E95A9] dark:text-slate-500 font-normal'
+            }`}>
+              {item.desc}
+            </div>
+          </div>
+        </div>
+
+        {item.badge && (
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold shrink-0 ${
+            active
+              ? 'bg-white/20 text-white'
+              : item.badgeColor === 'blue'
+                ? 'bg-[#EEF2FF] text-[#2D55F5] border border-[#2D55F5]/20'
+                : 'bg-[#F0F2F6] dark:bg-white/[0.08] text-[#5F6678] dark:text-slate-400'
+          }`}>
+            {item.badge}
+          </span>
+        )}
+      </button>
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#141416] text-slate-800 dark:text-slate-200 font-sans antialiased flex flex-col relative transition-colors duration-200 overflow-x-hidden">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#141416] text-slate-800 dark:text-slate-200 font-sans antialiased flex relative transition-colors duration-200 overflow-x-hidden">
       {/* 1. Ambient Background Drifting Mesh Flows */}
       <AmbientBackgroundFlow />
 
-      {/* 2. Top Universal Studio Navigation Bar */}
-      <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-[#18181C]/90 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/[0.08] transition-colors">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-2 lg:gap-4">
-          
-          {/* Brand Logo & Studio Navigation */}
-          <div className="flex items-center gap-3 xl:gap-5 shrink-0">
-            {/* Logo */}
+      {/* 2. Sliding Left Navigation Sidebar (Desktop >= 1024px) */}
+      <aside
+        aria-label="Primary Studio Sidebar"
+        className={`hidden lg:flex flex-col shrink-0 sticky top-0 h-screen z-40 bg-white/95 dark:bg-[#18181C]/95 backdrop-blur-xl border-r border-[#E3E6EE] dark:border-white/[0.08] transition-[width,transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden select-none shadow-xs ${
+          sidebarOpen 
+            ? 'w-[276px] xl:w-[292px] opacity-100 translate-x-0' 
+            : 'w-0 opacity-0 -translate-x-10 border-r-0 pointer-events-none'
+        }`}
+      >
+        <div className="w-[276px] xl:w-[292px] h-full flex flex-col justify-between">
+          {/* Sidebar Brand Header + Slide Toggle */}
+          <div className="h-16 px-4 flex items-center justify-between border-b border-[#E3E6EE]/80 dark:border-white/[0.08] shrink-0">
             <button
               type="button"
               onClick={() => navigateTo('workflows')}
-              className="flex items-center gap-2 cursor-pointer hover:opacity-85 transition-opacity shrink-0 group text-left"
-              title="Return to Workflows"
+              className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 transition-opacity group text-left"
+              title="DataX Studio Home"
             >
-              <Logo size={28} className="transition-transform group-hover:scale-105" />
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-slate-900 dark:text-white text-base tracking-tight font-display">
-                  DataX
-                </span>
-                <span className="hidden 2xl:inline-block px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-slate-400 border border-slate-200/60 dark:border-white/[0.06]">
-                  Studio
+              <Logo size={30} className="transition-transform group-hover:scale-105" />
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-[#0A0F1F] dark:text-white text-base tracking-tight leading-none">
+                    DataX
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider bg-[#EEF2FF] text-[#2D55F5] border border-[#2D55F5]/20">
+                    STUDIO
+                  </span>
+                </div>
+                <span className="block text-[10px] text-[#5F6678] dark:text-slate-400 font-medium mt-0.5">
+                  Zero-Egress AI & Data Plane
                 </span>
               </div>
             </button>
 
-            {/* Desktop Navigation (Guaranteed zero overlap across all viewport widths) */}
-            <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 shrink-0">
-              {PRIMARY_NAV_ITEMS.map((item) => {
-                const active = isNavActive(item.screen);
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => navigateTo(item.screen)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer shrink-0 whitespace-nowrap ${
-                      active
-                        ? 'bg-[#1473E6]/10 text-[#1473E6] dark:bg-[#1473E6]/20 dark:text-[#60A5FA] font-bold shadow-2xs'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/70 dark:hover:bg-white/[0.05]'
-                    }`}
-                  >
-                    <Icon className={`w-3.5 h-3.5 shrink-0 ${active ? 'text-[#1473E6] dark:text-[#60A5FA]' : 'text-slate-400 dark:text-slate-500'}`} />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
-
-              {/* Operations Dropdown Menu (Templates, Quarantine, Shadow Parity, Runs) */}
-              <div className="relative shrink-0" ref={opsRef}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpsDropdownOpen(!opsDropdownOpen);
-                    setGovernDropdownOpen(false);
-                  }}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
-                    isOpsActive
-                      ? 'bg-[#1473E6]/10 text-[#1473E6] dark:bg-[#1473E6]/20 dark:text-[#60A5FA] font-bold shadow-2xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/70 dark:hover:bg-white/[0.05]'
-                  }`}
-                >
-                  <Layers className={`w-3.5 h-3.5 shrink-0 ${isOpsActive ? 'text-[#1473E6] dark:text-[#60A5FA]' : 'text-slate-400 dark:text-slate-500'}`} />
-                  <span>{activeOpsItem ? activeOpsItem.label : 'Operations'}</span>
-                  <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-150 ${opsDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {opsDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-1.5 w-64 bg-white dark:bg-[#1C1C22] border border-slate-200/90 dark:border-white/[0.1] rounded-xl shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
-                    <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-white/[0.06] mb-1">
-                      Pipeline Operations
-                    </div>
-                    {OPERATIONS_NAV_ITEMS.map((item) => {
-                      const active = isNavActive(item.screen);
-                      const Icon = item.icon;
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => {
-                            navigateTo(item.screen);
-                            setOpsDropdownOpen(false);
-                          }}
-                          className={`w-full flex items-start gap-2.5 px-3 py-2 text-xs transition-colors cursor-pointer text-left ${
-                            active
-                              ? 'bg-[#1473E6]/10 text-[#1473E6] dark:text-[#60A5FA] font-semibold'
-                              : 'hover:bg-slate-50 dark:hover:bg-white/[0.05] text-slate-700 dark:text-slate-300'
-                          }`}
-                        >
-                          <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${active ? 'text-[#1473E6]' : 'text-slate-400'}`} />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold">{item.label}</span>
-                              {active && <Check className="w-3 h-3 text-[#1473E6]" />}
-                            </div>
-                            <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
-                              {item.desc}
-                            </p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Governance & Assurance Dropdown Menu (Audit, ROI, Settings) */}
-              <div className="relative shrink-0" ref={governRef}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setGovernDropdownOpen(!governDropdownOpen);
-                    setOpsDropdownOpen(false);
-                  }}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
-                    isGovernActive
-                      ? 'bg-[#1473E6]/10 text-[#1473E6] dark:bg-[#1473E6]/20 dark:text-[#60A5FA] font-bold shadow-2xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/70 dark:hover:bg-white/[0.05]'
-                  }`}
-                >
-                  <ShieldCheck className={`w-3.5 h-3.5 shrink-0 ${isGovernActive ? 'text-[#1473E6] dark:text-[#60A5FA]' : 'text-slate-400 dark:text-slate-500'}`} />
-                  <span>{activeGovernItem ? activeGovernItem.label : 'Govern'}</span>
-                  <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-150 ${governDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {governDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-1.5 w-60 bg-white dark:bg-[#1C1C22] border border-slate-200/90 dark:border-white/[0.1] rounded-xl shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
-                    <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-white/[0.06] mb-1">
-                      Enterprise Governance
-                    </div>
-                    {GOVERN_NAV_ITEMS.map((item) => {
-                      const active = isNavActive(item.screen);
-                      const Icon = item.icon;
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => {
-                            navigateTo(item.screen);
-                            setGovernDropdownOpen(false);
-                          }}
-                          className={`w-full flex items-start gap-2.5 px-3 py-2 text-xs transition-colors cursor-pointer text-left ${
-                            active
-                              ? 'bg-[#1473E6]/10 text-[#1473E6] dark:text-[#60A5FA] font-semibold'
-                              : 'hover:bg-slate-50 dark:hover:bg-white/[0.05] text-slate-700 dark:text-slate-300'
-                          }`}
-                        >
-                          <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${active ? 'text-[#1473E6]' : 'text-slate-400'}`} />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold">{item.label}</span>
-                              {active && <Check className="w-3 h-3 text-[#1473E6]" />}
-                            </div>
-                            <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
-                              {item.desc}
-                            </p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </nav>
-          </div>
-
-          {/* Right Controls: Advisor, Search, Help, Notifications, User Menu, Mobile Toggle */}
-          <div className="flex items-center gap-1.5 xl:gap-2 shrink-0">
-            {/* Interactive Blueprint & Use Case Advisor Trigger */}
             <button
               type="button"
-              onClick={() => setAdvisorModalOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-[#2D55F5]/8 hover:bg-[#2D55F5]/15 text-[#2D55F5] dark:text-[#60A5FA] border border-[#2D55F5]/25 hover:border-[#2D55F5]/50 text-xs font-semibold transition-all cursor-pointer shrink-0 whitespace-nowrap"
-              title="Interactive Use Case Blueprint Advisor"
+              onClick={toggleSidebar}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-[#5F6678] hover:text-[#0A0F1F] dark:hover:text-white hover:bg-[#F0F2F6] dark:hover:bg-white/[0.08] transition-colors cursor-pointer"
+              title="Slide sidebar closed (⌘B)"
+              aria-label="Collapse sidebar"
             >
-              <Sparkles className="w-3.5 h-3.5 text-[#2D55F5] dark:text-[#60A5FA] shrink-0" />
-              <span className="hidden 2xl:inline">Use Case Advisor</span>
-              <span className="2xl:hidden">Advisor</span>
+              <PanelLeftClose className="w-4 h-4" />
             </button>
+          </div>
 
-            {/* Global Search Bar (Compact responsive width) */}
+          {/* Sidebar Quick Actions: Search & Use Case Advisor */}
+          <div className="px-3.5 pt-3.5 pb-2 space-y-2 shrink-0">
             <button
               type="button"
               onClick={() => setSearchModalOpen(true)}
-              className="relative hidden sm:flex items-center gap-1.5 xl:w-36 h-8 px-2.5 rounded-lg bg-slate-100/80 dark:bg-white/[0.05] border border-slate-200/70 dark:border-white/[0.08] text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-white/[0.15] transition-all cursor-pointer text-left shrink-0"
-              title="Search workflows, tables, and settings (⌘K)"
+              className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-[#F5F6FA] dark:bg-white/[0.05] border border-[#E3E6EE] dark:border-white/[0.08] text-xs text-[#5F6678] hover:border-[#2D55F5]/50 hover:text-[#0A0F1F] transition-all cursor-pointer"
             >
-              <Search className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden xl:inline truncate">Search...</span>
-              <kbd className="xl:ml-auto text-[10px] font-mono text-slate-400 dark:text-slate-500 bg-white dark:bg-white/[0.08] px-1 py-0.5 rounded border border-slate-200 dark:border-white/[0.06]">
+              <span className="flex items-center gap-2">
+                <Search className="w-3.5 h-3.5 text-[#8E95A9]" />
+                <span>Quick Search...</span>
+              </span>
+              <kbd className="text-[10px] font-mono text-[#5F6678] bg-white dark:bg-white/[0.08] px-1.5 py-0.5 rounded border border-[#E3E6EE]">
                 ⌘K
               </kbd>
             </button>
 
-            {/* Help / Guide Trigger */}
             <button
               type="button"
-              onClick={() => setOnboardingOpen(true)}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors cursor-pointer shrink-0"
-              title="First-Run Studio Guide"
-              aria-label="Open Onboarding Guide"
+              onClick={() => setAdvisorModalOpen(true)}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-[#0B1226] to-[#1C2C5E] hover:from-[#101A38] hover:to-[#243875] text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer group"
             >
-              <HelpCircle className="w-4 h-4" />
+              <span className="flex items-center gap-2">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300 group-hover:rotate-12 transition-transform" />
+                <span>Use Case Advisor</span>
+              </span>
+              <span className="text-[9px] font-mono bg-white/15 px-1.5 py-0.5 rounded text-blue-200">
+                30s Match
+              </span>
             </button>
+          </div>
 
-            {/* In-App Notification Center */}
-            <NotificationCenter />
-
-            {/* Dynamic Governance Profile & Theme Hub */}
-            <div className="pl-1 border-l border-slate-200/80 dark:border-white/[0.08] shrink-0">
-              <DataXUserMenu onSwitchToMarketing={onSwitchToMarketing} />
+          {/* Scrollable Organized Navigation Sections */}
+          <div className="flex-1 overflow-y-auto px-3.5 py-2 space-y-5 scrollbar-thin">
+            {/* Group 1: Core Pillars */}
+            <div className="space-y-1">
+              <div className="px-2 pb-1 flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8E95A9] dark:text-slate-500">
+                  Core Engine Pillars
+                </span>
+              </div>
+              {CORE_PILLARS.map(renderSidebarNavButton)}
             </div>
 
-            {/* Mobile / Tablet Menu Button (< 1024px) */}
+            {/* Group 2: Pipeline Operations */}
+            <div className="space-y-1">
+              <div className="px-2 pb-1 flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8E95A9] dark:text-slate-500">
+                  Pipeline Operations
+                </span>
+              </div>
+              {PIPELINE_OPERATIONS.map(renderSidebarNavButton)}
+            </div>
+
+            {/* Group 3: Governance & Admin */}
+            <div className="space-y-1">
+              <div className="px-2 pb-1 flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8E95A9] dark:text-slate-500">
+                  Governance & Security
+                </span>
+              </div>
+              {GOVERNANCE_ITEMS.map(renderSidebarNavButton)}
+            </div>
+          </div>
+
+          {/* Sidebar Footer: Zero-Egress Status & Help Guide */}
+          <div className="p-3.5 border-t border-[#E3E6EE]/80 dark:border-white/[0.08] bg-[#F8FAFC]/80 dark:bg-white/[0.02] space-y-2.5 shrink-0">
+            <div className="px-3 py-2 rounded-xl bg-white dark:bg-[#222226] border border-[#E3E6EE] dark:border-white/[0.08] flex items-center justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <div className="truncate">
+                  <div className="text-[11px] font-bold text-[#0A0F1F] dark:text-white leading-tight">
+                    Zero-Egress Vault
+                  </div>
+                  <div className="text-[10px] font-mono text-[#5F6678] dark:text-slate-400 truncate">
+                    AES-GCM • On-Prem Ready
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOnboardingOpen(true)}
+                className="p-1.5 rounded-lg text-[#5F6678] hover:text-[#2D55F5] hover:bg-[#EEF2FF] transition-colors cursor-pointer shrink-0"
+                title="Open Studio Guide"
+              >
+                <HelpCircle className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* 3. Right Main Content Viewport (Smoothly Resizes & Transitions when Sidebar Slides) */}
+      <div className="flex-1 min-w-0 flex flex-col relative z-10 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]">
+        
+        {/* Top Studio Utility Header Bar */}
+        <header className="sticky top-0 z-30 w-full h-16 bg-white/90 dark:bg-[#18181C]/90 backdrop-blur-xl border-b border-[#E3E6EE] dark:border-white/[0.08] px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 transition-colors">
+          {/* Left: Sidebar Toggle + Breadcrumb + Active Pipeline Context */}
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Desktop Sidebar Slide-Open Button (Visible when Sidebar is Closed, or quick toggle) */}
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              className={`hidden lg:flex items-center gap-2 px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+                !sidebarOpen
+                  ? 'bg-[#EEF2FF] border-[#2D55F5]/30 text-[#2D55F5] hover:bg-[#2D55F5] hover:text-white shadow-2xs'
+                  : 'bg-[#F5F6FA] dark:bg-white/[0.05] border-[#E3E6EE] dark:border-white/[0.08] text-[#5F6678] hover:text-[#0A0F1F]'
+              }`}
+              title={sidebarOpen ? 'Slide sidebar closed (⌘B)' : 'Slide sidebar open (⌘B)'}
+            >
+              {sidebarOpen ? (
+                <PanelLeftClose className="w-4 h-4" />
+              ) : (
+                <>
+                  <PanelLeftOpen className="w-4 h-4" />
+                  <span>Menu</span>
+                </>
+              )}
+            </button>
+
+            {/* Mobile Hamburger Button (< 1024px) */}
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors cursor-pointer shrink-0"
-              aria-label="Toggle navigation menu"
+              className="lg:hidden p-2 text-[#5F6678] hover:text-[#0A0F1F] rounded-xl border border-[#E3E6EE] bg-white cursor-pointer shrink-0"
+              aria-label="Toggle mobile menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
-          </div>
-        </div>
 
-        {/* Mobile / Tablet Full Navigation Drawer */}
-        {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-slate-200/80 dark:border-white/[0.08] bg-white/95 dark:bg-[#18181C]/95 backdrop-blur-xl px-4 py-3 space-y-1 animate-in slide-in-from-top-2 duration-150">
+            {/* Show compact brand logo in top bar only when sidebar is slid closed or on mobile */}
+            {!sidebarOpen && (
+              <button
+                type="button"
+                onClick={() => navigateTo('workflows')}
+                className="hidden lg:flex items-center gap-2 cursor-pointer pr-1"
+              >
+                <Logo size={26} />
+                <span className="font-bold text-[#0A0F1F] dark:text-white text-sm tracking-tight">DataX</span>
+              </button>
+            )}
+
+            {/* Current Section Breadcrumb */}
+            <div className="flex items-center gap-2 text-xs min-w-0">
+              <span className="hidden sm:inline text-[#8E95A9] font-medium">Studio</span>
+              <ChevronRight className="hidden sm:inline w-3.5 h-3.5 text-[#CDD2DE] shrink-0" />
+              <span className="font-bold text-[#0A0F1F] dark:text-white truncate text-sm">
+                {activeNavObj.label}
+              </span>
+            </div>
+
+            {/* Active Pipeline Quick Selector (When showContextBar is true or on studio screens) */}
+            {showContextBar && (
+              <div className="hidden md:flex items-center gap-2 pl-3 ml-1 border-l border-[#E3E6EE] min-w-0" ref={threadPickerRef}>
+                <span className="text-[11px] font-semibold text-[#8E95A9] shrink-0">Pipeline:</span>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setThreadPickerOpen(!threadPickerOpen)}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F5F6FA] dark:bg-[#222226] border border-[#E3E6EE] dark:border-white/[0.08] font-semibold text-xs text-[#0A0F1F] dark:text-slate-200 hover:border-[#2D55F5] transition-colors cursor-pointer max-w-[240px] truncate"
+                  >
+                    <span className="truncate">{currentThreadName}</span>
+                    <ChevronDown className={`w-3 h-3 text-slate-400 shrink-0 transition-transform ${threadPickerOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {threadPickerOpen && (
+                    <div className="absolute top-full left-0 mt-1.5 w-72 bg-white dark:bg-[#222226] border border-[#E3E6EE] dark:border-white/[0.1] rounded-xl shadow-xl py-1 z-50">
+                      {(threads.length > 0 ? threads : [
+                        { id: 'sap_bw_s4hana', name: 'SAP BW InfoCube 0PUR_C01 → S/4HANA' },
+                        { id: 'salesforce_snowflake', name: 'Salesforce Opportunity → Snowflake Lakehouse' },
+                        { id: 'oracle_neon', name: 'Oracle Financials General Ledger → Neon Postgres' }
+                      ]).map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => {
+                            if (selectThread) selectThread(t.id);
+                            setThreadPickerOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-xs truncate transition-colors cursor-pointer ${
+                            activeThread?.id === t.id
+                              ? 'bg-[#EEF2FF] text-[#2D55F5] font-bold'
+                              : 'hover:bg-slate-50 dark:hover:bg-white/[0.05] text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          {t.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right: Quick Actions, New Workflow CTA, Notifications & Profile */}
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             <button
               type="button"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setAdvisorModalOpen(true);
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2 mb-2 rounded-lg text-xs font-bold bg-[#2D55F5]/10 text-[#2D55F5] cursor-pointer"
+              onClick={() => navigateTo('new-workflow')}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#2D55F5] hover:bg-[#2045DC] text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>Use Case Advisor</span>
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>New workflow</span>
             </button>
 
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 px-2">Core Pillars</div>
-            {PRIMARY_NAV_ITEMS.map((item) => {
-              const active = isNavActive(item.screen);
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    navigateTo(item.screen);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer ${
-                    active ? 'bg-[#1473E6]/10 text-[#1473E6]' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.05]'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
+            <NotificationCenter />
 
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-3 mb-1 px-2">Pipeline Operations</div>
-            {OPERATIONS_NAV_ITEMS.map((item) => {
-              const active = isNavActive(item.screen);
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    navigateTo(item.screen);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer ${
-                    active ? 'bg-[#1473E6]/10 text-[#1473E6]' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.05]'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-3 mb-1 px-2">Governance & Settings</div>
-            {GOVERN_NAV_ITEMS.map((item) => {
-              const active = isNavActive(item.screen);
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    navigateTo(item.screen);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer ${
-                    active ? 'bg-[#1473E6]/10 text-[#1473E6]' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.05]'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
+            <div className="pl-1.5 border-l border-[#E3E6EE] dark:border-white/[0.08]">
+              <DataXUserMenu onSwitchToMarketing={onSwitchToMarketing} />
+            </div>
           </div>
-        )}
-      </header>
+        </header>
 
-      {/* 3. Persistent Active Pipeline Context Ribbon (Studio Sub-Surface) */}
-      {showContextBar && (
-        <div className="w-full bg-slate-50/90 dark:bg-[#1A1A1E]/90 border-b border-slate-200/60 dark:border-white/[0.06] backdrop-blur-md px-4 sm:px-6 py-2 transition-colors z-30">
-          <div className="max-w-[1400px] mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
-            {/* Active Workflow Selector */}
-            <div className="flex items-center gap-2 min-w-0" ref={threadPickerRef}>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 shrink-0">
-                Active Pipeline:
-              </span>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setThreadPickerOpen(!threadPickerOpen)}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white dark:bg-[#222226] border border-slate-200 dark:border-white/[0.08] font-semibold text-slate-800 dark:text-slate-200 hover:border-[#1473E6] transition-colors cursor-pointer max-w-[280px] sm:max-w-md truncate"
-                >
-                  <span className="truncate">{currentThreadName}</span>
-                  <ChevronDown className={`w-3 h-3 text-slate-400 shrink-0 ml-1 transition-transform ${threadPickerOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {/* Workflow Dropdown Picker */}
-                {threadPickerOpen && (
-                  <div className="absolute top-full left-0 mt-1.5 w-72 bg-white dark:bg-[#222226] border border-slate-200 dark:border-white/[0.1] rounded-xl shadow-xl py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
-                    {(threads.length > 0 ? threads : [
-                      { id: 'sap_bw_s4hana', name: 'SAP BW InfoCube 0PUR_C01 → S/4HANA' },
-                      { id: 'salesforce_snowflake', name: 'Salesforce Opportunity → Snowflake Lakehouse' },
-                      { id: 'oracle_neon', name: 'Oracle Financials General Ledger → Neon Postgres' }
-                    ]).map((t) => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => {
-                          if (selectThread) selectThread(t.id);
-                          setThreadPickerOpen(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 text-xs truncate transition-colors cursor-pointer ${
-                          activeThread?.id === t.id
-                            ? 'bg-[#1473E6]/10 text-[#1473E6] dark:text-[#60A5FA] font-bold'
-                            : 'hover:bg-slate-50 dark:hover:bg-white/[0.05] text-slate-700 dark:text-slate-300'
-                        }`}
-                      >
-                        {t.name}
-                      </button>
-                    ))}
+        {/* Mobile Slide-Over Sidebar Drawer (< 1024px) */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden fixed inset-0 z-50 flex">
+            <div 
+              className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs" 
+              onClick={() => setMobileMenuOpen(false)} 
+            />
+            <div className="relative w-72 max-w-[85vw] bg-white dark:bg-[#18181C] h-full flex flex-col justify-between p-4 overflow-y-auto z-10 shadow-2xl">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-[#E3E6EE]">
+                  <div className="flex items-center gap-2">
+                    <Logo size={28} />
+                    <span className="font-bold text-[#0A0F1F] dark:text-white text-base">DataX Studio</span>
                   </div>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 pb-1">Core Engine Pillars</div>
+                  {CORE_PILLARS.map(renderSidebarNavButton)}
+                </div>
+
+                <div className="space-y-1">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 pb-1">Pipeline Operations</div>
+                  {PIPELINE_OPERATIONS.map(renderSidebarNavButton)}
+                </div>
+
+                <div className="space-y-1">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 pb-1">Governance & Security</div>
+                  {GOVERNANCE_ITEMS.map(renderSidebarNavButton)}
+                </div>
               </div>
             </div>
-
-            {/* Pipeline Health & Canvas Actions */}
-            <div className="flex items-center gap-3 shrink-0">
-              <span className="hidden sm:inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[11px] font-mono">
-                <span className="w-2 h-2 rounded-full bg-[#3B7E74]" />
-                Clean Core Armed • 99.01% Parity
-              </span>
-
-              {currentScreen !== 'canvas' && (
-                <button
-                  type="button"
-                  onClick={() => navigateTo('canvas')}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#1473E6] hover:bg-[#1261C4] text-white font-semibold text-[11px] shadow-2xs transition-colors cursor-pointer"
-                >
-                  <span>Open in Canvas</span>
-                  <ArrowRight className="w-3 h-3 ml-0.5" />
-                </button>
-              )}
-            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* 4. Page Main Viewport Container with Smooth Studio Entry */}
-      <main className="flex-1 w-full relative z-10 studio-page-enter">
-        {children}
-      </main>
+        {/* Main Viewport Page Content */}
+        <main className="flex-1 w-full relative z-10 studio-page-enter">
+          {children}
+        </main>
+      </div>
 
       {/* Global Command Palette & Onboarding Modal Instances */}
       <GlobalSearchModal 
