@@ -98,6 +98,7 @@ def record_chained_gateway_audit(event: Dict[str, Any]) -> str:
     latency = event.get("latencyMs", 0.0)
     tok_p = event.get("tokensPrompt", 0)
     tok_c = event.get("tokensCompletion", 0)
+    tenant_id = event.get("tenantId", "tenant_enterprise")
 
     with _CHAIN_LOCK:
         prev_hash = get_latest_chain_hash()
@@ -113,17 +114,18 @@ def record_chained_gateway_audit(event: Dict[str, Any]) -> str:
                             request_id, session_id, timestamp, model, entities_detected,
                             entities_count, policy_applied, verdict, original_hash, sanitized_hash,
                             sanitized_prompt, upstream_provider, latency_ms, tokens_prompt, tokens_completion,
-                            prev_chain_hash, chain_hash
+                            prev_chain_hash, chain_hash, tenant_id
                         ) VALUES (
-                            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                         ) ON CONFLICT (request_id) DO UPDATE SET
                             prev_chain_hash = EXCLUDED.prev_chain_hash,
-                            chain_hash = EXCLUDED.chain_hash;
+                            chain_hash = EXCLUDED.chain_hash,
+                            tenant_id = EXCLUDED.tenant_id;
                     """, (
                         req_id, sess_id, ts, model, entities_detected,
                         entities_count, policy_applied, verdict, raw_hash, san_hash,
                         san_prompt, provider, latency, tok_p, tok_c,
-                        prev_hash, curr_chain_hash
+                        prev_hash, curr_chain_hash, tenant_id
                     ))
                 conn.close()
             except Exception:

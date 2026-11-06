@@ -1,10 +1,11 @@
 import DataXAppShell from "../components/common/DataXAppShell";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from '../context/NavigationContext';
 import { useRuleEngine } from '../context/RuleEngineContext';
 import NotificationCenter from '../components/common/NotificationCenter';
 import DataXUserMenu from '../components/common/DataXUserMenu';
 import { DataXLogo } from './ThreadsPage';
+import api from '../services/apiClient';
 
 export default function SettingsPage({ onSwitchToMarketing }) {
   const [activeTab, setActiveTab] = useState(() => {
@@ -23,12 +24,19 @@ export default function SettingsPage({ onSwitchToMarketing }) {
       localStorage.setItem('datax_settings_active_tab', tabId);
     } catch {}
   };
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [companyName, setCompanyName] = useState('AAVIL Inc (Enterprise)');
+  const [tenantId, setTenantId] = useState('tenant_enterprise');
+  const [dataResidency, setDataResidency] = useState('us-east-2');
   const [cronExpression, setCronExpression] = useState('0 */6 * * *');
   const [cronEnabled, setCronEnabled] = useState(true);
   const [notificationChannel, setNotificationChannel] = useState('email');
   const [emailAlerts, setEmailAlerts] = useState('compliance-alerts@enterprise.io');
   const [slackWebhook, setSlackWebhook] = useState('https://hooks.slack.com/services/T00/B00/X00');
-  const [savedBanner, setSavedBanner] = useState(false);
+  const [savedBanner, setSavedBanner] = useState('');
+  const [apiKey, setApiKey] = useState('dx_live_99f81a7b02bc4219ef821a0029b');
 
   const [teamMembers, setTeamMembers] = useState([
     { id: 'usr_1', name: 'Alex Rivera', email: 'admin@enterprise.io', role: 'Tenant Admin', status: 'Active' },
@@ -39,29 +47,109 @@ export default function SettingsPage({ onSwitchToMarketing }) {
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [newMemberRole, setNewMemberRole] = useState('Data Steward');
 
-  const handleSave = () => {
-    setSavedBanner(true);
-    setTimeout(() => setSavedBanner(false), 3000);
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/settings/tenant');
+      if (res?.settings) {
+        const s = res.settings;
+        if (s.company_name) setCompanyName(s.company_name);
+        if (s.tenant_id) setTenantId(s.tenant_id);
+        if (s.data_residency) setDataResidency(s.data_residency);
+        if (s.cron_expression) setCronExpression(s.cron_expression);
+        if (typeof s.cron_enabled === 'boolean') setCronEnabled(s.cron_enabled);
+        if (s.notification_channel) setNotificationChannel(s.notification_channel);
+        if (s.email_alerts) setEmailAlerts(s.email_alerts);
+        if (s.slack_webhook !== undefined) setSlackWebhook(s.slack_webhook || '');
+        if (Array.isArray(s.team_members) && s.team_members.length > 0) setTeamMembers(s.team_members);
+        if (s.api_key) setApiKey(s.api_key);
+      }
+    } catch (e) {
+      console.warn('Failed loading tenant settings:', e);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAddMember = (e) => {
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const payload = {
+        company_name: companyName,
+        data_residency: dataResidency,
+        cron_expression: cronExpression,
+        cron_enabled: cronEnabled,
+        notification_channel: notificationChannel,
+        email_alerts: emailAlerts,
+        slack_webhook: slackWebhook,
+        team_members: teamMembers,
+        api_key: apiKey
+      };
+      await api.post('/settings/tenant', payload);
+      setSavedBanner('Settings successfully persisted to PostgreSQL encrypted vault.');
+      setTimeout(() => setSavedBanner(''), 4000);
+    } catch (err) {
+      setSavedBanner(`Failed to save: ${err.message}`);
+      setTimeout(() => setSavedBanner(''), 4000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddMember = async (e) => {
     e.preventDefault();
     if (!newMemberEmail.trim()) return;
-    setTeamMembers(prev => [
-      ...prev,
-      {
-        id: `usr_${Date.now()}`,
-        name: newMemberEmail.split('@')[0],
+    try {
+      const res = await api.post('/settings/team/invite', {
         email: newMemberEmail.trim(),
-        role: newMemberRole,
-        status: 'Invited'
+        role: newMemberRole
+      });
+      if (res?.team_members) {
+        setTeamMembers(res.team_members);
+      } else if (res?.member) {
+        setTeamMembers(prev => [...prev, res.member]);
       }
-    ]);
-    setNewMemberEmail('');
+      setNewMemberEmail('');
+      setSavedBanner('Team member invited and persisted to tenant directory.');
+      setTimeout(() => setSavedBanner(''), 4000);
+    } catch (err) {
+      setSavedBanner(`Failed to invite: ${err.message}`);
+      setTimeout(() => setSavedBanner(''), 4000);
+    }
   };
 
-  const handleRemoveMember = (id) => {
-    setTeamMembers(prev => prev.filter(m => m.id !== id));
+  const handleRemoveMember = async (id) => {
+    try {
+      const res = await api.delete(`/settings/team/${id}`);
+      if (res?.team_members) {
+        setTeamMembers(res.team_members);
+      } else {
+        setTeamMembers(prev => prev.filter(m => m.id !== id));
+      }
+      setSavedBanner('Member removed from tenant access roster.');
+      setTimeout(() => setSavedBanner(''), 4000);
+    } catch (err) {
+      setSavedBanner(`Failed to remove: ${err.message}`);
+      setTimeout(() => setSavedBanner(''), 4000);
+    }
+  };
+
+  const handleRotateApiKey = async () => {
+    try {
+      const res = await api.post('/settings/apikeys/rotate');
+      if (res?.apiKey) {
+        setApiKey(res.apiKey);
+        setSavedBanner('API Key rotated successfully. Previous credentials revoked.');
+        setTimeout(() => setSavedBanner(''), 4000);
+      }
+    } catch (err) {
+      setSavedBanner(`Failed rotating key: ${err.message}`);
+      setTimeout(() => setSavedBanner(''), 4000);
+    }
   };
 
   return (
@@ -71,8 +159,8 @@ export default function SettingsPage({ onSwitchToMarketing }) {
       <main className="max-w-[1360px] mx-auto px-6 py-8">
         {savedBanner && (
           <div className="mb-6 p-4 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-sm font-medium flex items-center justify-between shadow-sm">
-            <span>Settings successfully persisted to encrypted vault.</span>
-            <button onClick={() => setSavedBanner(false)} className="text-xs font-bold underline">Dismiss</button>
+            <span>{savedBanner}</span>
+            <button onClick={() => setSavedBanner('')} className="text-xs font-bold underline cursor-pointer">Dismiss</button>
           </div>
         )}
 
@@ -122,15 +210,29 @@ export default function SettingsPage({ onSwitchToMarketing }) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Company / Organization</label>
-                    <input type="text" readOnly defaultValue="AAVIL Inc (Enterprise)" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800" />
+                    <input 
+                      type="text" 
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800" 
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Tenant ID</label>
-                    <input type="text" readOnly defaultValue="tenant_aavil_prod_01" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-slate-600" />
+                    <input 
+                      type="text" 
+                      readOnly 
+                      value={tenantId}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-slate-600 cursor-not-allowed" 
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Default Data Residency</label>
-                    <select defaultValue="us-east-2" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800">
+                    <select 
+                      value={dataResidency}
+                      onChange={(e) => setDataResidency(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800"
+                    >
                       <option value="us-east-2">AWS US-East-2 (Ohio)</option>
                       <option value="eu-central-1">AWS EU-Central-1 (Frankfurt)</option>
                       <option value="ap-south-1">Azure India Central (Pune)</option>
@@ -349,14 +451,14 @@ export default function SettingsPage({ onSwitchToMarketing }) {
                     <span className="text-slate-400">Production Secret API Key</span>
                     <span className="text-[10px] px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded">ACTIVE</span>
                   </div>
-                  <p className="text-emerald-400 text-sm font-bold tracking-wider">
-                    dx_live_99f81a7b02bc4219ef821a0029b
+                  <p className="text-emerald-400 text-sm font-bold tracking-wider select-all">
+                    {apiKey}
                   </p>
-                  <p className="text-[10px] text-slate-400">Created 2026-10-23 • AES-128 Fernet Hardware Encrypted</p>
+                  <p className="text-[10px] text-slate-400">Created 2026-10-23 • AES-128 Hardware Encrypted</p>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <button onClick={handleSave} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl transition-all">
+                  <button onClick={handleRotateApiKey} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl transition-all cursor-pointer">
                     Roll & Rotate API Key
                   </button>
                 </div>

@@ -622,7 +622,9 @@ def should_route_to_local_llm(
 # -----------------------------------------------------------------------------
 def execute_privacy_gateway_chat(
     req_body: Dict[str, Any],
-    session_id: Optional[str] = None
+    session_id: Optional[str] = None,
+    upstream_api_key: Optional[str] = None,
+    tenant_id: str = "tenant_enterprise"
 ) -> Tuple[Union[Dict[str, Any], Generator[str, None, None]], Dict[str, Any]]:
     """
     The Core Privacy Gateway Orchestrator:
@@ -656,6 +658,7 @@ def execute_privacy_gateway_chat(
         audit_event = {
             "requestId": req_id,
             "sessionId": sid,
+            "tenantId": tenant_id,
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "model": model,
             "verdict": "BLOCKED",
@@ -682,16 +685,20 @@ def execute_privacy_gateway_chat(
     is_local_route, route_reason = should_route_to_local_llm(model, detected_entities, policy, req_body)
     local_daemon_url = os.environ.get("LOCAL_LLM_URL", "http://127.0.0.1:11434").rstrip("/")
 
-    upstream_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("AZURE_OPENAI_API_KEY")
+    # BYOK (Bring Your Own Key) Support with Request-Scoped Memory Only
+    byok = (upstream_api_key or req_body.get("upstream_api_key") or req_body.get("byok_api_key") or "").strip()
+    upstream_key = byok or os.environ.get("OPENAI_API_KEY") or os.environ.get("AZURE_OPENAI_API_KEY")
     upstream_endpoint = os.environ.get("OPENAI_API_BASE") or os.environ.get("AZURE_OPENAI_ENDPOINT")
 
-    upstream_payload = {**req_body, "messages": sanitized_messages}
+    # Clean payload for upstream: never leak BYOK credentials in payload
+    clean_payload = {k: v for k, v in req_body.items() if k not in ("upstream_api_key", "byok_api_key")}
+    clean_payload["messages"] = sanitized_messages
+    upstream_payload = clean_payload
     target_url = None
     headers = {}
 
     if is_local_route:
         provider_name = f"On-Prem Local LLM ({route_reason})"
-        # Check if local Ollama or vLLM daemon is reachable
         try:
             r = requests.get(f"{local_daemon_url}/api/tags", timeout=0.8)
             if r.status_code == 200:
@@ -700,11 +707,11 @@ def execute_privacy_gateway_chat(
         except Exception:
             target_url = None
     elif upstream_key and upstream_endpoint and "azure" in upstream_endpoint.lower():
-        provider_name = "Azure OpenAI"
+        provider_name = "Azure OpenAI" + (" (Live BYOK)" if byok else "")
         headers = {"api-key": upstream_key, "Content-Type": "application/json"}
         target_url = f"{upstream_endpoint.rstrip('/')}/openai/deployments/{model}/chat/completions?api-version=2024-02-15-preview"
     elif upstream_key:
-        provider_name = "OpenAI Cloud"
+        provider_name = "OpenAI Cloud" + (" (Live BYOK)" if byok else "")
         headers = {"Authorization": f"Bearer {upstream_key}", "Content-Type": "application/json"}
         target_url = "https://api.openai.com/v1/chat/completions"
     else:
@@ -753,13 +760,16 @@ def execute_privacy_gateway_chat(
                     "entities_scrubbed": len(detected_entities),
                     "placeholders": list(tokens_preview.keys()),
                     "latency_ms": round(latency, 2),
-                    "zero_cloud_egress_verified": True
+                    "zero_cloud_egress_verified": True,
+                    "execution_mode": "ZERO_EGRESS_SANDBOX",
+                    "provider": provider_name
                 }
             }
 
             audit_event = {
                 "requestId": req_id,
                 "sessionId": sid,
+                "tenantId": tenant_id,
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 "model": model,
                 "verdict": verdict,
@@ -798,6 +808,7 @@ def execute_privacy_gateway_chat(
             audit_event = {
                 "requestId": req_id,
                 "sessionId": sid,
+                "tenantId": tenant_id,
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 "model": model,
                 "verdict": verdict,
@@ -832,12 +843,14 @@ def execute_privacy_gateway_chat(
                 "verdict": verdict,
                 "entities_scrubbed": len(detected_entities),
                 "latency_ms": round(latency, 2),
-                "provider": provider_name
+                "provider": provider_name,
+                "execution_mode": "LIVE_UPSTREAM" if byok else "UPSTREAM_DISPATCH"
             }
 
             audit_event = {
                 "requestId": req_id,
                 "sessionId": sid,
+                "tenantId": tenant_id,
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 "model": model,
                 "verdict": verdict,
@@ -864,6 +877,7 @@ def execute_privacy_gateway_chat(
             audit_event = {
                 "requestId": req_id,
                 "sessionId": sid,
+                "tenantId": tenant_id,
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 "model": model,
                 "verdict": verdict,
@@ -897,7 +911,9 @@ def execute_privacy_gateway_chat(
 # -----------------------------------------------------------------------------
 def execute_anthropic_messages_chat(
     req_body: Dict[str, Any],
-    session_id: Optional[str] = None
+    session_id: Optional[str] = None,
+    upstream_api_key: Optional[str] = None,
+    tenant_id: str = "tenant_enterprise"
 ) -> Tuple[Union[Dict[str, Any], Generator[str, None, None]], Dict[str, Any]]:
     """
     Native Anthropic Messages API Adapter (/v1/messages).
@@ -947,6 +963,7 @@ def execute_anthropic_messages_chat(
         audit_event = {
             "requestId": req_id,
             "sessionId": sid,
+            "tenantId": tenant_id,
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "model": model,
             "verdict": "BLOCKED",
@@ -969,9 +986,10 @@ def execute_anthropic_messages_chat(
     sanitized_prompt_concat = (clean_sys + " " if clean_sys else "") + " ".join([str(m.get("content")) for m in sanitized_messages])
     raw_hash = hashlib.sha256(sanitized_prompt_concat.encode("utf-8")).hexdigest()
 
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+    byok = (upstream_api_key or req_body.get("upstream_api_key") or req_body.get("byok_api_key") or "").strip()
+    anthropic_key = byok or os.environ.get("ANTHROPIC_API_KEY")
     if anthropic_key:
-        provider_name = "Anthropic Cloud"
+        provider_name = "Anthropic Cloud" + (" (Live BYOK)" if byok else "")
         target_url = "https://api.anthropic.com/v1/messages"
         headers = {
             "x-api-key": anthropic_key,
@@ -1000,11 +1018,13 @@ def execute_anthropic_messages_chat(
                     "verdict": verdict,
                     "entities_scrubbed": len(detected_all),
                     "latency_ms": round(latency, 2),
-                    "provider": provider_name
+                    "provider": provider_name,
+                    "execution_mode": "LIVE_UPSTREAM" if byok else "UPSTREAM_DISPATCH"
                 }
                 audit_event = {
                     "requestId": req_id,
                     "sessionId": sid,
+                    "tenantId": tenant_id,
                     "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                     "model": model,
                     "verdict": verdict,
@@ -1054,12 +1074,14 @@ def execute_anthropic_messages_chat(
                 "verdict": verdict,
                 "entities_scrubbed": len(detected_all),
                 "latency_ms": round(latency, 2),
-                "provider": "DataX Anthropic Adapter (On-Prem)"
+                "provider": "DataX Anthropic Adapter (On-Prem)",
+                "execution_mode": "ZERO_EGRESS_SANDBOX"
             }
         }
         audit_event = {
             "requestId": req_id,
             "sessionId": sid,
+            "tenantId": tenant_id,
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "model": model,
             "verdict": verdict,
@@ -1127,20 +1149,32 @@ def _record_gateway_audit(event: Dict[str, Any]):
         pass
 
 
-def get_gateway_audit_events(limit: int = 50) -> List[Dict[str, Any]]:
+def get_gateway_audit_events(limit: int = 50, tenant_id: Optional[str] = None) -> List[Dict[str, Any]]:
     """Retrieves recent gateway interception records from on-prem PostgreSQL."""
     try:
         conn = get_storage_connection(connect_timeout=4, autocommit=True)
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT request_id, session_id, timestamp, model, entities_detected,
-                       entities_count, policy_applied, verdict, original_hash,
-                       sanitized_hash, sanitized_prompt, upstream_provider, latency_ms,
-                       tokens_prompt, tokens_completion, prev_chain_hash, chain_hash
-                FROM "datax_gateway_audit"
-                ORDER BY timestamp DESC
-                LIMIT %s;
-            """, (min(max(int(limit), 1), 500),))
+            if tenant_id and tenant_id not in ("tenant_enterprise", "all"):
+                cur.execute("""
+                    SELECT request_id, session_id, timestamp, model, entities_detected,
+                           entities_count, policy_applied, verdict, original_hash,
+                           sanitized_hash, sanitized_prompt, upstream_provider, latency_ms,
+                           tokens_prompt, tokens_completion, prev_chain_hash, chain_hash
+                    FROM "datax_gateway_audit"
+                    WHERE tenant_id = %s OR tenant_id IS NULL
+                    ORDER BY timestamp DESC
+                    LIMIT %s;
+                """, (tenant_id, min(max(int(limit), 1), 500)))
+            else:
+                cur.execute("""
+                    SELECT request_id, session_id, timestamp, model, entities_detected,
+                           entities_count, policy_applied, verdict, original_hash,
+                           sanitized_hash, sanitized_prompt, upstream_provider, latency_ms,
+                           tokens_prompt, tokens_completion, prev_chain_hash, chain_hash
+                    FROM "datax_gateway_audit"
+                    ORDER BY timestamp DESC
+                    LIMIT %s;
+                """, (min(max(int(limit), 1), 500),))
             rows = cur.fetchall()
             out = []
             for r in rows:

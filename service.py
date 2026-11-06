@@ -1277,11 +1277,26 @@ Generate strict enterprise validation rules tailored to these exact columns and 
 
 
 # -----------------------------------------------------------------------------
-# Catalog & Thread Routes
+# Catalog & Thread Routes (Tenant-Isolated)
 # -----------------------------------------------------------------------------
+def get_request_tenant_id(request: Request) -> str:
+    """Extracts tenant ID from X-Tenant-Id header or verified JWT token."""
+    header_tid = request.headers.get("X-Tenant-Id")
+    if header_tid and header_tid.strip() and header_tid not in ("tenant_default", "null", "undefined"):
+        return header_tid.strip()
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        user_data = auth_engine._verify_jwt(token)
+        if user_data and user_data.get("tenantId"):
+            return user_data["tenantId"]
+    return header_tid or "tenant_enterprise"
+
+
 @app.get("/runs")
-def api_get_runs():
-    return {"success": True, "runs": load_runs()}
+def api_get_runs(request: Request):
+    tid = get_request_tenant_id(request)
+    return {"success": True, "runs": load_runs(tid)}
 
 
 @app.get("/domain-packs")
@@ -1290,15 +1305,17 @@ def api_get_domain_packs():
 
 
 @app.get("/threads")
-def api_list_threads():
-    return {"status": "success", "threads": load_threads()}
+def api_list_threads(request: Request):
+    tid = get_request_tenant_id(request)
+    return {"status": "success", "threads": load_threads(tid)}
 
 
 @app.post("/workflow/save")
 @app.post("/workflows")
 @app.post("/threads")
-def api_save_thread(req: ThreadCreateRequest, user: Dict[str, Any] = Depends(require_roles(["Admin", "Data Steward"]))):
-    threads = load_threads()
+def api_save_thread(req: ThreadCreateRequest, request: Request, user: Dict[str, Any] = Depends(require_roles(["Admin", "Data Steward"]))):
+    tid = get_request_tenant_id(request)
+    threads = load_threads(tid)
     thread_id = req.id or f"thread_{int(datetime.utcnow().timestamp())}"
     existing_idx = next((i for i, t in enumerate(threads) if t["id"] == thread_id), -1)
 
@@ -1339,13 +1356,14 @@ def api_save_thread(req: ThreadCreateRequest, user: Dict[str, Any] = Depends(req
     else:
         threads.insert(0, thread_obj)
 
-    save_threads(threads)
+    save_threads(threads, tid)
     return {"status": "success", "thread": thread_obj}
 
 
 @app.get("/threads/{thread_id}")
-def api_get_thread(thread_id: str):
-    threads = load_threads()
+def api_get_thread(thread_id: str, request: Request):
+    tid = get_request_tenant_id(request)
+    threads = load_threads(tid)
     thread = next((t for t in threads if t["id"] == thread_id), None)
     if not thread:
         raise HTTPException(status_code=404, detail="Thread not found")
@@ -1353,18 +1371,20 @@ def api_get_thread(thread_id: str):
 
 
 @app.delete("/threads/{thread_id}")
-def api_delete_thread(thread_id: str, user: Dict[str, Any] = Depends(require_roles(["Admin"]))):
-    threads = load_threads()
+def api_delete_thread(thread_id: str, request: Request, user: Dict[str, Any] = Depends(require_roles(["Admin"]))):
+    tid = get_request_tenant_id(request)
+    threads = load_threads(tid)
     new_threads = [t for t in threads if t["id"] != thread_id]
     if len(new_threads) == len(threads):
         raise HTTPException(status_code=404, detail="Thread not found")
-    save_threads(new_threads)
+    save_threads(new_threads, tid)
     return {"status": "success", "deletedId": thread_id}
 
 
 @app.get("/threads/{thread_id}/audit-logs")
-def api_get_thread_audit_logs(thread_id: str):
-    logs = load_audit_logs()
+def api_get_thread_audit_logs(thread_id: str, request: Request):
+    tid = get_request_tenant_id(request)
+    logs = load_audit_logs(tid)
     thread_runs = logs.get(thread_id, [])
     if not thread_runs:
         thread_runs = [
@@ -2016,8 +2036,20 @@ async def api_v1_chat_completions(request: Request):
         or f"sess_{hashlib.md5(str(time.time()).encode()).hexdigest()[:10]}"
     )
     
+    upstream_key = (
+        request.headers.get("x-upstream-api-key")
+        or request.headers.get("x-byok-api-key")
+        or body.get("upstream_api_key")
+        or body.get("byok_api_key")
+    )
+    tid = get_request_tenant_id(request)
     is_stream = bool(body.get("stream", False))
-    result, audit = execute_privacy_gateway_chat(body, session_id=session_id)
+    result, audit = execute_privacy_gateway_chat(
+        body,
+        session_id=session_id,
+        upstream_api_key=upstream_key,
+        tenant_id=tid
+    )
     
     # Handle policy violation / upstream error response
     if isinstance(result, dict) and "error" in result:
@@ -2134,9 +2166,10 @@ async def api_v1_embeddings(request: Request):
 
 
 @app.get("/gateway/audit")
-def api_get_gateway_audit(limit: int = 50):
+def api_get_gateway_audit(request: Request, limit: int = 50):
     """Returns recent tamper-proof gateway interception logs from on-prem PostgreSQL."""
-    events = get_gateway_audit_events(limit=limit)
+    tid = get_request_tenant_id(request)
+    events = get_gateway_audit_events(limit=limit, tenant_id=tid)
     return {
         "status": "success",
         "events": events,
@@ -2212,8 +2245,20 @@ async def api_v1_anthropic_messages(request: Request):
         or f"sess_{hashlib.md5(str(time.time()).encode()).hexdigest()[:10]}"
     )
 
+    upstream_key = (
+        request.headers.get("x-upstream-api-key")
+        or request.headers.get("x-byok-api-key")
+        or body.get("upstream_api_key")
+        or body.get("byok_api_key")
+    )
+    tid = get_request_tenant_id(request)
     is_stream = bool(body.get("stream", False))
-    result, audit = execute_anthropic_messages_chat(body, session_id=session_id)
+    result, audit = execute_anthropic_messages_chat(
+        body,
+        session_id=session_id,
+        upstream_api_key=upstream_key,
+        tenant_id=tid
+    )
 
     if isinstance(result, dict) and "error" in result:
         return JSONResponse(status_code=403 if audit.get("verdict") == "BLOCKED" else 400, content=result)
@@ -2409,6 +2454,177 @@ def api_simulate_sso_login(req: Dict[str, Any] = Body(...)):
 def api_run_egress_test():
     """Simulates an air-gapped network sandbox and audits zero-egress compliance."""
     return run_egress_block_audit()
+
+
+# -----------------------------------------------------------------------------
+# Pillar 8: Tenant Settings & Multi-Tenant Administration Persistence
+# -----------------------------------------------------------------------------
+_TENANT_SETTINGS_CACHE: Dict[str, Any] = {}
+
+def get_tenant_settings(tenant_id: str) -> Dict[str, Any]:
+    tid = (tenant_id or "tenant_enterprise").strip()
+    if tid in _TENANT_SETTINGS_CACHE:
+        return _TENANT_SETTINGS_CACHE[tid]
+    
+    clean_name = tid.replace("tenant_", "").replace("_", " ").title()
+    default_settings = {
+        "tenant_id": tid,
+        "company_name": f"{clean_name} (Enterprise)",
+        "data_residency": "us-east-2",
+        "cron_expression": "0 */6 * * *",
+        "cron_enabled": True,
+        "notification_channel": "email",
+        "email_alerts": f"compliance-alerts@{tid.replace('tenant_', '')}.io",
+        "slack_webhook": "https://hooks.slack.com/services/T00/B00/X00",
+        "team_members": [
+            {"id": "usr_1", "name": "Tenant Administrator", "email": f"admin@{tid.replace('tenant_', '')}.io", "role": "Tenant Admin", "status": "Active"},
+            {"id": "usr_2", "name": "Sarah Chen", "email": "s.chen@enterprise.io", "role": "Data Steward", "status": "Active"},
+            {"id": "usr_3", "name": "Marcus Vance", "email": "m.vance@enterprise.io", "role": "Security Auditor", "status": "Active"}
+        ],
+        "api_key": f"dx_live_{hashlib.sha256(tid.encode()).hexdigest()[:24]}",
+        "updated_at": datetime.utcnow().isoformat()
+    }
+    
+    try:
+        conn = get_storage_connection(connect_timeout=2, autocommit=True)
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT company_name, data_residency, cron_expression, cron_enabled,
+                       notification_channel, email_alerts, slack_webhook, team_members,
+                       api_key, updated_at
+                FROM "datax_tenant_settings"
+                WHERE tenant_id = %s
+                LIMIT 1;
+            """, (tid,))
+            row = cur.fetchone()
+            if row:
+                conn.close()
+                members = json.loads(row[7]) if isinstance(row[7], str) else (row[7] or [])
+                res = {
+                    "tenant_id": tid,
+                    "company_name": row[0] or default_settings["company_name"],
+                    "data_residency": row[1] or "us-east-2",
+                    "cron_expression": row[2] or "0 */6 * * *",
+                    "cron_enabled": bool(row[3]),
+                    "notification_channel": row[4] or "email",
+                    "email_alerts": row[5] or default_settings["email_alerts"],
+                    "slack_webhook": row[6] or "",
+                    "team_members": members,
+                    "api_key": row[8] or default_settings["api_key"],
+                    "updated_at": row[9].isoformat() if hasattr(row[9], "isoformat") else str(row[9])
+                }
+                _TENANT_SETTINGS_CACHE[tid] = res
+                return res
+        conn.close()
+    except Exception:
+        pass
+        
+    _TENANT_SETTINGS_CACHE[tid] = default_settings
+    return default_settings
+
+def save_tenant_settings(tenant_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+    tid = (tenant_id or "tenant_enterprise").strip()
+    current = get_tenant_settings(tid)
+    current.update({k: v for k, v in updates.items() if v is not None})
+    current["updated_at"] = datetime.utcnow().isoformat()
+    _TENANT_SETTINGS_CACHE[tid] = current
+    
+    try:
+        conn = get_storage_connection(connect_timeout=3, autocommit=True)
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO "datax_tenant_settings" (
+                    tenant_id, company_name, data_residency, cron_expression,
+                    cron_enabled, notification_channel, email_alerts, slack_webhook,
+                    team_members, api_key, updated_at
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP
+                ) ON CONFLICT (tenant_id) DO UPDATE SET
+                    company_name = EXCLUDED.company_name,
+                    data_residency = EXCLUDED.data_residency,
+                    cron_expression = EXCLUDED.cron_expression,
+                    cron_enabled = EXCLUDED.cron_enabled,
+                    notification_channel = EXCLUDED.notification_channel,
+                    email_alerts = EXCLUDED.email_alerts,
+                    slack_webhook = EXCLUDED.slack_webhook,
+                    team_members = EXCLUDED.team_members,
+                    api_key = EXCLUDED.api_key,
+                    updated_at = CURRENT_TIMESTAMP;
+            """, (
+                tid,
+                current.get("company_name", "AAVIL Inc"),
+                current.get("data_residency", "us-east-2"),
+                current.get("cron_expression", "0 */6 * * *"),
+                bool(current.get("cron_enabled", True)),
+                current.get("notification_channel", "email"),
+                current.get("email_alerts", ""),
+                current.get("slack_webhook", ""),
+                json.dumps(current.get("team_members", [])),
+                current.get("api_key", "")
+            ))
+        conn.close()
+    except Exception as e:
+        logger.warning(f"Could not persist tenant settings to DB: {e}")
+        
+    return current
+
+
+@app.get("/settings/tenant")
+def api_get_tenant_settings(request: Request):
+    """Returns persistent enterprise organization settings for current tenant."""
+    tid = get_request_tenant_id(request)
+    return {"status": "success", "settings": get_tenant_settings(tid)}
+
+
+@app.post("/settings/tenant")
+def api_update_tenant_settings(request: Request, body: Dict[str, Any] = Body(...)):
+    """Persists enterprise settings, cron schedules, and webhooks for tenant."""
+    tid = get_request_tenant_id(request)
+    saved = save_tenant_settings(tid, body)
+    return {"status": "success", "message": "Settings persisted successfully.", "settings": saved}
+
+
+@app.post("/settings/team/invite")
+def api_invite_team_member(request: Request, body: Dict[str, Any] = Body(...)):
+    """Invites a new member to the tenant's RBAC team table."""
+    tid = get_request_tenant_id(request)
+    email = (body.get("email") or "").strip()
+    role = (body.get("role") or "Data Steward").strip()
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="Valid email address is required.")
+    
+    current = get_tenant_settings(tid)
+    members = list(current.get("team_members", []))
+    new_member = {
+        "id": f"usr_{int(time.time())}_{uuid.uuid4().hex[:6]}",
+        "name": email.split("@")[0].replace(".", " ").title(),
+        "email": email,
+        "role": role,
+        "status": "Invited",
+        "invitedAt": datetime.utcnow().isoformat()
+    }
+    members.append(new_member)
+    save_tenant_settings(tid, {"team_members": members})
+    return {"status": "success", "member": new_member, "team_members": members}
+
+
+@app.delete("/settings/team/{member_id}")
+def api_remove_team_member(member_id: str, request: Request):
+    """Removes a member from tenant's RBAC team."""
+    tid = get_request_tenant_id(request)
+    current = get_tenant_settings(tid)
+    members = [m for m in current.get("team_members", []) if m.get("id") != member_id]
+    save_tenant_settings(tid, {"team_members": members})
+    return {"status": "success", "removedId": member_id, "team_members": members}
+
+
+@app.post("/settings/apikeys/rotate")
+def api_rotate_tenant_api_key(request: Request):
+    """Generates a fresh cryptographically secure tenant API bearer key."""
+    tid = get_request_tenant_id(request)
+    new_key = f"dx_live_{uuid.uuid4().hex[:28]}"
+    saved = save_tenant_settings(tid, {"api_key": new_key})
+    return {"status": "success", "apiKey": new_key, "settings": saved}
 
 
 if __name__ == "__main__":

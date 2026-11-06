@@ -42,9 +42,23 @@ export async function apiRequest(endpoint, options = {}) {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const url = `${API_BASE_URL}${cleanEndpoint}`;
 
+  // Extract tenantId from stored user profile if available
+  let effectiveTenantId = tenantId;
+  if (!effectiveTenantId || effectiveTenantId === 'tenant_default') {
+    try {
+      const storedProfile = 
+        (typeof localStorage !== 'undefined' ? localStorage.getItem('datax_user_profile') : null) ||
+        (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('datax_user_profile') : null);
+      if (storedProfile) {
+        const u = JSON.parse(storedProfile);
+        if (u.tenantId) effectiveTenantId = u.tenantId;
+      }
+    } catch (_) {}
+  }
+
   const requestHeaders = {
     'Content-Type': 'application/json',
-    'X-Tenant-Id': tenantId,
+    'X-Tenant-Id': effectiveTenantId || 'tenant_enterprise',
     ...headers
   };
 

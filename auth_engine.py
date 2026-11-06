@@ -309,12 +309,28 @@ def register_user(email: str, password: str, full_name: str, tenant_id: str = "t
     if existing:
         return {"status": 409, "data": {"error": "An account with this email already exists."}}
 
+    # Determine tenant isolation
+    assigned_tenant = (tenant_id or "").strip()
+    if not assigned_tenant or assigned_tenant in ("tenant_enterprise", "tenant_default"):
+        if email_clean in ["admin@dataglow.ai", "demo@dataglow.ai", "admin@datax.internal"] or email_clean.endswith("@dataglow.ai"):
+            assigned_tenant = "tenant_enterprise"
+        else:
+            import re
+            domain_part = email_clean.split("@")[-1].replace(".", "_")
+            if domain_part in ["gmail_com", "yahoo_com", "outlook_com", "hotmail_com", "icloud_com"]:
+                user_slug = re.sub(r'[^a-zA-Z0-9_]', '_', email_clean.split("@")[0])
+                assigned_tenant = f"tenant_{user_slug}_{abs(hash(email_clean)) % 10000}"
+            else:
+                domain_clean = re.sub(r'[^a-zA-Z0-9_]', '_', domain_part)
+                assigned_tenant = f"tenant_{domain_clean}"
+            assigned_tenant = assigned_tenant[:60]
+
     password_hash = _hash_password(password)
     user_record = db.create_user(
         email=email_clean,
         password_hash=password_hash,
         full_name=full_name.strip(),
-        tenant_id=tenant_id or "tenant_enterprise"
+        tenant_id=assigned_tenant
     )
 
     token = _sign_jwt(user_record)

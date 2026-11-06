@@ -257,6 +257,9 @@ def init_all_storage_tables(uri: Optional[str] = None) -> Dict[str, Any]:
         """
         ALTER TABLE "datax_gateway_audit" ADD COLUMN IF NOT EXISTS chain_hash VARCHAR(64);
         """,
+        """
+        ALTER TABLE "datax_gateway_audit" ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(64) DEFAULT 'tenant_enterprise';
+        """,
         # Enterprise SIEM & SOC Forwarding Config (Task 32)
         """
         CREATE TABLE IF NOT EXISTS "datax_siem_config" (
@@ -302,6 +305,22 @@ def init_all_storage_tables(uri: Optional[str] = None) -> Dict[str, Any]:
             role_mapping_json JSONB,
             enabled BOOLEAN DEFAULT FALSE,
             enforce_sso_only BOOLEAN DEFAULT FALSE,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+        """,
+        # Enterprise Tenant Settings & Administration
+        """
+        CREATE TABLE IF NOT EXISTS "datax_tenant_settings" (
+            tenant_id VARCHAR(64) PRIMARY KEY,
+            company_name VARCHAR(128) DEFAULT 'AAVIL Inc (Enterprise)',
+            data_residency VARCHAR(64) DEFAULT 'us-east-2',
+            cron_expression VARCHAR(64) DEFAULT '0 */6 * * *',
+            cron_enabled BOOLEAN DEFAULT TRUE,
+            notification_channel VARCHAR(32) DEFAULT 'email',
+            email_alerts VARCHAR(256) DEFAULT 'compliance-alerts@enterprise.io',
+            slack_webhook VARCHAR(512) DEFAULT 'https://hooks.slack.com/services/T00/B00/X00',
+            team_members JSONB DEFAULT '[]'::jsonb,
+            api_key VARCHAR(128) DEFAULT 'dx_live_99f81a7b02bc4219ef821a0029b',
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
         """

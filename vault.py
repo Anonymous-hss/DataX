@@ -186,59 +186,100 @@ DEFAULT_THREADS = [
 ]
 
 
-def load_threads() -> List[Dict[str, Any]]:
-    if not os.path.exists(THREADS_STORE_FILE):
-        save_threads(DEFAULT_THREADS)
-        return DEFAULT_THREADS
+import copy
+
+def _read_json_store(filepath: str, default: Any) -> Any:
+    if not os.path.exists(filepath):
+        return default
     try:
-        with open(THREADS_STORE_FILE, "r") as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
-        return DEFAULT_THREADS
+        return default
 
-
-def save_threads(threads: List[Dict[str, Any]]):
-    with open(THREADS_STORE_FILE, "w") as f:
-        json.dump(threads, f, indent=2)
-
-
-def load_audit_logs() -> Dict[str, List[Dict[str, Any]]]:
-    if not os.path.exists(AUDIT_LOGS_FILE):
-        return {}
+def _write_json_store(filepath: str, data: Any):
     try:
-        with open(AUDIT_LOGS_FILE, "r") as f:
-            return json.load(f)
-    except Exception:
-        return {}
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        print(f"Error writing to {filepath}: {e}")
 
 
-def load_runs() -> List[Dict[str, Any]]:
-    if not os.path.exists(RUNS_STORE_FILE):
-        return []
-    try:
-        with open(RUNS_STORE_FILE, "r") as f:
-            return json.load(f)
-    except Exception:
-        return []
+def load_threads(tenant_id: str = "tenant_enterprise") -> List[Dict[str, Any]]:
+    tid = (tenant_id or "tenant_enterprise").strip()
+    raw = _read_json_store(THREADS_STORE_FILE, None)
+    
+    # Migrate legacy flat list if present
+    if isinstance(raw, list):
+        store = {"tenant_enterprise": raw}
+    elif isinstance(raw, dict):
+        store = raw
+    else:
+        store = {"tenant_enterprise": copy.deepcopy(DEFAULT_THREADS)}
+
+    if tid not in store or not store[tid]:
+        store[tid] = copy.deepcopy(DEFAULT_THREADS)
+        _write_json_store(THREADS_STORE_FILE, store)
+
+    return store[tid]
 
 
-def append_run(run_entry: Dict[str, Any]):
+def save_threads(threads: List[Dict[str, Any]], tenant_id: str = "tenant_enterprise"):
+    tid = (tenant_id or "tenant_enterprise").strip()
+    raw = _read_json_store(THREADS_STORE_FILE, {})
+    store = {"tenant_enterprise": raw} if isinstance(raw, list) else (raw if isinstance(raw, dict) else {})
+    store[tid] = threads
+    _write_json_store(THREADS_STORE_FILE, store)
+
+
+def load_audit_logs(tenant_id: str = "tenant_enterprise") -> Dict[str, List[Dict[str, Any]]]:
+    tid = (tenant_id or "tenant_enterprise").strip()
+    raw = _read_json_store(AUDIT_LOGS_FILE, {})
+    if isinstance(raw, dict) and any(isinstance(v, list) for v in raw.values()) and not any(k.startswith("tenant_") for k in raw.keys()):
+        store = {"tenant_enterprise": raw}
+    elif isinstance(raw, dict):
+        store = raw
+    else:
+        store = {}
+    return store.get(tid, {})
+
+
+def load_runs(tenant_id: str = "tenant_enterprise") -> List[Dict[str, Any]]:
+    tid = (tenant_id or "tenant_enterprise").strip()
+    raw = _read_json_store(RUNS_STORE_FILE, {})
+    if isinstance(raw, list):
+        store = {"tenant_enterprise": raw}
+    elif isinstance(raw, dict):
+        store = raw
+    else:
+        store = {}
+    return store.get(tid, [])
+
+
+def append_run(run_entry: Dict[str, Any], tenant_id: str = "tenant_enterprise"):
+    tid = (tenant_id or "tenant_enterprise").strip()
     from sanitizer import mask_telemetry_payload
     sanitized_entry = mask_telemetry_payload(run_entry)
-    runs = load_runs()
+    
+    raw = _read_json_store(RUNS_STORE_FILE, {})
+    store = {"tenant_enterprise": raw} if isinstance(raw, list) else (raw if isinstance(raw, dict) else {})
+    runs = store.get(tid, [])
     runs.insert(0, sanitized_entry)
-    runs = runs[:100]
-    with open(RUNS_STORE_FILE, "w") as f:
-        json.dump(runs, f, indent=2)
+    store[tid] = runs[:100]
+    _write_json_store(RUNS_STORE_FILE, store)
 
 
-def append_audit_log(thread_id: str, log_entry: Dict[str, Any]):
+def append_audit_log(thread_id: str, log_entry: Dict[str, Any], tenant_id: str = "tenant_enterprise"):
+    tid = (tenant_id or "tenant_enterprise").strip()
     from sanitizer import mask_telemetry_payload
     sanitized_entry = mask_telemetry_payload(log_entry)
-    logs = load_audit_logs()
-    if thread_id not in logs:
-        logs[thread_id] = []
-    logs[thread_id].insert(0, sanitized_entry)
-    logs[thread_id] = logs[thread_id][:50]
-    with open(AUDIT_LOGS_FILE, "w") as f:
-        json.dump(logs, f, indent=2)
+    
+    raw = _read_json_store(AUDIT_LOGS_FILE, {})
+    store = raw if isinstance(raw, dict) else {}
+    tenant_logs = store.get(tid, {})
+    if thread_id not in tenant_logs:
+        tenant_logs[thread_id] = []
+    tenant_logs[thread_id].insert(0, sanitized_entry)
+    tenant_logs[thread_id] = tenant_logs[thread_id][:50]
+    store[tid] = tenant_logs
+    _write_json_store(AUDIT_LOGS_FILE, store)
