@@ -34,10 +34,18 @@ services:
       PORT: 8003
       DATAX_VAULT_DIR: /app/data
       DATAX_MASTER_KEY: ${DATAX_MASTER_KEY:-g3Q6M9vP8xK2rT5wY7zB1cE4fH6jL0nS2uV4xZ6aC8=}
-      NEON_DATABASE_URI: postgresql://${POSTGRES_USER:-datax_admin}:${POSTGRES_PASSWORD:-DataX_Secure_Pass_2026!}@datax-postgres:5432/${POSTGRES_DB:-datax_db}
+      DATAX_STORAGE_URI: postgresql://${POSTGRES_USER:-datax_admin}:${POSTGRES_PASSWORD:-DataX_Secure_Pass_2026!}@datax-postgres:5432/${POSTGRES_DB:-datax_db}?sslmode=disable
+      DATAX_POSTGRES_URI: postgresql://${POSTGRES_USER:-datax_admin}:${POSTGRES_PASSWORD:-DataX_Secure_Pass_2026!}@datax-postgres:5432/${POSTGRES_DB:-datax_db}?sslmode=disable
+      DATAX_JWT_SECRET: ${DATAX_JWT_SECRET:-DataX_OnPrem_MasterSecret_2027_Enterprise!}
+      LOCAL_LLM_URL: ${LOCAL_LLM_URL:-http://host.docker.internal:11434}
       AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
       AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-https://dataglow-azure-openai.openai.azure.com/}
-      DATAX_JWT_SECRET: "${DATAX_JWT_SECRET:-${JWT_SECRET:-${JWT_SECRET_KEY:-}}}"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8003/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     ports:
       - "8003:8003"
     volumes:

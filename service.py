@@ -63,6 +63,8 @@ from db_config import (
 )
 from privacy_gateway_engine import (
     execute_privacy_gateway_chat,
+    execute_anthropic_messages_chat,
+    probe_local_llm_models,
     get_gateway_policy,
     get_gateway_audit_events,
     get_gateway_telemetry_stats,
@@ -2162,6 +2164,62 @@ def api_update_gateway_policy(req: Dict[str, Any] = Body(...)):
         return {"status": "success", "message": "Policy updated successfully", "policy": req}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed updating policy: {str(e)}")
+
+
+@app.post("/v1/messages")
+async def api_v1_anthropic_messages(request: Request):
+    """
+    Multi-Provider Gateway: Anthropic Claude Drop-In Adapter (Task 22).
+    Standard Anthropic SDK compatibility:
+      client = anthropic.Anthropic(base_url="https://dataglow.ai/datax-api")
+    Zero sensitive data leaves on-premise infrastructure.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+    session_id = (
+        request.headers.get("x-session-id")
+        or request.headers.get("x-datax-session-id")
+        or f"sess_{hashlib.md5(str(time.time()).encode()).hexdigest()[:10]}"
+    )
+
+    is_stream = bool(body.get("stream", False))
+    result, audit = execute_anthropic_messages_chat(body, session_id=session_id)
+
+    if isinstance(result, dict) and "error" in result:
+        return JSONResponse(status_code=403 if audit.get("verdict") == "BLOCKED" else 400, content=result)
+
+    if is_stream:
+        return StreamingResponse(
+            result,
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-DataX-Gateway-Verdict": audit.get("verdict", "PASSED"),
+                "X-DataX-Entities-Scrubbed": str(audit.get("entitiesCount", 0)),
+            }
+        )
+    else:
+        return JSONResponse(
+            content=result,
+            headers={
+                "X-DataX-Gateway-Verdict": audit.get("verdict", "PASSED"),
+                "X-DataX-Entities-Scrubbed": str(audit.get("entitiesCount", 0)),
+            }
+        )
+
+
+@app.get("/v1/local-models")
+def api_v1_list_local_models():
+    """Lists discovered local on-prem models (Ollama, vLLM, TGI)."""
+    return {
+        "status": "success",
+        "models": probe_local_llm_models(),
+        "local_daemon_url": os.environ.get("LOCAL_LLM_URL", "http://127.0.0.1:11434")
+    }
 
 
 # -----------------------------------------------------------------------------

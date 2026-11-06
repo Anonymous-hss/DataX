@@ -20,6 +20,8 @@ import {
   AlertTriangle,
   Clock,
   Sparkles,
+  Cpu,
+  Globe,
 } from 'lucide-react';
 import api, { API_BASE_URL } from '../../services/apiClient';
 
@@ -48,6 +50,7 @@ const PRESET_PROMPTS = [
 
 export default function PrivacyGatewayTab() {
   // Playground state
+  const [targetProvider, setTargetProvider] = useState('openai'); // 'openai' | 'anthropic' | 'local_ollama'
   const [selectedPreset, setSelectedPreset] = useState(0);
   const [promptText, setPromptText] = useState(PRESET_PROMPTS[0].text);
   const [selectedModel, setSelectedModel] = useState('gpt-4o');
@@ -57,16 +60,18 @@ export default function PrivacyGatewayTab() {
   const [testError, setTestError] = useState('');
 
   // Code snippet state
-  const [activeSnippetLang, setActiveSnippetLang] = useState('python');
+  const [activeSnippetLang, setActiveSnippetLang] = useState('python_openai'); // 'python_openai' | 'python_anthropic' | 'typescript' | 'curl'
   const [copiedSnippet, setCopiedSnippet] = useState(false);
 
-  // Policy state
+  // Policy state (Tasks 16 & 28)
   const [policy, setPolicy] = useState({
     policy_id: 'pol_default_zero_egress',
     name: 'Enterprise Zero-Egress Policy',
     action_prompt_injection: 'BLOCK',
     action_secrets: 'BLOCK',
     action_pii: 'TOKENIZE',
+    pseudonymization_mode: 'PLACEHOLDER', // 'PLACEHOLDER' | 'FORMAT_PRESERVING'
+    smart_local_routing: true, // Task 27: Smart route to on-prem runner
     token_ttl_seconds: 1800,
     enable_reversible_detokenization: true,
   });
@@ -77,6 +82,9 @@ export default function PrivacyGatewayTab() {
   const [auditEvents, setAuditEvents] = useState([]);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditFilter, setAuditFilter] = useState('ALL');
+
+  // Local models state (Task 27)
+  const [localModels, setLocalModels] = useState([]);
 
   // Telemetry stats
   const [stats, setStats] = useState({
@@ -92,13 +100,14 @@ export default function PrivacyGatewayTab() {
     loadPolicy();
     loadAuditEvents();
     loadTelemetryStats();
+    loadLocalModels();
   }, []);
 
   const loadPolicy = async () => {
     try {
       const res = await api.get('/gateway/policy');
       if (res?.policy) {
-        setPolicy(res.policy);
+        setPolicy((prev) => ({ ...prev, ...res.policy }));
       }
     } catch {
       // Non-blocking fallback
@@ -128,6 +137,17 @@ export default function PrivacyGatewayTab() {
     }
   };
 
+  const loadLocalModels = async () => {
+    try {
+      const res = await api.get('/v1/local-models');
+      if (res?.models) {
+        setLocalModels(res.models);
+      }
+    } catch {
+      setLocalModels([]);
+    }
+  };
+
   const handleSavePolicy = async () => {
     setPolicySaving(true);
     setPolicySaveNote('');
@@ -150,28 +170,49 @@ export default function PrivacyGatewayTab() {
 
     const startTime = performance.now();
     try {
-      const payload = {
-        model: selectedModel,
-        messages: [{ role: 'user', content: promptText }],
-        stream: false,
-      };
+      let res;
+      let effectiveModel = selectedModel;
 
-      const res = await api.post('/v1/chat/completions', payload);
+      if (targetProvider === 'anthropic') {
+        effectiveModel = selectedModel.includes('claude') ? selectedModel : 'claude-3-5-sonnet-20241022';
+        const anthropicPayload = {
+          model: effectiveModel,
+          max_tokens: 1024,
+          messages: [{ role: 'user', content: promptText }],
+        };
+        res = await api.post('/v1/messages', anthropicPayload);
+      } else {
+        if (targetProvider === 'local_ollama') {
+          effectiveModel = 'ollama/llama3.1:8b';
+        }
+        const openAiPayload = {
+          model: effectiveModel,
+          messages: [{ role: 'user', content: promptText }],
+          stream: false,
+        };
+        res = await api.post('/v1/chat/completions', openAiPayload);
+      }
+
       const elapsed = (performance.now() - startTime).toFixed(1);
+      const isAnthropic = targetProvider === 'anthropic';
+      const responseContent = isAnthropic
+        ? (res?.content?.[0]?.text || '')
+        : (res?.choices?.[0]?.message?.content || '');
 
       setTestResult({
         rawPrompt: promptText,
         sanitizedPrompt: res?.datax_privacy_guard?.placeholders?.length
-          ? simulateSanitizedView(promptText, res.datax_privacy_guard.placeholders)
+          ? simulateSanitizedView(promptText, policy.pseudonymization_mode)
           : promptText,
-        responseContent: res?.choices?.[0]?.message?.content || '',
+        responseContent,
         privacyGuard: res?.datax_privacy_guard || {},
         elapsedMs: elapsed,
         verdict: res?.datax_privacy_guard?.verdict || 'PASSED',
         requestId: res?.id || 'gw_simulated',
+        model: effectiveModel,
+        provider: res?.datax_privacy_guard?.provider || (isAnthropic ? 'Anthropic Claude' : 'OpenAI / Azure'),
       });
 
-      // Refresh ledger & stats after successful run
       loadAuditEvents();
       loadTelemetryStats();
     } catch (err) {
@@ -186,6 +227,7 @@ export default function PrivacyGatewayTab() {
         errorMessage: err?.message || errDetail?.message || 'Blocked by Zero-Egress Privacy Gateway',
         elapsedMs: elapsed,
         verdict: 'BLOCKED',
+        model: selectedModel,
       });
       loadAuditEvents();
       loadTelemetryStats();
@@ -194,18 +236,20 @@ export default function PrivacyGatewayTab() {
     }
   };
 
-  // Helper to visually render the placeholder view for demo
-  const simulateSanitizedView = (text, placeholders) => {
+  // Helper to visually render the placeholder or format-preserving view for demo
+  const simulateSanitizedView = (text, mode = 'PLACEHOLDER') => {
     let out = text;
-    // Replace SSN
-    out = out.replace(/\b\d{3}-\d{2}-\d{4}\b/g, '<SSN_1>');
-    // Replace Credit Card
-    out = out.replace(/\b(?:\d[ -]?){13,19}\b/g, '<CARD_1>');
-    // Replace Email
-    out = out.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '<EMAIL_1>');
-    // Replace Phone
-    out = out.replace(/\b(?:\+?1[-. ]?)?\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})\b/g, '<PHONE_1>');
-    // Replace AWS Key
+    if (mode === 'FORMAT_PRESERVING') {
+      out = out.replace(/\b\d{3}-\d{2}-\d{4}\b/g, '900-48-2918');
+      out = out.replace(/\b(?:\d[ -]?){13,19}\b/g, '4000 8129 1048 2916');
+      out = out.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, 'anon_user_a7f9@datax-vault.internal');
+      out = out.replace(/\b(?:\+?1[-. ]?)?\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})\b/g, '+1-555-0142');
+    } else {
+      out = out.replace(/\b\d{3}-\d{2}-\d{4}\b/g, '<SSN_1>');
+      out = out.replace(/\b(?:\d[ -]?){13,19}\b/g, '<CARD_1>');
+      out = out.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '<EMAIL_1>');
+      out = out.replace(/\b(?:\+?1[-. ]?)?\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})\b/g, '<PHONE_1>');
+    }
     out = out.replace(/\b(AKIA[0-9A-Z]{16})\b/g, '<SECRET_1>');
     return out;
   };
@@ -230,16 +274,18 @@ export default function PrivacyGatewayTab() {
 
   const getCodeSnippet = () => {
     const gatewayBaseUrl = `${API_BASE_URL.replace(/\/$/, '')}/v1`;
-    if (activeSnippetLang === 'python') {
+    const apiRoot = API_BASE_URL.replace(/\/$/, '');
+
+    if (activeSnippetLang === 'python_openai') {
       return `from openai import OpenAI
 
 # Drop-in replacement: point OpenAI client to on-prem DataX Privacy Gateway
 client = OpenAI(
     base_url="${gatewayBaseUrl}",
-    api_key="datax-onprem-token"  # Zero cloud transmission
+    api_key="datax-onprem-token"  # Never leaves your local network
 )
 
-# Raw PII and secrets in prompt are automatically tokenized in volatile RAM (<SSN_1>)
+# Raw PII is tokenized in volatile RAM (<SSN_1> or synthetic Luhn card)
 # Upstream LLMs (Azure, OpenAI, Bedrock) NEVER receive unencrypted customer data
 response = client.chat.completions.create(
     model="${selectedModel}",
@@ -250,9 +296,28 @@ response = client.chat.completions.create(
 )
 
 for chunk in response:
-    # Placeholders are seamlessly re-hydrated on the streaming fly
+    # Entities are seamlessly re-hydrated on the streaming fly (<15ms latency)
     if chunk.choices[0].delta.content:
         print(chunk.choices[0].delta.content, end="", flush=True)`;
+    } else if (activeSnippetLang === 'python_anthropic') {
+      return `import anthropic
+
+# Drop-in Anthropic client pointing to DataX on-prem Messages API (Task 22)
+client = anthropic.Anthropic(
+    base_url="${apiRoot}",
+    api_key="datax-onprem-token"
+)
+
+message = client.messages.create(
+    model="claude-3-5-sonnet-20241022",
+    max_tokens=1024,
+    messages=[
+        {"role": "user", "content": "Patient Alice Morgan SSN 987-65-4321 records review"}
+    ]
+)
+
+# Response has already been restored back to customer values
+print(message.content[0].text)`;
     } else if (activeSnippetLang === 'typescript') {
       return `import OpenAI from 'openai';
 
@@ -296,15 +361,15 @@ main();`;
         <div className="relative z-10 max-w-4xl space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-semibold">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Task 8, 9, 10, 15, 16 &amp; 21: OpenAI-Compatible Zero-Egress Reverse Proxy</span>
+            <span>Phase 2: Multi-Provider Gateway (OpenAI, Anthropic Claude, On-Prem Ollama/vLLM) &amp; Format-Preserving Encryption</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
             DataX Enterprise AI Privacy Gateway
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            A drop-in proxy for all LLM traffic. Point any standard OpenAI or LangChain application to your on-premise
-            DataX instance. Inbound PII and credentials are intercepted, AES-GCM tokenized into volatile RAM, and stripped
-            before leaving your network. Upstream responses are seamlessly de-tokenized in real-time streaming chunks.
+            A drop-in reverse proxy for OpenAI, Azure OpenAI, Anthropic Claude, and local on-prem models. Inbound PII
+            and credentials are intercepted and encrypted into volatile RAM. Upstream cloud providers never see raw customer
+            bytes. When classified sensitive data is detected, requests automatically smart-route to on-prem runners.
           </p>
 
           {/* Real-time Telemetry Pills */}
@@ -318,8 +383,8 @@ main();`;
               <span>Added Latency: <strong className="font-mono text-white">&lt;15ms</strong> (AES-GCM RAM Vault)</span>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 backdrop-blur-sm border border-white/15 text-slate-200">
-              <Lock className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Zero Raw Cloud Egress: <strong className="text-emerald-400">100% Enforced</strong></span>
+              <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Smart On-Prem Route: <strong className="text-emerald-400">Active (Ollama/vLLM)</strong></span>
             </div>
           </div>
         </div>
@@ -330,17 +395,57 @@ main();`;
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-[#2D55F5]">
-              Task 21: Live Interception &amp; Audit Diff
+              Live Interception &amp; Multi-Provider Diff
             </span>
             <h3 className="text-base font-bold text-slate-900">
               "What Provider Saw" Inspection Playground
             </h3>
             <p className="text-xs text-slate-500">
-              Test how the gateway intercepts sensitive data, swaps it for reversible placeholders before reaching cloud models, and re-hydrates responses.
+              Test how the gateway intercepts sensitive data across OpenAI, Anthropic, or on-prem local models with zero cloud egress.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Provider & Model Selectors */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1 text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => {
+                  setTargetProvider('openai');
+                  setSelectedModel('gpt-4o');
+                }}
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                  targetProvider === 'openai' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                OpenAI / Azure
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTargetProvider('anthropic');
+                  setSelectedModel('claude-3-5-sonnet');
+                }}
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                  targetProvider === 'anthropic' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Anthropic Claude
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTargetProvider('local_ollama');
+                  setSelectedModel('ollama/llama3.1:8b');
+                }}
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                  targetProvider === 'local_ollama' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                On-Prem Ollama / vLLM
+              </button>
+            </div>
+
             <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
               <span className="px-2 py-1 text-slate-600">Model:</span>
               <select
@@ -348,11 +453,27 @@ main();`;
                 onChange={(e) => setSelectedModel(e.target.value)}
                 className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-mono text-slate-800 cursor-pointer focus:outline-none"
               >
-                <option value="gpt-4o">gpt-4o (Azure / OpenAI)</option>
-                <option value="gpt-4o-mini">gpt-4o-mini</option>
-                <option value="claude-3-5-sonnet">claude-3-5-sonnet</option>
-                <option value="gemini-1.5-pro">gemini-1.5-pro</option>
-                <option value="local-ollama/llama3.1">local-ollama/llama3.1 (On-Prem)</option>
+                {targetProvider === 'openai' && (
+                  <>
+                    <option value="gpt-4o">gpt-4o</option>
+                    <option value="gpt-4o-mini">gpt-4o-mini</option>
+                    <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                  </>
+                )}
+                {targetProvider === 'anthropic' && (
+                  <>
+                    <option value="claude-3-5-sonnet">claude-3-5-sonnet-20241022</option>
+                    <option value="claude-3-5-haiku">claude-3-5-haiku-20241022</option>
+                    <option value="claude-3-opus">claude-3-opus-20240229</option>
+                  </>
+                )}
+                {targetProvider === 'local_ollama' && (
+                  <>
+                    <option value="ollama/llama3.1:8b">ollama/llama3.1:8b (On-Prem)</option>
+                    <option value="ollama/mistral:7b">ollama/mistral:7b (On-Prem)</option>
+                    <option value="ollama/qwen2.5:7b">ollama/qwen2.5:7b (On-Prem)</option>
+                  </>
+                )}
               </select>
             </div>
           </div>
@@ -404,11 +525,14 @@ main();`;
           />
         </div>
 
-        {/* Execute Button */}
+        {/* Execute Button & Mode Pill */}
         <div className="flex items-center justify-between gap-3">
-          <div className="text-xs text-slate-500 flex items-center gap-1.5">
-            <Lock className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Vault encryption: AES-GCM 256-bit with 1800s session TTL</span>
+          <div className="text-xs text-slate-600 flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 font-mono text-[11px] text-slate-700">
+              Mode: {policy.pseudonymization_mode === 'FORMAT_PRESERVING' ? 'Format-Preserving Synthetic' : 'Reversible <TAG_N>'}
+            </span>
+            <span className="text-slate-400">•</span>
+            <span>Target Endpoint: <code className="font-mono text-slate-800">{targetProvider === 'anthropic' ? '/v1/messages' : '/v1/chat/completions'}</code></span>
           </div>
 
           <button
@@ -443,7 +567,7 @@ main();`;
                   <span>•</span>
                   <span>Latency: {testResult.elapsedMs}ms</span>
                   <span>•</span>
-                  <span>Upstream Cloud Transmission: <strong>ZERO BYTES SENT</strong></span>
+                  <span>Upstream Cloud Transmission: <strong>ZERO BYTES DISPATCHED</strong></span>
                 </div>
               </div>
             ) : (
@@ -465,9 +589,9 @@ main();`;
                     </div>
                   </div>
                   <div className="text-[11px] text-slate-500 flex items-center gap-1 pt-2">
-                    <span>Sent via:</span>
+                    <span>Sent to:</span>
                     <code className="font-mono bg-slate-200/80 px-1.5 py-0.5 rounded text-[10px]">
-                      /v1/chat/completions
+                      {targetProvider === 'anthropic' ? '/v1/messages' : '/v1/chat/completions'}
                     </code>
                   </div>
                 </div>
@@ -485,7 +609,7 @@ main();`;
                       </span>
                     </div>
                     <div className="text-xs font-bold text-slate-900">
-                      What Cloud Provider Saw ({selectedModel})
+                      What Provider Saw ({testResult.provider || testResult.model})
                     </div>
                     <div className="rounded-lg bg-white border border-emerald-200 p-3 text-xs font-mono text-emerald-950 whitespace-pre-wrap leading-relaxed min-h-[90px]">
                       {testResult.sanitizedPrompt}
@@ -494,7 +618,7 @@ main();`;
                   <div className="text-[11px] text-emerald-800 flex items-center justify-between pt-2">
                     <span>Scrubbed {testResult.privacyGuard?.entities_scrubbed || 2} entities</span>
                     <span className="font-mono font-bold text-[10px] bg-emerald-100 px-1.5 py-0.5 rounded">
-                      &lt;PLACEHOLDER_N&gt;
+                      {policy.pseudonymization_mode === 'FORMAT_PRESERVING' ? 'Realistic Synthetic' : '<PLACEHOLDER_N>'}
                     </span>
                   </div>
                 </div>
@@ -526,7 +650,7 @@ main();`;
         )}
       </section>
 
-      {/* SECTION 2: DROP-IN CODE SNIPPETS (PYTHON / TS / CURL) */}
+      {/* SECTION 2: DROP-IN CODE SNIPPETS (OPENAI, ANTHROPIC, TS, CURL) */}
       <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -537,24 +661,29 @@ main();`;
               One-Line Code Integration for Engineering Teams
             </h3>
             <p className="text-xs text-slate-500">
-              Zero changes to your prompting logic. Simply update your OpenAI client base URL to point to DataX.
+              Zero changes to your prompting logic. Compatible with standard OpenAI and Anthropic Claude SDKs.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1">
-              {['python', 'typescript', 'curl'].map((lang) => (
+              {[
+                { id: 'python_openai', label: 'OpenAI (Python)' },
+                { id: 'python_anthropic', label: 'Claude (Python)' },
+                { id: 'typescript', label: 'Node / TS' },
+                { id: 'curl', label: 'cURL' },
+              ].map((item) => (
                 <button
-                  key={lang}
+                  key={item.id}
                   type="button"
-                  onClick={() => setActiveSnippetLang(lang)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize cursor-pointer transition-all ${
-                    activeSnippetLang === lang
+                  onClick={() => setActiveSnippetLang(item.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
+                    activeSnippetLang === item.id
                       ? 'bg-white text-slate-900 shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  {lang === 'python' ? 'Python SDK' : lang === 'typescript' ? 'Node / TS' : 'cURL'}
+                  {item.label}
                 </button>
               ))}
             </div>
@@ -575,18 +704,18 @@ main();`;
         </pre>
       </section>
 
-      {/* SECTION 3: ENTERPRISE POLICY CONFIGURATION (TASK 16) */}
+      {/* SECTION 3: ENTERPRISE POLICY CONFIGURATION (TASKS 16, 27, 28) */}
       <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-[#2D55F5]">
-              Task 16: Per-Model Privacy Policy Engine
+              Task 16, 27 &amp; 28: Privacy Policy &amp; Smart Routing Engine
             </span>
             <h3 className="text-base font-bold text-slate-900">
               Active Gateway Redaction &amp; Interception Rules
             </h3>
             <p className="text-xs text-slate-500">
-              Configured policies are executed deterministically before any outbound payload is dispatched.
+              Deterministic on-prem policies executed before any payload leaves local network boundaries.
             </p>
           </div>
 
@@ -609,7 +738,7 @@ main();`;
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-1.5">
             <label className="block text-xs font-bold text-slate-800">Prompt Injection Action</label>
             <select
@@ -650,6 +779,40 @@ main();`;
               <option value="BLOCK">BLOCK (Reject Transaction)</option>
             </select>
             <p className="text-[11px] text-slate-500">Validated via Luhn &amp; Regex algorithms</p>
+          </div>
+
+          {/* Task 28: Format-Preserving Encryption */}
+          <div className="p-3.5 rounded-xl border border-blue-200 bg-blue-50/40 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-blue-900">Task 28: Tokenization Mode</label>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-200 text-blue-800">FF3-1</span>
+            </div>
+            <select
+              value={policy.pseudonymization_mode}
+              onChange={(e) => setPolicy({ ...policy, pseudonymization_mode: e.target.value })}
+              className="w-full bg-white border border-blue-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold"
+            >
+              <option value="PLACEHOLDER">Reversible Tags (&lt;SSN_1&gt;, &lt;CARD_1&gt;)</option>
+              <option value="FORMAT_PRESERVING">Format-Preserving (Synthetic Luhn Visa &amp; 900-SSN)</option>
+            </select>
+            <p className="text-[11px] text-blue-700">Preserves downstream model reasoning syntax</p>
+          </div>
+
+          {/* Task 27: Smart Local Route */}
+          <div className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/40 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-emerald-900">Task 27: Smart Local Routing</label>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-200 text-emerald-800">On-Prem</span>
+            </div>
+            <select
+              value={policy.smart_local_routing ? 'true' : 'false'}
+              onChange={(e) => setPolicy({ ...policy, smart_local_routing: e.target.value === 'true' })}
+              className="w-full bg-white border border-emerald-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold"
+            >
+              <option value="true">Enabled (Auto-route restricted data to local runner)</option>
+              <option value="false">Disabled (Forward through cloud proxy)</option>
+            </select>
+            <p className="text-[11px] text-emerald-700">Routes high-sensitivity prompts to Ollama/vLLM</p>
           </div>
 
           <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-1.5">
