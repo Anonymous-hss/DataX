@@ -84,6 +84,20 @@ from license_engine import (
 from gateway_benchmark import (
     run_gateway_load_benchmark,
 )
+from vault_connector import (
+    get_vault_health_status,
+    get_secret,
+)
+from rbac_engine import (
+    get_sso_config,
+    save_sso_config,
+    CANONICAL_ROLES,
+    ROLE_PERMISSIONS,
+    map_idp_claims_to_role,
+)
+from egress_block_test import (
+    run_egress_block_audit,
+)
 from sap_generator import DOMAIN_PACKS
 from connectors import test_database_connection, sample_table_data
 from pipeline import run_pipeline
@@ -2328,6 +2342,73 @@ def api_recommend_use_cases(req: UseCaseAdvisorRequest):
         return {"status": "success", "recommendations": blueprints, "count": len(blueprints)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Use-case recommendation failed: {str(e)}")
+
+
+# -----------------------------------------------------------------------------
+# Pillar 5: Customer-Managed Vault Connector (Task 14)
+# -----------------------------------------------------------------------------
+@app.get("/vault/status")
+def api_get_vault_status():
+    """Returns status of local customer vault (ENV / K8s Secrets / HashiCorp)."""
+    return get_vault_health_status()
+
+
+# -----------------------------------------------------------------------------
+# Pillar 6: Enterprise OIDC / SAML SSO & RBAC (Task 33)
+# -----------------------------------------------------------------------------
+@app.get("/sso/config")
+def api_get_sso_config():
+    """Returns enterprise SSO configuration with client_secret safely masked."""
+    return {"status": "success", "config": get_sso_config()}
+
+
+@app.post("/sso/config")
+def api_save_sso_config(req: Dict[str, Any] = Body(...)):
+    """Saves enterprise SSO configuration with IdP claim mappings."""
+    return save_sso_config(req)
+
+
+@app.get("/sso/roles")
+def api_get_sso_roles():
+    """Returns canonical roles and enterprise permissions matrix."""
+    return {
+        "status": "success",
+        "roles": CANONICAL_ROLES,
+        "permissions": ROLE_PERMISSIONS
+    }
+
+
+@app.post("/sso/simulate-login")
+def api_simulate_sso_login(req: Dict[str, Any] = Body(...)):
+    """Simulates enterprise IdP claim exchange and returns signed DataX session token."""
+    email = req.get("email", "auditor@enterprise.internal")
+    claims = req.get("claims", {})
+    mapped_role = map_idp_claims_to_role(claims)
+    
+    token = auth_engine._sign_jwt({
+        "id": f"sso_{int(time.time())}",
+        "email": email,
+        "fullName": email.split("@")[0].replace(".", " ").title(),
+        "role": mapped_role.lower().replace(" ", "_"),
+        "tenantId": "tenant_enterprise"
+    })
+    return {
+        "status": "success",
+        "message": f"SSO authentication successful. Mapped to canonical role '{mapped_role}'.",
+        "token": token,
+        "role": mapped_role,
+        "permissions": ROLE_PERMISSIONS.get(mapped_role, []),
+        "email": email
+    }
+
+
+# -----------------------------------------------------------------------------
+# Pillar 7: Automated Network Egress-Block Audit Engine (Task 31)
+# -----------------------------------------------------------------------------
+@app.post("/security/egress-test/run")
+def api_run_egress_test():
+    """Simulates an air-gapped network sandbox and audits zero-egress compliance."""
+    return run_egress_block_audit()
 
 
 if __name__ == "__main__":

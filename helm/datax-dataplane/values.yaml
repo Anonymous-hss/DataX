@@ -1,0 +1,93 @@
+# Default values for datax-dataplane.
+replicaCount: 2
+
+image:
+  repository: datax/dataplane-runner
+  pullPolicy: IfNotPresent
+  tag: "1.0.0"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: "datax-dataplane"
+
+serviceAccount:
+  create: true
+  name: "datax-dataplane-sa"
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  fsGroup: 10001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 8003
+  targetPort: 8003
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "64m"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: datax.internal
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: datax-dataplane-tls
+      hosts:
+        - datax.internal
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4096Mi
+  requests:
+    cpu: 500m
+    memory: 1024Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 75
+  targetMemoryUtilizationPercentage: 80
+
+env:
+  DATAX_ON_PREM_STRICT: "true"
+  DATAX_OFFLINE_MODE: "true"
+  DATAX_STORAGE_TYPE: "POSTGRES"
+  DATAX_POSTGRES_HOST: "postgres-service"
+  DATAX_POSTGRES_PORT: "5432"
+  DATAX_POSTGRES_DB: "datax"
+  DATAX_POSTGRES_USER: "datax"
+  DATAX_JWT_SECRET: "k8s-managed-enterprise-jwt-secret-at-least-32-chars-long"
+
+# Kubernetes Secrets Volume Mount (Task 14)
+vaultSecrets:
+  enabled: true
+  mountPath: "/var/run/secrets/datax"
+  secretName: "datax-enterprise-vault"
+
+probes:
+  liveness:
+    httpGet:
+      path: /health
+      port: 8003
+    initialDelaySeconds: 15
+    periodSeconds: 10
+  readiness:
+    httpGet:
+      path: /license/status
+      port: 8003
+    initialDelaySeconds: 5
+    periodSeconds: 5

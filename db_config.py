@@ -287,6 +287,23 @@ def init_all_storage_tables(uri: Optional[str] = None) -> Dict[str, Any]:
             installed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             is_active BOOLEAN DEFAULT TRUE
         );
+        """,
+        # Enterprise OIDC & SAML SSO Configuration (Task 33)
+        """
+        CREATE TABLE IF NOT EXISTS "datax_sso_config" (
+            config_id VARCHAR(64) PRIMARY KEY,
+            provider VARCHAR(32) DEFAULT 'AZURE_AD',
+            client_id VARCHAR(256),
+            client_secret VARCHAR(256),
+            issuer_url VARCHAR(512),
+            jwks_uri VARCHAR(512),
+            redirect_uri VARCHAR(512),
+            role_claim_name VARCHAR(64) DEFAULT 'roles',
+            role_mapping_json JSONB,
+            enabled BOOLEAN DEFAULT FALSE,
+            enforce_sso_only BOOLEAN DEFAULT FALSE,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
         """
     ]
 
