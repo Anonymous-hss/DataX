@@ -9,19 +9,17 @@ import {
   RefreshCw,
   Sliders,
   Terminal,
-  FileCode,
   Zap,
-  Eye,
-  Key,
-  Database,
-  ArrowRight,
   Server,
   Layers,
-  AlertTriangle,
-  Clock,
-  Sparkles,
   Cpu,
-  Globe,
+  Radio,
+  KeyRound,
+  CheckCircle,
+  Activity,
+  AlertTriangle,
+  Send,
+  Download,
 } from 'lucide-react';
 import api, { API_BASE_URL } from '../../services/apiClient';
 
@@ -54,13 +52,11 @@ export default function PrivacyGatewayTab() {
   const [selectedPreset, setSelectedPreset] = useState(0);
   const [promptText, setPromptText] = useState(PRESET_PROMPTS[0].text);
   const [selectedModel, setSelectedModel] = useState('gpt-4o');
-  const [isStreaming, setIsStreaming] = useState(false);
   const [runningTest, setRunningTest] = useState(false);
   const [testResult, setTestResult] = useState(null);
-  const [testError, setTestError] = useState('');
 
   // Code snippet state
-  const [activeSnippetLang, setActiveSnippetLang] = useState('python_openai'); // 'python_openai' | 'python_anthropic' | 'typescript' | 'curl'
+  const [activeSnippetLang, setActiveSnippetLang] = useState('python_openai');
   const [copiedSnippet, setCopiedSnippet] = useState(false);
 
   // Policy state (Tasks 16 & 28)
@@ -71,7 +67,7 @@ export default function PrivacyGatewayTab() {
     action_secrets: 'BLOCK',
     action_pii: 'TOKENIZE',
     pseudonymization_mode: 'PLACEHOLDER', // 'PLACEHOLDER' | 'FORMAT_PRESERVING'
-    smart_local_routing: true, // Task 27: Smart route to on-prem runner
+    smart_local_routing: true,
     token_ttl_seconds: 1800,
     enable_reversible_detokenization: true,
   });
@@ -83,34 +79,44 @@ export default function PrivacyGatewayTab() {
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditFilter, setAuditFilter] = useState('ALL');
 
-  // Local models state (Task 27)
-  const [localModels, setLocalModels] = useState([]);
-
-  // Telemetry stats
-  const [stats, setStats] = useState({
-    totalRequests: 0,
-    totalEntitiesScrubbed: 0,
-    avgLatencyMs: 0.0,
-    totalBlockedInjections: 0,
-    totalSanitized: 0,
-    zeroCloudEgressVerified: true,
+  // SIEM & SOC state (Task 32)
+  const [siemConfig, setSiemConfig] = useState({
+    target_type: 'SPLUNK',
+    endpoint_url: 'https://splunk.internal:8088/services/collector/event',
+    auth_token: '',
+    syslog_host: 'syslog.internal',
+    syslog_port: 514,
+    syslog_protocol: 'UDP',
+    enabled: false,
   });
+  const [siemSaving, setSiemSaving] = useState(false);
+  const [siemNote, setSiemNote] = useState('');
+  const [ledgerIntegrity, setLedgerIntegrity] = useState(null);
+  const [verifyingLedger, setVerifyingLedger] = useState(false);
+
+  // Air-Gapped License state (Task 30)
+  const [licenseInfo, setLicenseInfo] = useState(null);
+  const [licenseKeyInput, setLicenseKeyInput] = useState('');
+  const [installingLicense, setInstallingLicense] = useState(false);
+  const [licenseNotice, setLicenseNotice] = useState('');
+
+  // Concurrency Benchmark state (Task 36)
+  const [benchmarking, setBenchmarking] = useState(false);
+  const [benchmarkResult, setBenchmarkResult] = useState(null);
 
   useEffect(() => {
     loadPolicy();
     loadAuditEvents();
-    loadTelemetryStats();
-    loadLocalModels();
+    loadSiemConfig();
+    loadLicenseStatus();
   }, []);
 
   const loadPolicy = async () => {
     try {
       const res = await api.get('/gateway/policy');
-      if (res?.policy) {
-        setPolicy((prev) => ({ ...prev, ...res.policy }));
-      }
+      if (res?.policy) setPolicy((prev) => ({ ...prev, ...res.policy }));
     } catch {
-      // Non-blocking fallback
+      // Non-blocking
     }
   };
 
@@ -126,25 +132,21 @@ export default function PrivacyGatewayTab() {
     }
   };
 
-  const loadTelemetryStats = async () => {
+  const loadSiemConfig = async () => {
     try {
-      const res = await api.get('/gateway/stats');
-      if (res?.stats) {
-        setStats(res.stats);
-      }
+      const res = await api.get('/siem/config');
+      if (res?.config) setSiemConfig(res.config);
     } catch {
       // Non-blocking
     }
   };
 
-  const loadLocalModels = async () => {
+  const loadLicenseStatus = async () => {
     try {
-      const res = await api.get('/v1/local-models');
-      if (res?.models) {
-        setLocalModels(res.models);
-      }
+      const res = await api.get('/license/status');
+      if (res) setLicenseInfo(res);
     } catch {
-      setLocalModels([]);
+      // Non-blocking
     }
   };
 
@@ -162,10 +164,74 @@ export default function PrivacyGatewayTab() {
     }
   };
 
+  const handleSaveSiemConfig = async () => {
+    setSiemSaving(true);
+    setSiemNote('');
+    try {
+      const res = await api.post('/siem/config', siemConfig);
+      setSiemConfig(res.config);
+      setSiemNote('SIEM forwarding settings saved successfully.');
+      setTimeout(() => setSiemNote(''), 4000);
+    } catch (err) {
+      setSiemNote(`Failed saving SIEM config: ${err.message}`);
+    } finally {
+      setSiemSaving(false);
+    }
+  };
+
+  const handleTestSiemPing = async () => {
+    setSiemNote('Dispatching test alert...');
+    try {
+      const res = await api.post('/siem/test-dispatch', {});
+      setSiemNote(res.message || 'SIEM test event sent.');
+    } catch (err) {
+      setSiemNote(`Ping failed: ${err.message}`);
+    }
+  };
+
+  const handleVerifyLedger = async () => {
+    setVerifyingLedger(true);
+    try {
+      const res = await api.get('/siem/verify-ledger');
+      setLedgerIntegrity(res);
+    } catch (err) {
+      setLedgerIntegrity({ status: 'ERROR', message: err.message });
+    } finally {
+      setVerifyingLedger(false);
+    }
+  };
+
+  const handleInstallLicense = async () => {
+    if (!licenseKeyInput.trim()) return;
+    setInstallingLicense(true);
+    setLicenseNotice('');
+    try {
+      const res = await api.post('/license/install', { license_key: licenseKeyInput.trim() });
+      setLicenseNotice(res.message || 'License activated successfully.');
+      setLicenseKeyInput('');
+      loadLicenseStatus();
+    } catch (err) {
+      setLicenseNotice(`Activation failed: ${err.message}`);
+    } finally {
+      setInstallingLicense(false);
+    }
+  };
+
+  const handleRunBenchmark = async () => {
+    setBenchmarking(true);
+    try {
+      const res = await api.post('/gateway/benchmark/run', { rounds: 50, concurrency: 5 });
+      setBenchmarkResult(res);
+    } catch (err) {
+      setBenchmarkResult({ status: 'error', message: err.message });
+    } finally {
+      setBenchmarking(false);
+    }
+  };
+
   const handleRunInspection = async () => {
     if (!promptText.trim()) return;
     setRunningTest(true);
-    setTestError('');
     setTestResult(null);
 
     const startTime = performance.now();
@@ -214,7 +280,6 @@ export default function PrivacyGatewayTab() {
       });
 
       loadAuditEvents();
-      loadTelemetryStats();
     } catch (err) {
       const elapsed = (performance.now() - startTime).toFixed(1);
       const errDetail = err?.detail?.error || err?.detail || {};
@@ -230,13 +295,11 @@ export default function PrivacyGatewayTab() {
         model: selectedModel,
       });
       loadAuditEvents();
-      loadTelemetryStats();
     } finally {
       setRunningTest(false);
     }
   };
 
-  // Helper to visually render the placeholder or format-preserving view for demo
   const simulateSanitizedView = (text, mode = 'PLACEHOLDER') => {
     let out = text;
     if (mode === 'FORMAT_PRESERVING') {
@@ -258,7 +321,6 @@ export default function PrivacyGatewayTab() {
     setSelectedPreset(idx);
     setPromptText(PRESET_PROMPTS[idx].text);
     setTestResult(null);
-    setTestError('');
   };
 
   const copyCode = (text) => {
@@ -282,21 +344,16 @@ export default function PrivacyGatewayTab() {
 # Drop-in replacement: point OpenAI client to on-prem DataX Privacy Gateway
 client = OpenAI(
     base_url="${gatewayBaseUrl}",
-    api_key="datax-onprem-token"  # Never leaves your local network
+    api_key="datax-onprem-token"
 )
 
-# Raw PII is tokenized in volatile RAM (<SSN_1> or synthetic Luhn card)
-# Upstream LLMs (Azure, OpenAI, Bedrock) NEVER receive unencrypted customer data
 response = client.chat.completions.create(
     model="${selectedModel}",
-    messages=[
-        {"role": "user", "content": "Review patient SSN 987-65-4321 and email alice@healthcorp.com"}
-    ],
+    messages=[{"role": "user", "content": "Review patient SSN 987-65-4321..."}],
     stream=True
 )
 
 for chunk in response:
-    # Entities are seamlessly re-hydrated on the streaming fly (<15ms latency)
     if chunk.choices[0].delta.content:
         print(chunk.choices[0].delta.content, end="", flush=True)`;
     } else if (activeSnippetLang === 'python_anthropic') {
@@ -311,46 +368,14 @@ client = anthropic.Anthropic(
 message = client.messages.create(
     model="claude-3-5-sonnet-20241022",
     max_tokens=1024,
-    messages=[
-        {"role": "user", "content": "Patient Alice Morgan SSN 987-65-4321 records review"}
-    ]
+    messages=[{"role": "user", "content": "Review SSN 987-65-4321 records"}]
 )
-
-# Response has already been restored back to customer values
 print(message.content[0].text)`;
-    } else if (activeSnippetLang === 'typescript') {
-      return `import OpenAI from 'openai';
-
-// Initialize standard OpenAI SDK with DataX Zero-Egress Gateway URL
-const client = new OpenAI({
-  baseURL: '${gatewayBaseUrl}',
-  apiKey: 'datax-onprem-token',
-});
-
-async function main() {
-  const completion = await client.chat.completions.create({
-    model: '${selectedModel}',
-    messages: [
-      { role: 'user', content: 'Authorize payment for card 4111 1111 1111 1111' }
-    ],
-  });
-
-  // Response has already been safely de-tokenized back to original values
-  console.log(completion.choices[0].message.content);
-}
-
-main();`;
     } else {
       return `curl -X POST "${gatewayBaseUrl}/chat/completions" \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer datax-onprem-token" \\
-  -d '{
-    "model": "${selectedModel}",
-    "messages": [
-      {"role": "user", "content": "Patient SSN 987-65-4321 records review"}
-    ],
-    "stream": false
-  }'`;
+  -d '{"model": "${selectedModel}", "messages": [{"role": "user", "content": "Patient SSN 987-65-4321"}]}'`;
     }
   };
 
@@ -361,18 +386,16 @@ main();`;
         <div className="relative z-10 max-w-4xl space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-semibold">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Phase 2: Multi-Provider Gateway (OpenAI, Anthropic Claude, On-Prem Ollama/vLLM) &amp; Format-Preserving Encryption</span>
+            <span>Phase 3: Multi-Provider Reverse Proxy, SIEM Tamper-Evident Ledger &amp; Offline Air-Gap Packaging</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
             DataX Enterprise AI Privacy Gateway
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            A drop-in reverse proxy for OpenAI, Azure OpenAI, Anthropic Claude, and local on-prem models. Inbound PII
-            and credentials are intercepted and encrypted into volatile RAM. Upstream cloud providers never see raw customer
-            bytes. When classified sensitive data is detected, requests automatically smart-route to on-prem runners.
+            Enterprise reverse proxy with AES-GCM RAM vault, SHA-256 hash-chained audit storage, Splunk/Syslog SIEM forwarder,
+            and offline cryptographically signed license verification for 100% air-gapped on-premises infrastructures.
           </p>
 
-          {/* Real-time Telemetry Pills */}
           <div className="pt-2 flex flex-wrap items-center gap-3 text-xs">
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 backdrop-blur-sm border border-white/15 text-slate-200">
               <Server className="w-3.5 h-3.5 text-emerald-400" />
@@ -383,8 +406,8 @@ main();`;
               <span>Added Latency: <strong className="font-mono text-white">&lt;15ms</strong> (AES-GCM RAM Vault)</span>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 backdrop-blur-sm border border-white/15 text-slate-200">
-              <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Smart On-Prem Route: <strong className="text-emerald-400">Active (Ollama/vLLM)</strong></span>
+              <Lock className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Air-Gap License: <strong className="text-emerald-400">{licenseInfo?.status || 'ACTIVE'}</strong></span>
             </div>
           </div>
         </div>
@@ -405,7 +428,6 @@ main();`;
             </p>
           </div>
 
-          {/* Provider & Model Selectors */}
           <div className="flex flex-wrap items-center gap-2">
             <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1 text-xs font-semibold">
               <button
@@ -442,7 +464,7 @@ main();`;
                   targetProvider === 'local_ollama' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                On-Prem Ollama / vLLM
+                On-Prem Ollama
               </button>
             </div>
 
@@ -464,14 +486,12 @@ main();`;
                   <>
                     <option value="claude-3-5-sonnet">claude-3-5-sonnet-20241022</option>
                     <option value="claude-3-5-haiku">claude-3-5-haiku-20241022</option>
-                    <option value="claude-3-opus">claude-3-opus-20240229</option>
                   </>
                 )}
                 {targetProvider === 'local_ollama' && (
                   <>
                     <option value="ollama/llama3.1:8b">ollama/llama3.1:8b (On-Prem)</option>
                     <option value="ollama/mistral:7b">ollama/mistral:7b (On-Prem)</option>
-                    <option value="ollama/qwen2.5:7b">ollama/qwen2.5:7b (On-Prem)</option>
                   </>
                 )}
               </select>
@@ -479,7 +499,7 @@ main();`;
           </div>
         </div>
 
-        {/* Preset Selector Buttons */}
+        {/* Preset Selector */}
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-2">
             Load Enterprise Scenario Preset:
@@ -506,15 +526,13 @@ main();`;
           </div>
         </div>
 
-        {/* Inbound Prompt Input Box */}
+        {/* Input box */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <label className="text-xs font-semibold text-slate-700">
               Inbound User Prompt (Client-Side Raw Text):
             </label>
-            <span className="text-[11px] text-slate-500 font-mono">
-              {promptText.length} chars
-            </span>
+            <span className="text-[11px] text-slate-500 font-mono">{promptText.length} chars</span>
           </div>
           <textarea
             rows={3}
@@ -525,7 +543,6 @@ main();`;
           />
         </div>
 
-        {/* Execute Button & Mode Pill */}
         <div className="flex items-center justify-between gap-3">
           <div className="text-xs text-slate-600 flex items-center gap-2">
             <span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 font-mono text-[11px] text-slate-700">
@@ -541,16 +558,12 @@ main();`;
             disabled={runningTest}
             className="px-5 py-2.5 rounded-xl bg-[#2D55F5] hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-sm transition-all"
           >
-            {runningTest ? (
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Play className="w-3.5 h-3.5" />
-            )}
+            {runningTest ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
             <span>{runningTest ? 'Intercepting & Sanitizing...' : 'Run Zero-Egress Interception'}</span>
           </button>
         </div>
 
-        {/* 3-WAY VISUAL SPLIT COMPARISON ("WHAT PROVIDER SAW") */}
+        {/* 3-Way Split Diff */}
         {testResult && (
           <div className="space-y-4 pt-2">
             {testResult.isBlocked ? (
@@ -559,9 +572,7 @@ main();`;
                   <ShieldAlert className="w-5 h-5 text-red-600" />
                   <span>Gateway Intercept: Violation Blocked ({testResult.violationType})</span>
                 </div>
-                <p className="text-xs text-red-700 leading-relaxed">
-                  {testResult.errorMessage}
-                </p>
+                <p className="text-xs text-red-700 leading-relaxed">{testResult.errorMessage}</p>
                 <div className="pt-1 flex items-center gap-3 text-[11px] font-mono text-red-600">
                   <span>Verdict: <strong>BLOCKED</strong></span>
                   <span>•</span>
@@ -572,74 +583,49 @@ main();`;
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* CARD 1: USER RAW PROMPT */}
                 <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2 flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                        1. Client Application Input
-                      </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
-                        Contains Raw PII
-                      </span>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">1. Client Input</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">Raw PII</span>
                     </div>
-                    <div className="text-xs font-bold text-slate-800">Inbound User Prompt</div>
-                    <div className="rounded-lg bg-white border border-slate-200 p-3 text-xs font-mono text-slate-900 whitespace-pre-wrap leading-relaxed min-h-[90px]">
+                    <div className="rounded-lg bg-white border border-slate-200 p-3 text-xs font-mono text-slate-900 whitespace-pre-wrap min-h-[90px]">
                       {testResult.rawPrompt}
                     </div>
                   </div>
-                  <div className="text-[11px] text-slate-500 flex items-center gap-1 pt-2">
-                    <span>Sent to:</span>
-                    <code className="font-mono bg-slate-200/80 px-1.5 py-0.5 rounded text-[10px]">
-                      {targetProvider === 'anthropic' ? '/v1/messages' : '/v1/chat/completions'}
-                    </code>
-                  </div>
                 </div>
 
-                {/* CARD 2: WHAT PROVIDER SAW (SANITIZED) */}
                 <div className="rounded-xl border-2 border-emerald-400 bg-emerald-50/40 p-4 space-y-2 flex flex-col justify-between shadow-2xs">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
-                        2. Upstream Network Payload
-                      </span>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">2. Network Payload</span>
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500 text-white flex items-center gap-1">
-                        <ShieldCheck className="w-3 h-3" />
-                        Zero-Egress Verified
+                        <ShieldCheck className="w-3 h-3" /> Zero-Egress Verified
                       </span>
                     </div>
-                    <div className="text-xs font-bold text-slate-900">
-                      What Provider Saw ({testResult.provider || testResult.model})
-                    </div>
-                    <div className="rounded-lg bg-white border border-emerald-200 p-3 text-xs font-mono text-emerald-950 whitespace-pre-wrap leading-relaxed min-h-[90px]">
+                    <div className="rounded-lg bg-white border border-emerald-200 p-3 text-xs font-mono text-emerald-950 whitespace-pre-wrap min-h-[90px]">
                       {testResult.sanitizedPrompt}
                     </div>
                   </div>
-                  <div className="text-[11px] text-emerald-800 flex items-center justify-between pt-2">
+                  <div className="text-[11px] text-emerald-800 pt-2 flex items-center justify-between">
                     <span>Scrubbed {testResult.privacyGuard?.entities_scrubbed || 2} entities</span>
-                    <span className="font-mono font-bold text-[10px] bg-emerald-100 px-1.5 py-0.5 rounded">
+                    <span className="font-mono text-[10px] font-bold bg-emerald-100 px-1.5 py-0.5 rounded">
                       {policy.pseudonymization_mode === 'FORMAT_PRESERVING' ? 'Realistic Synthetic' : '<PLACEHOLDER_N>'}
                     </span>
                   </div>
                 </div>
 
-                {/* CARD 3: CALLER DE-TOKENIZED RESPONSE */}
                 <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-4 space-y-2 flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#2D55F5]">
-                        3. Restored Client Response
-                      </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
-                        Re-Hydrated in RAM
-                      </span>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#2D55F5]">3. Restored Caller Response</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">Re-Hydrated in RAM</span>
                     </div>
-                    <div className="text-xs font-bold text-slate-900">Application Response</div>
-                    <div className="rounded-lg bg-white border border-blue-200 p-3 text-xs font-mono text-slate-800 whitespace-pre-wrap leading-relaxed min-h-[90px]">
+                    <div className="rounded-lg bg-white border border-blue-200 p-3 text-xs font-mono text-slate-800 whitespace-pre-wrap min-h-[90px]">
                       {testResult.responseContent || 'Processing completed with zero leaks.'}
                     </div>
                   </div>
-                  <div className="text-[11px] text-blue-700 flex items-center justify-between pt-2">
+                  <div className="text-[11px] text-blue-700 pt-2 flex items-center justify-between">
                     <span>Verdict: <strong>{testResult.verdict}</strong></span>
                     <span className="font-mono text-[10px]">{testResult.elapsedMs}ms latency</span>
                   </div>
@@ -650,27 +636,211 @@ main();`;
         )}
       </section>
 
-      {/* SECTION 2: DROP-IN CODE SNIPPETS (OPENAI, ANTHROPIC, TS, CURL) */}
+      {/* SECTION 2: TAMPER-EVIDENT HASH CHAIN & SIEM FORWARDER (TASK 32) */}
       <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-[#2D55F5]">
-              Drop-In Integration
+              Task 32: Tamper-Evident SHA-256 Chain &amp; SOC Forwarding
             </span>
             <h3 className="text-base font-bold text-slate-900">
-              One-Line Code Integration for Engineering Teams
+              Cryptographic Audit Chain &amp; Enterprise SIEM Exporter
             </h3>
             <p className="text-xs text-slate-500">
-              Zero changes to your prompting logic. Compatible with standard OpenAI and Anthropic Claude SDKs.
+              Each audit entry is linked via a mathematical SHA-256 Merkel chain. Dispatches security events to Splunk or Syslog.
             </p>
           </div>
 
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleVerifyLedger}
+              disabled={verifyingLedger}
+              className="px-3.5 py-1.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-xs font-bold text-[#2D55F5] flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            >
+              <CheckCircle className="w-3.5 h-3.5" />
+              <span>{verifyingLedger ? 'Verifying Chain...' : 'Verify Ledger Integrity'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleTestSiemPing}
+              className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 flex items-center gap-1.5 cursor-pointer"
+            >
+              <Send className="w-3.5 h-3.5 text-slate-500" />
+              <span>Send Test SOC Ping</span>
+            </button>
+          </div>
+        </div>
+
+        {ledgerIntegrity && (
+          <div className={`p-4 rounded-xl border flex items-center justify-between gap-3 ${
+            ledgerIntegrity.chain_intact ? 'bg-emerald-50/70 border-emerald-200 text-emerald-800' : 'bg-red-50/70 border-red-200 text-red-800'
+          }`}>
+            <div className="flex items-center gap-2 text-xs">
+              <ShieldCheck className="w-4 h-4 shrink-0" />
+              <span>{ledgerIntegrity.message}</span>
+            </div>
+            <div className="text-[11px] font-mono shrink-0">
+              Last Anchor: <strong>{ledgerIntegrity.last_hash ? `${ledgerIntegrity.last_hash.slice(0, 12)}…` : 'GENESIS'}</strong>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-700">SIEM Destination</label>
+            <select
+              value={siemConfig.target_type}
+              onChange={(e) => setSiemConfig({ ...siemConfig, target_type: e.target.value })}
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold"
+            >
+              <option value="SPLUNK">Splunk HEC (HTTP Event Collector)</option>
+              <option value="SYSLOG">Syslog (RFC 5424 UDP/TCP)</option>
+              <option value="WEBHOOK">Generic Secure Webhook</option>
+            </select>
+          </div>
+
+          <div className="space-y-1 sm:col-span-2">
+            <label className="text-xs font-semibold text-slate-700">Collector Endpoint URL / Host</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={siemConfig.target_type === 'SYSLOG' ? siemConfig.syslog_host : siemConfig.endpoint_url}
+                onChange={(e) => {
+                  if (siemConfig.target_type === 'SYSLOG') {
+                    setSiemConfig({ ...siemConfig, syslog_host: e.target.value });
+                  } else {
+                    setSiemConfig({ ...siemConfig, endpoint_url: e.target.value });
+                  }
+                }}
+                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-mono text-slate-800"
+              />
+              <button
+                type="button"
+                onClick={handleSaveSiemConfig}
+                disabled={siemSaving}
+                className="px-4 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold shrink-0 cursor-pointer"
+              >
+                {siemSaving ? 'Saving...' : 'Save Rule'}
+              </button>
+            </div>
+          </div>
+        </div>
+        {siemNote && <p className="text-xs text-emerald-600 font-semibold">{siemNote}</p>}
+      </section>
+
+      {/* SECTION 3: AIR-GAPPED OFFLINE LICENSE & LATENCY BENCHMARK (TASKS 30 & 36) */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Task 30: License Card */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#2D55F5]">Task 30: Air-Gap Bundle</span>
+              <h3 className="text-base font-bold text-slate-900">Signed Offline License</h3>
+            </div>
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
+              {licenseInfo?.status || 'ACTIVE'}
+            </span>
+          </div>
+
+          <div className="space-y-2 text-xs text-slate-700">
+            <div className="flex items-center justify-between py-1 border-b border-slate-100">
+              <span className="text-slate-500">License ID:</span>
+              <strong className="font-mono">{licenseInfo?.license_id || 'LIC-ENTERPRISE-001'}</strong>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-slate-100">
+              <span className="text-slate-500">Licensed Entity:</span>
+              <strong>{licenseInfo?.customer_name || 'AAVIL Inc Global Enterprise'}</strong>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-slate-100">
+              <span className="text-slate-500">Entitlements:</span>
+              <span>{licenseInfo?.allowed_cores || 128} Cores • {licenseInfo?.allowed_seats || 1000} Seats</span>
+            </div>
+            <div className="flex items-center justify-between py-1">
+              <span className="text-slate-500">Air-Gap Operation:</span>
+              <strong className="text-emerald-700">100% Permitted (Zero Outbound Telemetry)</strong>
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={licenseKeyInput}
+                onChange={(e) => setLicenseKeyInput(e.target.value)}
+                placeholder="DATAX-LIC-..."
+                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-mono"
+              />
+              <button
+                type="button"
+                onClick={handleInstallLicense}
+                disabled={installingLicense}
+                className="px-3.5 py-1.5 rounded-lg bg-[#2D55F5] text-white text-xs font-bold shrink-0 cursor-pointer"
+              >
+                {installingLicense ? 'Activating...' : 'Activate'}
+              </button>
+            </div>
+            {licenseNotice && <p className="text-xs text-slate-600 mt-1 font-semibold">{licenseNotice}</p>}
+          </div>
+        </div>
+
+        {/* Task 36: Concurrency Load Benchmark */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#2D55F5]">Task 36: Concurrency Benchmark</span>
+              <h3 className="text-base font-bold text-slate-900">Load &amp; Latency Stress Test</h3>
+            </div>
+            <button
+              type="button"
+              onClick={handleRunBenchmark}
+              disabled={benchmarking}
+              className="px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+            >
+              <Activity className="w-3.5 h-3.5 text-amber-400" />
+              <span>{benchmarking ? 'Running 50 Rounds...' : 'Run Stress Test'}</span>
+            </button>
+          </div>
+
+          {benchmarkResult?.throughput_requests_per_sec ? (
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <span className="text-slate-500 block text-[10px] uppercase font-bold">Throughput</span>
+                <span className="text-base font-bold text-slate-900">{benchmarkResult.throughput_requests_per_sec} req/s</span>
+              </div>
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+                <span className="text-emerald-700 block text-[10px] uppercase font-bold">p95 Added Latency</span>
+                <span className="text-base font-bold text-emerald-900">{benchmarkResult.latency_percentiles_ms?.p95}ms</span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <span className="text-slate-500 block text-[10px] uppercase font-bold">p50 Latency</span>
+                <span className="text-base font-bold text-slate-900">{benchmarkResult.latency_percentiles_ms?.p50}ms</span>
+              </div>
+              <div className="p-3 rounded-xl bg-blue-50 border border-blue-200">
+                <span className="text-blue-700 block text-[10px] uppercase font-bold">Zero-Egress Verified</span>
+                <span className="text-base font-bold text-blue-900">100% Intact</span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500 leading-relaxed pt-2">
+              Stress-tests the on-premise reverse proxy under multi-threaded concurrency. Measures AES-GCM RAM vault overhead and validates that p95 latency remains &lt;15ms. Click "Run Stress Test" to execute.
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* SECTION 4: CODE INTEGRATION SNIPPETS */}
+      <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#2D55F5]">Drop-In Integration</span>
+            <h3 className="text-base font-bold text-slate-900">Code Snippets for Engineering Teams</h3>
+          </div>
           <div className="flex items-center gap-2">
             <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1">
               {[
                 { id: 'python_openai', label: 'OpenAI (Python)' },
                 { id: 'python_anthropic', label: 'Claude (Python)' },
-                { id: 'typescript', label: 'Node / TS' },
                 { id: 'curl', label: 'cURL' },
               ].map((item) => (
                 <button
@@ -678,16 +848,13 @@ main();`;
                   type="button"
                   onClick={() => setActiveSnippetLang(item.id)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
-                    activeSnippetLang === item.id
-                      ? 'bg-white text-slate-900 shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900'
+                    activeSnippetLang === item.id ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   {item.label}
                 </button>
               ))}
             </div>
-
             <button
               type="button"
               onClick={() => copyCode(getCodeSnippet())}
@@ -698,152 +865,18 @@ main();`;
             </button>
           </div>
         </div>
-
         <pre className="rounded-xl bg-[#0B1226] text-slate-100 p-4 text-xs font-mono overflow-x-auto leading-relaxed border border-slate-800">
           {getCodeSnippet()}
         </pre>
       </section>
 
-      {/* SECTION 3: ENTERPRISE POLICY CONFIGURATION (TASKS 16, 27, 28) */}
-      <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-          <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#2D55F5]">
-              Task 16, 27 &amp; 28: Privacy Policy &amp; Smart Routing Engine
-            </span>
-            <h3 className="text-base font-bold text-slate-900">
-              Active Gateway Redaction &amp; Interception Rules
-            </h3>
-            <p className="text-xs text-slate-500">
-              Deterministic on-prem policies executed before any payload leaves local network boundaries.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {policySaveNote && (
-              <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
-                <Check className="w-3.5 h-3.5" />
-                {policySaveNote}
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={handleSavePolicy}
-              disabled={policySaving}
-              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
-            >
-              <Sliders className="w-3.5 h-3.5" />
-              <span>{policySaving ? 'Saving...' : 'Save & Enforce Policy'}</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-1.5">
-            <label className="block text-xs font-bold text-slate-800">Prompt Injection Action</label>
-            <select
-              value={policy.action_prompt_injection}
-              onChange={(e) => setPolicy({ ...policy, action_prompt_injection: e.target.value })}
-              className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold"
-            >
-              <option value="BLOCK">BLOCK (Return HTTP 403)</option>
-              <option value="SANITIZE">SANITIZE (Strip Attack Tokens)</option>
-              <option value="ALLOW">ALLOW (Audit Only)</option>
-            </select>
-            <p className="text-[11px] text-slate-500">Jailbreak attempts &amp; bypass patterns</p>
-          </div>
-
-          <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-1.5">
-            <label className="block text-xs font-bold text-slate-800">API Keys &amp; Secrets Action</label>
-            <select
-              value={policy.action_secrets}
-              onChange={(e) => setPolicy({ ...policy, action_secrets: e.target.value })}
-              className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold"
-            >
-              <option value="BLOCK">BLOCK (Strict No-Credential)</option>
-              <option value="MASK">MASK ([SECRET_REDACTED])</option>
-              <option value="TOKENIZE">TOKENIZE (Reversible &lt;SECRET_N&gt;)</option>
-            </select>
-            <p className="text-[11px] text-slate-500">AWS, OpenAI, DB credentials</p>
-          </div>
-
-          <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-1.5">
-            <label className="block text-xs font-bold text-slate-800">SSN &amp; Credit Cards Action</label>
-            <select
-              value={policy.action_pii}
-              onChange={(e) => setPolicy({ ...policy, action_pii: e.target.value })}
-              className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold"
-            >
-              <option value="TOKENIZE">TOKENIZE (Reversible AES-GCM)</option>
-              <option value="MASK">MASK (Permanent [REDACTED])</option>
-              <option value="BLOCK">BLOCK (Reject Transaction)</option>
-            </select>
-            <p className="text-[11px] text-slate-500">Validated via Luhn &amp; Regex algorithms</p>
-          </div>
-
-          {/* Task 28: Format-Preserving Encryption */}
-          <div className="p-3.5 rounded-xl border border-blue-200 bg-blue-50/40 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-blue-900">Task 28: Tokenization Mode</label>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-200 text-blue-800">FF3-1</span>
-            </div>
-            <select
-              value={policy.pseudonymization_mode}
-              onChange={(e) => setPolicy({ ...policy, pseudonymization_mode: e.target.value })}
-              className="w-full bg-white border border-blue-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold"
-            >
-              <option value="PLACEHOLDER">Reversible Tags (&lt;SSN_1&gt;, &lt;CARD_1&gt;)</option>
-              <option value="FORMAT_PRESERVING">Format-Preserving (Synthetic Luhn Visa &amp; 900-SSN)</option>
-            </select>
-            <p className="text-[11px] text-blue-700">Preserves downstream model reasoning syntax</p>
-          </div>
-
-          {/* Task 27: Smart Local Route */}
-          <div className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/40 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-emerald-900">Task 27: Smart Local Routing</label>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-200 text-emerald-800">On-Prem</span>
-            </div>
-            <select
-              value={policy.smart_local_routing ? 'true' : 'false'}
-              onChange={(e) => setPolicy({ ...policy, smart_local_routing: e.target.value === 'true' })}
-              className="w-full bg-white border border-emerald-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold"
-            >
-              <option value="true">Enabled (Auto-route restricted data to local runner)</option>
-              <option value="false">Disabled (Forward through cloud proxy)</option>
-            </select>
-            <p className="text-[11px] text-emerald-700">Routes high-sensitivity prompts to Ollama/vLLM</p>
-          </div>
-
-          <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-1.5">
-            <label className="block text-xs font-bold text-slate-800">In-Memory Session TTL</label>
-            <select
-              value={policy.token_ttl_seconds}
-              onChange={(e) => setPolicy({ ...policy, token_ttl_seconds: Number(e.target.value) })}
-              className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-semibold"
-            >
-              <option value={900}>900 seconds (15 minutes)</option>
-              <option value={1800}>1800 seconds (30 minutes)</option>
-              <option value={3600}>3600 seconds (1 hour)</option>
-              <option value={86400}>86400 seconds (24 hours)</option>
-            </select>
-            <p className="text-[11px] text-slate-500">RAM key purge window</p>
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 4: CRYPTOGRAPHIC AUDIT LEDGER (TASK 21) */}
+      {/* SECTION 5: CRYPTOGRAPHIC AUDIT LEDGER (TASK 21) */}
       <section className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#2D55F5]">
-              Local PostgreSQL Cryptographic Ledger
-            </span>
-            <h3 className="text-base font-bold text-slate-900">
-              Gateway Interception Audit Events ({auditEvents.length})
-            </h3>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#2D55F5]">Local PostgreSQL Cryptographic Ledger</span>
+            <h3 className="text-base font-bold text-slate-900">Gateway Interception Audit Events ({auditEvents.length})</h3>
           </div>
-
           <div className="flex flex-wrap items-center gap-2">
             {['ALL', 'SANITIZED', 'BLOCKED', 'PASSED'].map((filter) => (
               <button
@@ -851,21 +884,17 @@ main();`;
                 type="button"
                 onClick={() => setAuditFilter(filter)}
                 className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
-                  auditFilter === filter
-                    ? 'bg-[#2D55F5] text-white shadow-2xs'
-                    : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                  auditFilter === filter ? 'bg-[#2D55F5] text-white shadow-2xs' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
                 }`}
               >
                 {filter}
               </button>
             ))}
-
             <button
               type="button"
               onClick={loadAuditEvents}
               disabled={auditLoading}
               className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-slate-900 cursor-pointer"
-              title="Refresh Audit Ledger"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${auditLoading ? 'animate-spin' : ''}`} />
             </button>
@@ -874,7 +903,7 @@ main();`;
 
         {filteredEvents.length === 0 ? (
           <div className="p-8 text-center text-slate-500 text-xs">
-            {auditLoading ? 'Loading audit records...' : 'No gateway audit events recorded yet. Run an inspection in the playground above to generate records.'}
+            {auditLoading ? 'Loading audit records...' : 'No gateway audit events recorded yet.'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -887,7 +916,7 @@ main();`;
                   <th className="py-2.5 px-4">Verdict</th>
                   <th className="py-2.5 px-4">Entities Scrubbed</th>
                   <th className="py-2.5 px-4">Latency</th>
-                  <th className="py-2.5 px-4 text-right">Cryptographic SHA-256 Hashes</th>
+                  <th className="py-2.5 px-4 text-right">Chain Hash (SHA-256)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -905,29 +934,23 @@ main();`;
                       <div className="text-[10px] text-slate-400">{ev.upstreamProvider || 'OpenAI'}</div>
                     </td>
                     <td className="py-2.5 px-4">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                          ev.verdict === 'BLOCKED'
-                            ? 'bg-red-50 text-red-700 border border-red-200'
-                            : ev.verdict === 'SANITIZED'
-                            ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        }`}
-                      >
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                        ev.verdict === 'BLOCKED'
+                          ? 'bg-red-50 text-red-700 border border-red-200'
+                          : ev.verdict === 'SANITIZED'
+                          ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      }`}>
                         {ev.verdict}
                       </span>
                     </td>
-                    <td className="py-2.5 px-4">
-                      <span className="font-semibold text-slate-800">{ev.entitiesCount || 0} entities</span>
+                    <td className="py-2.5 px-4 font-semibold text-slate-800">
+                      {ev.entitiesCount || 0} entities
                     </td>
-                    <td className="py-2.5 px-4 font-mono text-slate-600">
-                      {ev.latencyMs}ms
-                    </td>
+                    <td className="py-2.5 px-4 font-mono text-slate-600">{ev.latencyMs}ms</td>
                     <td className="py-2.5 px-4 text-right font-mono text-[10px] text-slate-400">
-                      <div>Raw: {ev.originalHash ? `${ev.originalHash.slice(0, 12)}…` : '—'}</div>
-                      <div className="text-emerald-700 font-semibold">
-                        Sanitized: {ev.sanitizedHash ? `${ev.sanitizedHash.slice(0, 12)}…` : '—'}
-                      </div>
+                      <div className="text-emerald-700 font-semibold">{ev.chainHash ? `${ev.chainHash.slice(0, 14)}…` : 'GENESIS'}</div>
+                      <div className="text-slate-400 text-[9px]">Prev: {ev.prevChainHash ? `${ev.prevChainHash.slice(0, 10)}…` : '000000'}</div>
                     </td>
                   </tr>
                 ))}

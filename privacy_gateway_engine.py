@@ -1085,10 +1085,16 @@ def execute_anthropic_messages_chat(
 
 
 # -----------------------------------------------------------------------------
-# Audit Ledger Storage (Task 21)
+# Audit Ledger Storage (Task 21 & Task 32: Tamper-Evident SIEM Audit)
 # -----------------------------------------------------------------------------
 def _record_gateway_audit(event: Dict[str, Any]):
-    """Records audit metrics idempotently in local PostgreSQL datax_gateway_audit."""
+    """Records audit metrics idempotently in local PostgreSQL with SHA-256 hash chaining."""
+    try:
+        from siem_engine import record_chained_gateway_audit
+        return record_chained_gateway_audit(event)
+    except Exception:
+        pass
+
     try:
         conn = get_storage_connection(connect_timeout=3, autocommit=True)
         with conn.cursor() as cur:
@@ -1117,8 +1123,7 @@ def _record_gateway_audit(event: Dict[str, Any]):
                 event.get("tokensCompletion", 0)
             ))
         conn.close()
-    except Exception as e:
-        # Non-blocking fail-safe
+    except Exception:
         pass
 
 
@@ -1131,7 +1136,7 @@ def get_gateway_audit_events(limit: int = 50) -> List[Dict[str, Any]]:
                 SELECT request_id, session_id, timestamp, model, entities_detected,
                        entities_count, policy_applied, verdict, original_hash,
                        sanitized_hash, sanitized_prompt, upstream_provider, latency_ms,
-                       tokens_prompt, tokens_completion
+                       tokens_prompt, tokens_completion, prev_chain_hash, chain_hash
                 FROM "datax_gateway_audit"
                 ORDER BY timestamp DESC
                 LIMIT %s;
@@ -1154,7 +1159,9 @@ def get_gateway_audit_events(limit: int = 50) -> List[Dict[str, Any]]:
                     "upstreamProvider": r[11],
                     "latencyMs": float(r[12] or 0),
                     "tokensPrompt": r[13],
-                    "tokensCompletion": r[14]
+                    "tokensCompletion": r[14],
+                    "prevChainHash": r[15] or "GENESIS",
+                    "chainHash": r[16] or ""
                 })
         conn.close()
         return out

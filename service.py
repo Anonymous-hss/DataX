@@ -71,6 +71,19 @@ from privacy_gateway_engine import (
     _GLOBAL_VAULT,
     SecurityViolationException,
 )
+from siem_engine import (
+    verify_audit_chain_integrity,
+    get_siem_config,
+    save_siem_config,
+    test_siem_dispatch,
+)
+from license_engine import (
+    get_active_license_status,
+    install_license_key,
+)
+from gateway_benchmark import (
+    run_gateway_load_benchmark,
+)
 from sap_generator import DOMAIN_PACKS
 from connectors import test_database_connection, sample_table_data
 from pipeline import run_pipeline
@@ -2220,6 +2233,69 @@ def api_v1_list_local_models():
         "models": probe_local_llm_models(),
         "local_daemon_url": os.environ.get("LOCAL_LLM_URL", "http://127.0.0.1:11434")
     }
+
+
+# -----------------------------------------------------------------------------
+# Pillar 2: Tamper-Evident SIEM Audit & SOC Forwarding (Task 32)
+# -----------------------------------------------------------------------------
+@app.get("/siem/config")
+def api_get_siem_config():
+    """Returns active SIEM forwarding configuration (Splunk, Syslog, Webhook)."""
+    return {"status": "success", "config": get_siem_config()}
+
+
+@app.post("/siem/config")
+def api_save_siem_config(cfg: Dict[str, Any] = Body(...)):
+    """Saves enterprise SIEM forwarding configuration."""
+    try:
+        updated = save_siem_config(cfg)
+        return {"status": "success", "message": "SIEM configuration saved", "config": updated}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed saving SIEM config: {str(e)}")
+
+
+@app.post("/siem/test-dispatch")
+def api_test_siem_dispatch():
+    """Dispatches a synthetic security verification alert to configured SIEM destination."""
+    return test_siem_dispatch()
+
+
+@app.get("/siem/verify-ledger")
+def api_verify_ledger_integrity(limit: int = 500):
+    """Verifies that the entire cryptographic SHA-256 hash-chained audit ledger is intact."""
+    return verify_audit_chain_integrity(limit=limit)
+
+
+# -----------------------------------------------------------------------------
+# Pillar 3: Air-Gapped Offline Cryptographic Licensing (Task 30)
+# -----------------------------------------------------------------------------
+@app.get("/license/status")
+def api_get_license_status():
+    """Returns active air-gapped license status, core limits, and expiration date."""
+    return get_active_license_status()
+
+
+@app.post("/license/install")
+def api_install_license(req: Dict[str, Any] = Body(...)):
+    """Validates and installs a cryptographically signed offline license token."""
+    key_str = req.get("license_key") or req.get("license") or ""
+    try:
+        return install_license_key(key_str)
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"License installation failed: {str(e)}")
+
+
+# -----------------------------------------------------------------------------
+# Pillar 4: Concurrency Load & Latency Optimization Benchmark (Task 36)
+# -----------------------------------------------------------------------------
+@app.post("/gateway/benchmark/run")
+def api_run_gateway_benchmark(req: Dict[str, Any] = Body(default={})):
+    """Executes high-concurrency stress test measuring p50/p90/p95 latency and throughput."""
+    rounds = int(req.get("rounds", 40))
+    concurrency = int(req.get("concurrency", 4))
+    return run_gateway_load_benchmark(rounds=min(max(rounds, 10), 200), concurrency=min(max(concurrency, 1), 16))
 
 
 # -----------------------------------------------------------------------------

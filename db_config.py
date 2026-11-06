@@ -228,7 +228,7 @@ def init_all_storage_tables(uri: Optional[str] = None) -> Dict[str, Any]:
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
         """,
-        # AI Privacy Gateway Audit Ledger (Tasks 9, 10, 21)
+        # AI Privacy Gateway Audit Ledger (Tasks 9, 10, 21, 32: Tamper-Evident Hash Chain)
         """
         CREATE TABLE IF NOT EXISTS "datax_gateway_audit" (
             request_id VARCHAR(64) PRIMARY KEY,
@@ -245,7 +245,47 @@ def init_all_storage_tables(uri: Optional[str] = None) -> Dict[str, Any]:
             upstream_provider VARCHAR(64) DEFAULT 'OpenAI',
             latency_ms NUMERIC(8, 2),
             tokens_prompt INT DEFAULT 0,
-            tokens_completion INT DEFAULT 0
+            tokens_completion INT DEFAULT 0,
+            prev_chain_hash VARCHAR(64) DEFAULT 'GENESIS',
+            chain_hash VARCHAR(64)
+        );
+        """,
+        # Migration safe columns for existing instances
+        """
+        ALTER TABLE "datax_gateway_audit" ADD COLUMN IF NOT EXISTS prev_chain_hash VARCHAR(64) DEFAULT 'GENESIS';
+        """,
+        """
+        ALTER TABLE "datax_gateway_audit" ADD COLUMN IF NOT EXISTS chain_hash VARCHAR(64);
+        """,
+        # Enterprise SIEM & SOC Forwarding Config (Task 32)
+        """
+        CREATE TABLE IF NOT EXISTS "datax_siem_config" (
+            config_id VARCHAR(64) PRIMARY KEY,
+            target_type VARCHAR(32) DEFAULT 'WEBHOOK',
+            endpoint_url VARCHAR(512),
+            auth_token VARCHAR(256),
+            syslog_host VARCHAR(256),
+            syslog_port INT DEFAULT 514,
+            syslog_protocol VARCHAR(16) DEFAULT 'UDP',
+            enabled BOOLEAN DEFAULT FALSE,
+            last_dispatched_at TIMESTAMP WITH TIME ZONE,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+        """,
+        # Air-Gapped Cryptographically Signed Licenses (Task 30)
+        """
+        CREATE TABLE IF NOT EXISTS "datax_licenses" (
+            license_id VARCHAR(64) PRIMARY KEY,
+            license_key TEXT NOT NULL,
+            customer_name VARCHAR(128),
+            tenant_id VARCHAR(64),
+            tier VARCHAR(64),
+            allowed_cores INT DEFAULT 32,
+            allowed_seats INT DEFAULT 100,
+            features JSONB,
+            expires_at TIMESTAMP WITH TIME ZONE,
+            installed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            is_active BOOLEAN DEFAULT TRUE
         );
         """
     ]
