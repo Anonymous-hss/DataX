@@ -4,9 +4,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node api.js && vite",
+    "dev": "node init && vite",
     "server": "node server/index.js",
-    "build": "node api.js && vite build",
+    "build": "node init && vite build",
     "preview": "vite preview",
     "test": "vitest run"
   },

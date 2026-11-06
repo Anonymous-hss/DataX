@@ -362,28 +362,20 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
       >
         {/* Top Studio Utility Header Bar */}
         <header className="sticky top-0 z-30 w-full h-16 bg-white/90 dark:bg-[#18181C]/90 backdrop-blur-xl border-b border-[#E3E6EE] dark:border-white/[0.08] px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 transition-colors shrink-0">
-          {/* Left: Sidebar Toggle + Breadcrumb + Active Pipeline Context */}
+          {/* Left: Sidebar Expand Icon (only when sidebar is closed) + Breadcrumb + Active Pipeline Context */}
           <div className="flex items-center gap-3 min-w-0">
-            {/* Desktop Sidebar Slide Toggle Button */}
-            <button
-              type="button"
-              onClick={toggleSidebar}
-              className={`hidden lg:flex items-center gap-2 px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer shrink-0 ${
-                !sidebarOpen
-                  ? 'bg-[#EEF2FF] border-[#2D55F5]/30 text-[#2D55F5] hover:bg-[#2D55F5] hover:text-white shadow-2xs'
-                  : 'bg-[#F5F6FA] dark:bg-white/[0.05] border-[#E3E6EE] dark:border-white/[0.08] text-[#5F6678] hover:text-[#0A0F1F]'
-              }`}
-              title={sidebarOpen ? 'Slide sidebar closed (⌘B)' : 'Slide sidebar open (⌘B)'}
-            >
-              {sidebarOpen ? (
-                <PanelLeftClose className="w-4 h-4" />
-              ) : (
-                <>
-                  <PanelLeftOpen className="w-4 h-4" />
-                  <span>Sidebar</span>
-                </>
-              )}
-            </button>
+            {/* Desktop Sidebar Expand Button — ONLY rendered when sidebar is collapsed, icon-only (no duplicate button, no "Sidebar" text) */}
+            {!sidebarOpen && (
+              <button
+                type="button"
+                onClick={toggleSidebar}
+                className="hidden lg:flex w-8 h-8 items-center justify-center rounded-lg border border-[#E3E6EE] dark:border-white/[0.08] bg-[#F5F6FA] dark:bg-white/[0.05] text-[#5F6678] hover:text-[#2D55F5] hover:border-[#2D55F5]/40 hover:bg-[#EEF2FF] transition-all cursor-pointer shrink-0"
+                title="Expand navigation (⌘B)"
+                aria-label="Expand navigation"
+              >
+                <PanelLeftOpen className="w-4 h-4" />
+              </button>
+            )}
 
             {/* Mobile Hamburger Button (< 1024px) */}
             <button

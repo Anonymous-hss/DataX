@@ -28,70 +28,278 @@ export const DataXLogo = ({ size = 32 }) => (
   </svg>
 );
 
-// Minimal, Clean Animated Orbital Hero Illustration
-const HeroOrbitalGraphic = () => (
-  <svg width="440" height="200" viewBox="0 0 440 200" fill="none" className="w-full max-w-[440px] shrink-0 overflow-visible">
-    <defs>
-      <radialGradient id="heroGlow" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stopColor="#2D55F5" stopOpacity="0.45" />
-        <stop offset="70%" stopColor="#1E378A" stopOpacity="0.12" />
-        <stop offset="100%" stopColor="#0B1226" stopOpacity="0" />
-      </radialGradient>
-      <linearGradient id="orbitBeam" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor="#1473E6" stopOpacity="0.75" />
-        <stop offset="50%" stopColor="#2D55F5" />
-        <stop offset="100%" stopColor="#38BDF8" stopOpacity="0.8" />
-      </linearGradient>
-    </defs>
+// Minimal, Richly Animated Orbital Hero Illustration
+const HeroOrbitalGraphic = ({ activeStage = 0 }) => {
+  const stageLabels = [
+    { badge: 'STAGE 1 • SOURCE STREAM', text: 'Ingesting 1,428 rows • SAP_BW', color: '#38BDF8' },
+    { badge: 'STAGE 2 • AI AST ENGINE', text: 'Compiling 5 deterministic rules (4.2ms)', color: '#60A5FA' },
+    { badge: 'STAGE 3 • VERIFIED COMMIT', text: '99.4% Clean Core • 0 Egress Leaks ✓', color: '#34D399' },
+  ];
+  const currentStage = stageLabels[activeStage % stageLabels.length];
 
-    {/* Ambient Glow */}
-    <ellipse cx="220" cy="100" rx="170" ry="82" fill="url(#heroGlow)" />
+  return (
+    <div className="relative w-full max-w-[480px] h-[230px] flex items-center justify-center select-none shrink-0">
+      <style>{`
+        @keyframes heroFloatSlow {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-7px); }
+        }
+        @keyframes heroFloatReverse {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(6px); }
+        }
+        @keyframes heroSpinCw {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes heroSpinCcw {
+          from { transform: rotate(360deg); }
+          to { transform: rotate(0deg); }
+        }
+      `}</style>
 
-    {/* Orbital Concentric Wireframe Rings */}
-    <ellipse cx="220" cy="100" rx="158" ry="72" stroke="#334B80" strokeWidth="1" strokeDasharray="3 5" opacity="0.55" />
-    <ellipse cx="220" cy="100" rx="108" ry="48" stroke="#3D5F9E" strokeWidth="1.25" opacity="0.45" />
+      {/* Floating Top-Left Live Telemetry Pill */}
+      <div
+        style={{ animation: 'heroFloatSlow 3.8s ease-in-out infinite' }}
+        className="absolute -top-1 left-2 z-20 px-2.5 py-1 rounded-full bg-[#070D1F]/85 backdrop-blur-md border border-[#38BDF8]/30 shadow-lg flex items-center gap-2 text-[10px] font-mono text-[#E2E8F0]"
+      >
+        <span className="w-2 h-2 rounded-full bg-[#38BDF8] animate-ping" />
+        <span className="w-2 h-2 rounded-full bg-[#38BDF8] -ml-4" />
+        <span>AST Latency: <strong className="text-[#38BDF8]">4.2ms</strong></span>
+      </div>
 
-    {/* Pipeline Axis Line */}
-    <line x1="60" y1="100" x2="380" y2="100" stroke="url(#orbitBeam)" strokeWidth="2" strokeDasharray="5 4" opacity="0.8" />
+      {/* Floating Top-Right Zero-Egress Pill */}
+      <div
+        style={{ animation: 'heroFloatReverse 4.2s ease-in-out infinite' }}
+        className="absolute -top-1 right-2 z-20 px-2.5 py-1 rounded-full bg-[#070D1F]/85 backdrop-blur-md border border-emerald-400/30 shadow-lg flex items-center gap-1.5 text-[10px] font-mono text-emerald-300"
+      >
+        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+        <span>Zero-Egress • <strong>AES-GCM</strong></span>
+      </div>
 
-    {/* Subtle Animated Orbit Packet Dots */}
-    <circle cx="135" cy="68" r="3.5" fill="#1473E6" />
-    <circle cx="135" cy="68" r="7" fill="#1473E6" fillOpacity="0.2" className="animate-ping" style={{ animationDuration: '2.6s' }} />
-    <circle cx="165" cy="100" r="3.5" fill="#38BDF8" />
-    <circle cx="275" cy="100" r="3.5" fill="#38BDF8" />
-    <circle cx="305" cy="132" r="3.5" fill="#38BDF8" />
-    <circle cx="305" cy="132" r="7" fill="#38BDF8" fillOpacity="0.2" className="animate-ping" style={{ animationDuration: '2.2s' }} />
+      {/* Main Animated SVG Orbital Topology */}
+      <svg width="480" height="220" viewBox="0 0 480 220" fill="none" className="w-full h-full overflow-visible">
+        <defs>
+          <radialGradient id="heroGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#2D55F5" stopOpacity="0.55" />
+            <stop offset="55%" stopColor="#1473E6" stopOpacity="0.20" />
+            <stop offset="100%" stopColor="#0B1226" stopOpacity="0" />
+          </radialGradient>
+          <linearGradient id="ingestGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#2D55F5" stopOpacity="0.95" />
+          </linearGradient>
+          <linearGradient id="commitGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#2D55F5" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#10B981" stopOpacity="0.95" />
+          </linearGradient>
+          <filter id="neonGlow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
 
-    {/* Left Node: Source Cylinder */}
-    <g transform="translate(60, 100)">
-      <path d="M-20 -18 C-20 -25 20 -25 20 -18 V14 C20 21 -20 21 -20 14 Z" fill="#0C1428" stroke="#486299" strokeWidth="1.75" />
-      <path d="M-20 -5 C-20 2 20 2 20 -5" stroke="#486299" strokeWidth="1.5" fill="none" />
-      <path d="M-20 5 C-20 12 20 12 20 5" stroke="#486299" strokeWidth="1.5" fill="none" />
-      <ellipse cx="0" cy="-18" rx="20" ry="7" fill="#132142" stroke="#1473E6" strokeWidth="2.5" />
-    </g>
+        {/* Deep Ambient Core Glow */}
+        <ellipse cx="240" cy="102" rx="195" ry="92" fill="url(#heroGlow)" />
 
-    {/* Central Node: Glowing DataX Brand Squircle */}
-    <g transform="translate(220, 100)">
-      <rect x="-38" y="-38" width="76" height="76" rx="20" fill="#2D55F5" fillOpacity="0.2" />
-      <rect x="-32" y="-32" width="64" height="64" rx="16" fill="#2D55F5" stroke="#6084FF" strokeWidth="1.75" />
-      <g transform="translate(-32, -32)">
-        <polygon points="14.5,49.5 24.5,49.5 49.5,14.5 39.5,14.5" fill="#FFFFFF" />
-        <polygon points="14.5,14.5 24.5,14.5 31.5,24.5 21.5,24.5" fill="#1473E6" />
-        <polygon points="32.5,39.5 42.5,39.5 49.5,49.5 39.5,49.5" fill="#1473E6" />
-      </g>
-    </g>
+        {/* Outer & Inner Tilted Orbital Wireframe Ellipses */}
+        <ellipse
+          cx="240"
+          cy="102"
+          rx="178"
+          ry="78"
+          stroke="#3B5998"
+          strokeWidth="1.2"
+          strokeDasharray="4 6"
+          opacity="0.65"
+        />
+        <ellipse
+          cx="240"
+          cy="102"
+          rx="126"
+          ry="54"
+          stroke="#4F74C8"
+          strokeWidth="1.25"
+          strokeDasharray="8 5"
+          opacity="0.5"
+        />
 
-    {/* Right Node: Verified Target Cylinder with Success Check Badge */}
-    <g transform="translate(380, 100)">
-      <path d="M-20 -18 C-20 -25 20 -25 20 -18 V14 C20 21 -20 21 -20 14 Z" fill="#0C1428" stroke="#486299" strokeWidth="1.75" />
-      <path d="M-20 -5 C-20 2 20 2 20 -5" stroke="#486299" strokeWidth="1.5" fill="none" />
-      <path d="M-20 5 C-20 12 20 12 20 5" stroke="#486299" strokeWidth="1.5" fill="none" />
-      <ellipse cx="0" cy="-18" rx="20" ry="7" fill="#132142" stroke="#38BDF8" strokeWidth="2.5" />
-      <circle cx="16" cy="12" r="8" fill="#10B981" stroke="#0C1428" strokeWidth="2" />
-      <polyline points="13,12 15,14 19,10" stroke="#FFFFFF" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-    </g>
-  </svg>
-);
+        {/* Orbiting Satellite Nodes Riding Around the Outer & Inner Ellipses */}
+        <circle r="3.5" fill="#38BDF8" filter="url(#neonGlow)">
+          <animateMotion
+            dur="9s"
+            repeatCount="indefinite"
+            path="M 62,102 A 178,78 0 1,1 418,102 A 178,78 0 1,1 62,102"
+          />
+        </circle>
+        <circle r="3" fill="#34D399" filter="url(#neonGlow)">
+          <animateMotion
+            dur="7s"
+            begin="-3.5s"
+            repeatCount="indefinite"
+            path="M 114,102 A 126,54 0 1,0 366,102 A 126,54 0 1,0 114,102"
+          />
+        </circle>
+
+        {/* 3 Multi-Stream Bezier Channels (Left Source -> Center AI Core -> Right Target) */}
+        {/* Left Ingest Paths (Raw Blue Streams) */}
+        <path
+          id="ingestPathTop"
+          d="M 82 94 C 135 48, 175 58, 206 92"
+          stroke="url(#ingestGradient)"
+          strokeWidth="1.75"
+          strokeDasharray="4 4"
+          fill="none"
+        />
+        <path
+          id="ingestPathMid"
+          d="M 82 102 L 206 102"
+          stroke="url(#ingestGradient)"
+          strokeWidth="2.25"
+          fill="none"
+        />
+        <path
+          id="ingestPathBot"
+          d="M 82 110 C 135 156, 175 146, 206 112"
+          stroke="url(#ingestGradient)"
+          strokeWidth="1.75"
+          strokeDasharray="4 4"
+          fill="none"
+        />
+
+        {/* Right Verified Commit Paths (Clean Emerald Streams) */}
+        <path
+          id="commitPathTop"
+          d="M 274 92 C 305 58, 345 48, 398 94"
+          stroke="url(#commitGradient)"
+          strokeWidth="1.75"
+          strokeDasharray="4 4"
+          fill="none"
+        />
+        <path
+          id="commitPathMid"
+          d="M 274 102 L 398 102"
+          stroke="url(#commitGradient)"
+          strokeWidth="2.25"
+          fill="none"
+        />
+        <path
+          id="commitPathBot"
+          d="M 274 112 C 305 146, 345 156, 398 110"
+          stroke="url(#commitGradient)"
+          strokeWidth="1.75"
+          strokeDasharray="4 4"
+          fill="none"
+        />
+
+        {/* Continuous High-Speed Streaming Data Packets (Source -> AI Core) */}
+        <circle r="4" fill="#38BDF8" filter="url(#neonGlow)">
+          <animateMotion dur="1.8s" repeatCount="indefinite" path="M 82 94 C 135 48, 175 58, 206 92" />
+        </circle>
+        <circle r="4.5" fill="#60A5FA" filter="url(#neonGlow)">
+          <animateMotion dur="1.4s" begin="-0.5s" repeatCount="indefinite" path="M 82 102 L 206 102" />
+        </circle>
+        <circle r="3.5" fill="#FFFFFF">
+          <animateMotion dur="1.4s" begin="-1.1s" repeatCount="indefinite" path="M 82 102 L 206 102" />
+        </circle>
+        <circle r="4" fill="#38BDF8" filter="url(#neonGlow)">
+          <animateMotion dur="2.1s" begin="-0.9s" repeatCount="indefinite" path="M 82 110 C 135 156, 175 146, 206 112" />
+        </circle>
+
+        {/* Continuous Verified Streaming Data Packets (AI Core -> Target Sink) */}
+        <circle r="4" fill="#34D399" filter="url(#neonGlow)">
+          <animateMotion dur="1.7s" begin="-0.3s" repeatCount="indefinite" path="M 274 92 C 305 58, 345 48, 398 94" />
+        </circle>
+        <circle r="4.5" fill="#10B981" filter="url(#neonGlow)">
+          <animateMotion dur="1.35s" repeatCount="indefinite" path="M 274 102 L 398 102" />
+        </circle>
+        <circle r="3" fill="#A7F3D0">
+          <animateMotion dur="1.35s" begin="-0.65s" repeatCount="indefinite" path="M 274 102 L 398 102" />
+        </circle>
+        <circle r="4" fill="#34D399" filter="url(#neonGlow)">
+          <animateMotion dur="2.0s" begin="-1.1s" repeatCount="indefinite" path="M 274 112 C 305 146, 345 156, 398 110" />
+        </circle>
+
+        {/* Left Node: Animated Source Database Cylinder */}
+        <g transform="translate(60, 102)">
+          <circle cx="0" cy="0" r="28" fill="#1473E6" fillOpacity="0.12">
+            <animate attributeName="r" values="24;34;24" dur="2.8s" repeatCount="indefinite" />
+            <animate attributeName="fill-opacity" values="0.18;0.04;0.18" dur="2.8s" repeatCount="indefinite" />
+          </circle>
+          <path d="M-22 -19 C-22 -26 22 -26 22 -19 V15 C22 22 -22 22 -22 15 Z" fill="#0C1428" stroke="#486299" strokeWidth="1.75" />
+          <path d="M-22 -5 C-22 2 22 2 22 -5" stroke="#486299" strokeWidth="1.5" fill="none" />
+          <path d="M-22 6 C-22 13 22 13 22 6" stroke="#486299" strokeWidth="1.5" fill="none" />
+          <ellipse cx="0" cy="-19" rx="22" ry="7.5" fill="#132142" stroke="#38BDF8" strokeWidth="2.2" />
+          <text x="0" y="34" textAnchor="middle" fill="#94A3B8" fontSize="9.5" fontFamily="monospace" fontWeight="bold">
+            SOURCE DB
+          </text>
+        </g>
+
+        {/* Central Node: Pulsing Sonar Rings + Rotating Halo + Levitating DataX Squircle */}
+        <g transform="translate(240, 102)">
+          {/* Expanding Sonar Shockwave 1 */}
+          <circle cx="0" cy="0" r="36" stroke="#38BDF8" strokeWidth="1.5" fill="none">
+            <animate attributeName="r" values="34;68" dur="2.4s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.65;0" dur="2.4s" repeatCount="indefinite" />
+          </circle>
+          {/* Expanding Sonar Shockwave 2 */}
+          <circle cx="0" cy="0" r="36" stroke="#2D55F5" strokeWidth="1.5" fill="none">
+            <animate attributeName="r" values="34;68" begin="1.2s" dur="2.4s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.55;0" begin="1.2s" dur="2.4s" repeatCount="indefinite" />
+          </circle>
+
+          {/* Outer Glow Cushion */}
+          <rect x="-42" y="-42" width="84" height="84" rx="22" fill="#2D55F5" fillOpacity="0.25">
+            <animate attributeName="fill-opacity" values="0.18;0.34;0.18" dur="2s" repeatCount="indefinite" />
+          </rect>
+
+          {/* Main DataX Core Squircle */}
+          <rect x="-34" y="-34" width="68" height="68" rx="18" fill="#2D55F5" stroke="#7AA2FF" strokeWidth="2" />
+          <g transform="translate(-32, -32)">
+            <polygon points="14.5,49.5 24.5,49.5 49.5,14.5 39.5,14.5" fill="#FFFFFF" />
+            <polygon points="14.5,14.5 24.5,14.5 31.5,24.5 21.5,24.5" fill="#93C5FD" />
+            <polygon points="32.5,39.5 42.5,39.5 49.5,49.5 39.5,49.5" fill="#93C5FD" />
+          </g>
+
+          {/* Scanning Laser Line inside Core */}
+          <line x1="-26" y1="-20" x2="26" y2="-20" stroke="#38BDF8" strokeWidth="1.5" strokeOpacity="0.75">
+            <animate attributeName="y1" values="-24;24;-24" dur="2.2s" repeatCount="indefinite" />
+            <animate attributeName="y2" values="-24;24;-24" dur="2.2s" repeatCount="indefinite" />
+          </line>
+        </g>
+
+        {/* Right Node: Verified Target Cylinder with Pulsing Emerald Check Badge */}
+        <g transform="translate(420, 102)">
+          <circle cx="0" cy="0" r="28" fill="#10B981" fillOpacity="0.12">
+            <animate attributeName="r" values="24;34;24" dur="2.4s" repeatCount="indefinite" />
+            <animate attributeName="fill-opacity" values="0.2;0.04;0.2" dur="2.4s" repeatCount="indefinite" />
+          </circle>
+          <path d="M-22 -19 C-22 -26 22 -26 22 -19 V15 C22 22 -22 22 -22 15 Z" fill="#0C1428" stroke="#3B6E6C" strokeWidth="1.75" />
+          <path d="M-22 -5 C-22 2 22 2 22 -5" stroke="#3B6E6C" strokeWidth="1.5" fill="none" />
+          <path d="M-22 6 C-22 13 22 13 22 6" stroke="#3B6E6C" strokeWidth="1.5" fill="none" />
+          <ellipse cx="0" cy="-19" rx="22" ry="7.5" fill="#0F292A" stroke="#10B981" strokeWidth="2.2" />
+          <circle cx="16" cy="12" r="9" fill="#10B981" stroke="#0C1428" strokeWidth="2" />
+          <polyline points="12.5,12 15,14.5 19.5,9.5" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <text x="0" y="34" textAnchor="middle" fill="#6EE7B7" fontSize="9.5" fontFamily="monospace" fontWeight="bold">
+            CLEAN TARGET
+          </text>
+        </g>
+      </svg>
+
+      {/* Bottom Cycling Live Stage Ticker Pill */}
+      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1 rounded-full bg-[#070D1F]/90 backdrop-blur-md border border-white/15 shadow-xl flex items-center gap-2 text-[11px] font-mono whitespace-nowrap transition-all duration-300">
+        <span
+          className="w-2 h-2 rounded-full animate-pulse shrink-0"
+          style={{ backgroundColor: currentStage.color }}
+        />
+        <span className="font-bold tracking-wider text-[10px]" style={{ color: currentStage.color }}>
+          {currentStage.badge}:
+        </span>
+        <span className="text-white font-medium">{currentStage.text}</span>
+      </div>
+    </div>
+  );
+};
 
 // Database Cylinders Icon for Cards (SAP BW / Clean Core)
 const SapCylinderIcon = () => (
@@ -192,7 +400,15 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
   const [advisorOpen, setAdvisorOpen] = useState(false);
   const [threadToDelete, setThreadToDelete] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeHeroStage, setActiveHeroStage] = useState(0);
   const pageSize = 8;
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveHeroStage((prev) => (prev + 1) % 3);
+    }, 2400);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -229,16 +445,27 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
     <DataXAppShell onSwitchToMarketing={onSwitchToMarketing}>
       
       {/* =====================================================================
-          1. MINIMAL, CLEAN EDGE-TO-EDGE HERO SECTION + METRICS
+          1. MINIMAL, ANIMATED EDGE-TO-EDGE HERO SECTION + METRICS
       ===================================================================== */}
       <section className="w-full bg-gradient-to-r from-[#0B1226] via-[#101A38] to-[#1C2C5E] text-white border-b border-[#1E2E5A] relative overflow-hidden">
+        {/* Ambient Animated Aurora Orbs & Subtle Tech Grid */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-20"
+          style={{
+            backgroundImage: 'radial-gradient(#3B82F6 1px, transparent 1px)',
+            backgroundSize: '28px 28px'
+          }}
+        />
+        <div className="absolute -top-24 left-1/4 w-96 h-96 rounded-full bg-[#2D55F5]/25 blur-[95px] animate-pulse pointer-events-none" />
+        <div className="absolute -bottom-24 right-1/6 w-96 h-96 rounded-full bg-[#38BDF8]/20 blur-[95px] animate-pulse pointer-events-none" />
+
         <div className="max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-10 py-8 lg:py-10 relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
           
-          {/* Left: Minimal Tag, Headline, 3-Step Flow & 4 Metrics */}
+          {/* Left: Minimal Tag, Headline, Animated 3-Step Flow & 4 Metrics */}
           <div className="max-w-2xl space-y-5">
-            {/* Pill Tag */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1473E6] text-[#0A0F1F] font-bold text-xs tracking-tight">
-              <Zap className="w-3.5 h-3.5 fill-current" />
+            {/* Pill Tag with Live Pulse */}
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1473E6] text-[#0A0F1F] font-bold text-xs tracking-tight shadow-md shadow-[#1473E6]/30">
+              <Zap className="w-3.5 h-3.5 fill-current animate-bounce" style={{ animationDuration: '2.2s' }} />
               <span>AI rule builder</span>
             </div>
 
@@ -248,32 +475,47 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
               DataX writes them, tests them and keeps them running.
             </h1>
 
-            {/* Minimal 3-Step Indicator */}
-            <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-[#C5CCE0]">
-              <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-[#1473E6] text-[#0A0F1F] font-bold text-[11px] flex items-center justify-center shrink-0">
-                  1
-                </span>
-                <span>Connect a source</span>
-              </div>
-              <span className="text-[#717E9E]">›</span>
-              <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-[#1473E6] text-[#0A0F1F] font-bold text-[11px] flex items-center justify-center shrink-0">
-                  2
-                </span>
-                <span>Generate rules with AI</span>
-              </div>
-              <span className="text-[#717E9E]">›</span>
-              <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-[#1473E6] text-[#0A0F1F] font-bold text-[11px] flex items-center justify-center shrink-0">
-                  3
-                </span>
-                <span>Test, then run live</span>
-              </div>
+            {/* Animated Synchronized 3-Step Indicator */}
+            <div className="flex flex-wrap items-center gap-2.5 text-xs sm:text-sm">
+              {[
+                { num: 1, label: 'Connect a source' },
+                { num: 2, label: 'Generate rules with AI' },
+                { num: 3, label: 'Test, then run live' },
+              ].map((step, idx) => {
+                const isActive = activeHeroStage === idx;
+                return (
+                  <React.Fragment key={step.num}>
+                    <div
+                      onMouseEnter={() => setActiveHeroStage(idx)}
+                      className={`flex items-center gap-2 px-2.5 py-1 rounded-full border transition-all duration-300 cursor-pointer ${
+                        isActive
+                          ? 'bg-[#1473E6]/20 border-[#38BDF8]/60 text-white shadow-sm shadow-[#1473E6]/30 scale-[1.03]'
+                          : 'bg-transparent border-transparent text-[#9BA8C7] hover:text-white'
+                      }`}
+                    >
+                      <span
+                        className={`w-5 h-5 rounded-full font-bold text-[11px] flex items-center justify-center shrink-0 transition-all duration-300 ${
+                          isActive
+                            ? 'bg-[#38BDF8] text-[#0A0F1F] ring-4 ring-[#38BDF8]/25'
+                            : 'bg-[#1473E6] text-[#0A0F1F]'
+                        }`}
+                      >
+                        {step.num}
+                      </span>
+                      <span className={isActive ? 'font-semibold text-white' : ''}>{step.label}</span>
+                    </div>
+                    {idx < 2 && (
+                      <span className={`transition-colors duration-300 font-bold ${activeHeroStage === idx ? 'text-[#38BDF8] translate-x-0.5' : 'text-[#5C6B8A]'}`}>
+                        ›
+                      </span>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </div>
 
             {/* Clean 4-Metric Bar */}
-            <div className="bg-[#070D1F]/75 backdrop-blur-md border border-white/10 rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-white/10 w-full max-w-xl">
+            <div className="bg-[#070D1F]/75 backdrop-blur-md border border-white/10 rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-white/10 w-full max-w-xl shadow-xl">
               <div className="px-3 py-1 first:pl-1">
                 <p className="text-[11px] font-medium text-[#8F9BB3]">Active threads</p>
                 <p className="text-lg sm:text-xl font-bold text-white mt-0.5">
@@ -299,7 +541,7 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
               <div className="px-3 py-1 last:pr-1 flex items-center justify-between">
                 <div>
                   <p className="text-[11px] font-medium text-[#8F9BB3]">Auto-fix</p>
-                  <p className="text-lg sm:text-xl font-bold text-[#1473E6] mt-0.5">
+                  <p className="text-lg sm:text-xl font-bold text-[#38BDF8] mt-0.5">
                     {autoFixEnabled ? 'On' : 'Off'}
                   </p>
                 </div>
@@ -319,9 +561,9 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
             </div>
           </div>
 
-          {/* Right: Clean Floating Orbital Graphic (No Box, Zero Clutter) */}
+          {/* Right: Animated Multi-Stream Orbital Graphic */}
           <div className="hidden lg:flex items-center justify-center shrink-0">
-            <HeroOrbitalGraphic />
+            <HeroOrbitalGraphic activeStage={activeHeroStage} />
           </div>
 
         </div>
