@@ -813,3 +813,4 @@ export default function MlGateCanvas({ onSwitchToStudio }) {
     </div>
   );
 }
+

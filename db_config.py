@@ -212,6 +212,41 @@ def init_all_storage_tables(uri: Optional[str] = None) -> Dict[str, Any]:
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+        """,
+        # AI Privacy Gateway Policies (Task 16)
+        """
+        CREATE TABLE IF NOT EXISTS "datax_gateway_policies" (
+            policy_id VARCHAR(64) PRIMARY KEY,
+            name VARCHAR(128) NOT NULL,
+            model_pattern VARCHAR(128) DEFAULT '*',
+            action_prompt_injection VARCHAR(32) DEFAULT 'BLOCK',
+            action_secrets VARCHAR(32) DEFAULT 'MASK',
+            action_pii VARCHAR(32) DEFAULT 'TOKENIZE',
+            token_ttl_seconds INT DEFAULT 1800,
+            enable_reversible_detokenization BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+        """,
+        # AI Privacy Gateway Audit Ledger (Tasks 9, 10, 21)
+        """
+        CREATE TABLE IF NOT EXISTS "datax_gateway_audit" (
+            request_id VARCHAR(64) PRIMARY KEY,
+            session_id VARCHAR(64),
+            timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            model VARCHAR(64),
+            entities_detected JSONB,
+            entities_count INT DEFAULT 0,
+            policy_applied VARCHAR(32) DEFAULT 'TOKENIZE',
+            verdict VARCHAR(32) DEFAULT 'PASSED',
+            original_hash VARCHAR(64),
+            sanitized_hash VARCHAR(64),
+            sanitized_prompt TEXT,
+            upstream_provider VARCHAR(64) DEFAULT 'OpenAI',
+            latency_ms NUMERIC(8, 2),
+            tokens_prompt INT DEFAULT 0,
+            tokens_completion INT DEFAULT 0
+        );
         """
     ]
 

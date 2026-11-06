@@ -1,4 +1,5 @@
 import AiFirewallCanvas from '../components/firewall/AiFirewallCanvas';
+import PrivacyGatewayTab from '../components/firewall/PrivacyGatewayTab';
 import { ArrowRight } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
 import DataXAppShell from '../components/common/DataXAppShell';
@@ -728,6 +729,18 @@ def sanitize_before_embedding(chunks: list[dict]) -> list[dict]:
             </button>
             <button
               type="button"
+              onClick={() => setActiveTab('gateway')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                activeTab === 'gateway'
+                  ? 'bg-[#2D55F5] text-white shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>3. AI Privacy Gateway</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setActiveTab('integration')}
               className={`px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === 'integration'
@@ -736,7 +749,7 @@ def sanitize_before_embedding(chunks: list[dict]) -> list[dict]:
               }`}
             >
               <Code2 className="w-3.5 h-3.5" />
-              <span>3. Production API &amp; SDK</span>
+              <span>4. Production API &amp; SDK</span>
             </button>
           </div>
         </div>
@@ -1845,7 +1858,12 @@ def sanitize_before_embedding(chunks: list[dict]) -> list[dict]:
         )}
 
         {/* =================================================================== */}
-        {/* TAB 3: PRODUCTION REST API & SDK INTEGRATION                        */}
+        {/* TAB 3: ZERO-EGRESS AI PRIVACY GATEWAY (TASKS 8, 9, 10, 15, 16, 21) */}
+        {/* =================================================================== */}
+        {activeTab === 'gateway' && <PrivacyGatewayTab />}
+
+        {/* =================================================================== */}
+        {/* TAB 4: PRODUCTION REST API & SDK INTEGRATION                        */}
         {/* =================================================================== */}
         {activeTab === 'integration' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
