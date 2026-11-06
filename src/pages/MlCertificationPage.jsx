@@ -359,37 +359,7 @@ export default function MlCertificationPage({ onSwitchToMarketing } = {}) {
   return (
     <DataXAppShell onSwitchToMarketing={onSwitchToMarketing}>
       {viewMode === 'canvas' ? (
-        <div className="h-[calc(100vh-65px)] w-full flex flex-col bg-[#0A0E17]">
-          {/* Executive Subheader with View Switcher */}
-          <div className="shrink-0 bg-slate-900 border-b border-slate-800 px-6 py-2.5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-white uppercase tracking-wider">Module Mode:</span>
-                <div className="inline-flex rounded-lg border border-slate-700 bg-slate-800 p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('canvas')}
-                    className="px-3 py-1 rounded-md text-xs font-bold bg-emerald-600 text-white shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer"
-                  >
-                    <span>🎨 Interactive Canvas Flow</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('studio')}
-                    className="px-3 py-1 rounded-md text-xs font-medium text-slate-300 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer"
-                  >
-                    <span>⚡ Classic Studio Mode</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div className="text-xs text-slate-400 font-mono hidden md:block">
-              Drag &amp; Drop 10-Bin PSI • Target Leakage • Demographic Fairness • EU AI Act Art. 10 Gate
-            </div>
-          </div>
-
-          {/* Full Interactive Canvas */}
+        <div className="h-[calc(100vh-64px)] w-full p-2.5 bg-[#F5F5F7] flex flex-col overflow-hidden">
           <div className="flex-1 w-full h-full min-h-0 relative">
             <MlGateCanvas onSwitchToStudio={() => setViewMode('studio')} />
           </div>

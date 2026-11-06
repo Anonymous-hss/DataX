@@ -9,19 +9,13 @@ import UseCaseAdvisorModal from '../components/common/UseCaseAdvisorModal';
 import { 
   Sparkles, 
   ArrowRight, 
-  ShieldCheck, 
   Cpu, 
   Database, 
   Bot, 
-  Play, 
   CheckCircle2, 
   Zap, 
-  Activity, 
   Plus, 
-  Search,
-  SlidersHorizontal,
-  Layers,
-  RefreshCw
+  Search
 } from 'lucide-react';
 
 // --- Official DataX Brand Logo Squircle ---
@@ -34,117 +28,67 @@ export const DataXLogo = ({ size = 32 }) => (
   </svg>
 );
 
-// Animated Hero Orbital Pipeline Graphic with Live Pulse Feedback
-const AnimatedHeroPipelineGraphic = ({ isSimulating, activeScenario }) => (
-  <svg width="100%" height="175" viewBox="0 0 440 175" fill="none" className="w-full max-w-[440px] mx-auto overflow-visible">
+// Minimal, Clean Animated Orbital Hero Illustration
+const HeroOrbitalGraphic = () => (
+  <svg width="440" height="200" viewBox="0 0 440 200" fill="none" className="w-full max-w-[440px] shrink-0 overflow-visible">
     <defs>
-      <radialGradient id="heroCoreGlow" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stopColor="#2D55F5" stopOpacity={isSimulating ? "0.65" : "0.42"} />
-        <stop offset="65%" stopColor="#1473E6" stopOpacity="0.15" />
+      <radialGradient id="heroGlow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stopColor="#2D55F5" stopOpacity="0.45" />
+        <stop offset="70%" stopColor="#1E378A" stopOpacity="0.12" />
         <stop offset="100%" stopColor="#0B1226" stopOpacity="0" />
       </radialGradient>
-      <linearGradient id="orbitStreamBeam" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor="#1473E6" stopOpacity="0.85" />
-        <stop offset="50%" stopColor="#60A5FA" />
-        <stop offset="100%" stopColor="#10B981" stopOpacity="0.9" />
+      <linearGradient id="orbitBeam" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor="#1473E6" stopOpacity="0.75" />
+        <stop offset="50%" stopColor="#2D55F5" />
+        <stop offset="100%" stopColor="#38BDF8" stopOpacity="0.8" />
       </linearGradient>
     </defs>
 
-    {/* Ambient Core Aura */}
-    <ellipse cx="220" cy="88" rx="165" ry="72" fill="url(#heroCoreGlow)" className="transition-all duration-500" />
+    {/* Ambient Glow */}
+    <ellipse cx="220" cy="100" rx="170" ry="82" fill="url(#heroGlow)" />
 
-    {/* Concentric Orbital Rings */}
-    <ellipse 
-      cx="220" 
-      cy="88" 
-      rx="155" 
-      ry="64" 
-      stroke="#334B80" 
-      strokeWidth="1" 
-      strokeDasharray="4 6" 
-      opacity="0.6" 
-    />
-    <ellipse 
-      cx="220" 
-      cy="88" 
-      rx="104" 
-      ry="42" 
-      stroke="#3D5F9E" 
-      strokeWidth="1.25" 
-      opacity="0.5" 
-    />
+    {/* Orbital Concentric Wireframe Rings */}
+    <ellipse cx="220" cy="100" rx="158" ry="72" stroke="#334B80" strokeWidth="1" strokeDasharray="3 5" opacity="0.55" />
+    <ellipse cx="220" cy="100" rx="108" ry="48" stroke="#3D5F9E" strokeWidth="1.25" opacity="0.45" />
 
-    {/* Active Data Stream Axis */}
-    <line 
-      x1="58" 
-      y1="88" 
-      x2="382" 
-      y2="88" 
-      stroke="url(#orbitStreamBeam)" 
-      strokeWidth="2.5" 
-      strokeDasharray="6 4" 
-      opacity="0.85" 
-    />
+    {/* Pipeline Axis Line */}
+    <line x1="60" y1="100" x2="380" y2="100" stroke="url(#orbitBeam)" strokeWidth="2" strokeDasharray="5 4" opacity="0.8" />
 
-    {/* Animated Flowing Data Packets */}
-    <circle cx="115" cy="88" r="4" fill="#38BDF8" className="animate-ping" style={{ animationDuration: '2.2s' }} />
-    <circle cx="115" cy="88" r="4" fill="#38BDF8" />
-    <circle cx="158" cy="88" r="3.5" fill="#60A5FA" />
-    <circle cx="282" cy="88" r="3.5" fill="#34D399" />
-    <circle cx="325" cy="88" r="4" fill="#10B981" className="animate-ping" style={{ animationDuration: '1.8s' }} />
-    <circle cx="325" cy="88" r="4" fill="#10B981" />
+    {/* Subtle Animated Orbit Packet Dots */}
+    <circle cx="135" cy="68" r="3.5" fill="#1473E6" />
+    <circle cx="135" cy="68" r="7" fill="#1473E6" fillOpacity="0.2" className="animate-ping" style={{ animationDuration: '2.6s' }} />
+    <circle cx="165" cy="100" r="3.5" fill="#38BDF8" />
+    <circle cx="275" cy="100" r="3.5" fill="#38BDF8" />
+    <circle cx="305" cy="132" r="3.5" fill="#38BDF8" />
+    <circle cx="305" cy="132" r="7" fill="#38BDF8" fillOpacity="0.2" className="animate-ping" style={{ animationDuration: '2.2s' }} />
 
-    {/* Orbital Telemetry Nodes */}
-    <circle cx="135" cy="58" r="3.5" fill="#1473E6" />
-    <circle cx="135" cy="58" r="7" fill="#1473E6" fillOpacity="0.25" />
-    <circle cx="305" cy="118" r="3.5" fill="#10B981" />
-    <circle cx="305" cy="118" r="7" fill="#10B981" fillOpacity="0.25" />
-
-    {/* Left Node: Source System Cylinder */}
-    <g transform="translate(56, 88)">
-      <path d="M-22 -18 C-22 -25 22 -25 22 -18 V14 C22 21 -22 21 -22 14 Z" fill="#0B1328" stroke="#486299" strokeWidth="1.75" />
-      <path d="M-22 -5 C-22 2 22 2 22 -5" stroke="#486299" strokeWidth="1.5" fill="none" />
-      <path d="M-22 5 C-22 12 22 12 22 5" stroke="#486299" strokeWidth="1.5" fill="none" />
-      <ellipse cx="0" cy="-18" rx="22" ry="7" fill="#132142" stroke="#38BDF8" strokeWidth="2.2" />
-      <text x="0" y="34" textAnchor="middle" fill="#94A3B8" fontSize="9.5" fontFamily="monospace" fontWeight="600">
-        {activeScenario?.sourceShort || 'SOURCE_DB'}
-      </text>
+    {/* Left Node: Source Cylinder */}
+    <g transform="translate(60, 100)">
+      <path d="M-20 -18 C-20 -25 20 -25 20 -18 V14 C20 21 -20 21 -20 14 Z" fill="#0C1428" stroke="#486299" strokeWidth="1.75" />
+      <path d="M-20 -5 C-20 2 20 2 20 -5" stroke="#486299" strokeWidth="1.5" fill="none" />
+      <path d="M-20 5 C-20 12 20 12 20 5" stroke="#486299" strokeWidth="1.5" fill="none" />
+      <ellipse cx="0" cy="-18" rx="20" ry="7" fill="#132142" stroke="#1473E6" strokeWidth="2.5" />
     </g>
 
-    {/* Central Node: DataX AI Rule & Firewall Core */}
-    <g transform="translate(220, 88)">
-      <rect 
-        x="-42" 
-        y="-42" 
-        width="84" 
-        height="84" 
-        rx="22" 
-        fill="#2D55F5" 
-        fillOpacity={isSimulating ? "0.35" : "0.18"} 
-        className="transition-all duration-300"
-      />
-      <rect x="-32" y="-32" width="64" height="64" rx="16" fill="#2D55F5" stroke="#93C5FD" strokeWidth="2" />
+    {/* Central Node: Glowing DataX Brand Squircle */}
+    <g transform="translate(220, 100)">
+      <rect x="-38" y="-38" width="76" height="76" rx="20" fill="#2D55F5" fillOpacity="0.2" />
+      <rect x="-32" y="-32" width="64" height="64" rx="16" fill="#2D55F5" stroke="#6084FF" strokeWidth="1.75" />
       <g transform="translate(-32, -32)">
         <polygon points="14.5,49.5 24.5,49.5 49.5,14.5 39.5,14.5" fill="#FFFFFF" />
         <polygon points="14.5,14.5 24.5,14.5 31.5,24.5 21.5,24.5" fill="#1473E6" />
         <polygon points="32.5,39.5 42.5,39.5 49.5,49.5 39.5,49.5" fill="#1473E6" />
       </g>
-      <text x="0" y="48" textAnchor="middle" fill="#E2E8F0" fontSize="9.5" fontFamily="monospace" fontWeight="700">
-        AI AST ENGINE
-      </text>
     </g>
 
-    {/* Right Node: Verified Target Cylinder + Check Badge */}
-    <g transform="translate(384, 88)">
-      <path d="M-22 -18 C-22 -25 22 -25 22 -18 V14 C22 21 -22 21 -22 14 Z" fill="#0B1328" stroke="#486299" strokeWidth="1.75" />
-      <path d="M-22 -5 C-22 2 22 2 22 -5" stroke="#486299" strokeWidth="1.5" fill="none" />
-      <path d="M-22 5 C-22 12 22 12 22 5" stroke="#486299" strokeWidth="1.5" fill="none" />
-      <ellipse cx="0" cy="-18" rx="22" ry="7" fill="#132142" stroke="#10B981" strokeWidth="2.2" />
-      <circle cx="16" cy="12" r="8.5" fill="#10B981" stroke="#0B1328" strokeWidth="2" />
-      <polyline points="12.5,12 15,14.5 19.5,9.5" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <text x="0" y="34" textAnchor="middle" fill="#6EE7B7" fontSize="9.5" fontFamily="monospace" fontWeight="600">
-        {activeScenario?.targetShort || 'CLEAN_SINK'}
-      </text>
+    {/* Right Node: Verified Target Cylinder with Success Check Badge */}
+    <g transform="translate(380, 100)">
+      <path d="M-20 -18 C-20 -25 20 -25 20 -18 V14 C20 21 -20 21 -20 14 Z" fill="#0C1428" stroke="#486299" strokeWidth="1.75" />
+      <path d="M-20 -5 C-20 2 20 2 20 -5" stroke="#486299" strokeWidth="1.5" fill="none" />
+      <path d="M-20 5 C-20 12 20 12 20 5" stroke="#486299" strokeWidth="1.5" fill="none" />
+      <ellipse cx="0" cy="-18" rx="20" ry="7" fill="#132142" stroke="#38BDF8" strokeWidth="2.5" />
+      <circle cx="16" cy="12" r="8" fill="#10B981" stroke="#0C1428" strokeWidth="2" />
+      <polyline points="13,12 15,14 19,10" stroke="#FFFFFF" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" fill="none" />
     </g>
   </svg>
 );
@@ -179,102 +123,13 @@ const HealthcareIcon = () => (
   </svg>
 );
 
-// Interactive Hero Scenarios for Feedback-Driven Experience
-const HERO_LIVE_SCENARIOS = [
-  {
-    id: 'sap_clean_core',
-    label: 'SAP S/4HANA Clean Core',
-    badge: 'ERP Migration',
-    prompt: 'Verify plant code WERKS against S/4HANA ontology, enforce NETWR == MENGE * NETPR, and auto-convert legacy EUR rows.',
-    astCode: 'ASSERT(WERKS IN ["P1000","P2000"]) && ABS(NETWR - QTY*PRICE) < 0.01',
-    sourceShort: 'SAP_BW_0PUR',
-    targetShort: 'S4HANA_ACDOCA',
-    latency: '11.2ms',
-    cleanRate: '99.4%',
-    autoFixed: '142 rows',
-    targetScreen: 'canvas',
-    threadId: 'thread_sap_s4hana'
-  },
-  {
-    id: 'ai_privacy_guard',
-    label: 'Zero-Egress AI Firewall',
-    badge: 'LLM Proxy',
-    prompt: 'Intercept outbound GPT-4o & Claude prompts, mask SSNs and credit cards into AES-GCM RAM tokens, and block jailbreaks.',
-    astCode: 'TOKENIZE(PII: ["SSN","CC","EMAIL"], VAULT="AES_GCM_RAM") && BLOCK(INJECTION)',
-    sourceShort: 'APP_PROMPT',
-    targetShort: 'ZERO_EGRESS_LLM',
-    latency: '8.4ms',
-    cleanRate: '100% Scrubbed',
-    autoFixed: '0 bytes leaked',
-    targetScreen: 'ai-firewall',
-    threadId: null
-  },
-  {
-    id: 'ml_drift_gate',
-    label: 'ML Training & Drift Gate',
-    badge: 'EU AI Act Art. 10',
-    prompt: 'Block GPU fine-tuning if 10-quantile Population Stability Index (PSI) > 0.20 or target feature leakage |r| >= 0.75.',
-    astCode: 'GATE_CERTIFY(MAX_PSI <= 0.20, MAX_CORR < 0.75, SIGN="SHA256")',
-    sourceShort: 'RAW_CORPUS',
-    targetShort: 'CERTIFIED_SFT',
-    latency: '18.7ms',
-    cleanRate: '98.9% Parity',
-    autoFixed: 'Signed SHA-256',
-    targetScreen: 'ml-certify',
-    threadId: null
-  },
-  {
-    id: 'fin_gl_audit',
-    label: 'Financial GL Reconciliation',
-    badge: 'SOX Compliance',
-    prompt: 'Reconcile Oracle General Ledger debit/credit balance parity before committing to Snowflake executive reporting tables.',
-    astCode: 'ASSERT(SUM(DEBIT) == SUM(CREDIT)) && QUARANTINE_ORPHAN_COST_CENTER()',
-    sourceShort: 'ORACLE_GL',
-    targetShort: 'SNOWFLAKE_FIN',
-    latency: '13.1ms',
-    cleanRate: '99.8%',
-    autoFixed: '38 balanced',
-    targetScreen: 'canvas',
-    threadId: 'thread_financial_gl'
-  }
-];
-
 export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {}) {
   const { navigateTo } = useNavigation();
   const { threads: contextThreads, selectThread, deleteThread, autoFixEnabled, setAutoFixEnabled } = useRuleEngine();
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
 
-  // Interactive Hero Simulator State
-  const [activeScenarioIdx, setActiveScenarioIdx] = useState(0);
-  const [customRuleInput, setCustomRuleInput] = useState(HERO_LIVE_SCENARIOS[0].prompt);
-  const [isSimulating, setIsSimulating] = useState(false);
-  const [simFeedback, setSimFeedback] = useState('Compiled & Armed • 0 Egress Leaks');
-
-  const activeScenario = HERO_LIVE_SCENARIOS[activeScenarioIdx];
-
-  const handleSelectScenario = (idx) => {
-    setActiveScenarioIdx(idx);
-    setCustomRuleInput(HERO_LIVE_SCENARIOS[idx].prompt);
-    setIsSimulating(true);
-    setSimFeedback('Compiling deterministic AST rules...');
-    setTimeout(() => {
-      setIsSimulating(false);
-      setSimFeedback(`Verified in ${HERO_LIVE_SCENARIOS[idx].latency} • ${HERO_LIVE_SCENARIOS[idx].cleanRate}`);
-    }, 450);
-  };
-
-  const handleRunHeroSimulation = (e) => {
-    if (e) e.preventDefault();
-    setIsSimulating(true);
-    setSimFeedback('Synthesizing AST & running dry-run verification...');
-    setTimeout(() => {
-      setIsSimulating(false);
-      setSimFeedback(`✓ Rule Compiled & Verified (${activeScenario.latency}) • Ready for Live Execution`);
-    }, 550);
-  };
-
-  // Format threads with rich fallback metadata so cards never look empty or truncated
+  // Format threads with clean metadata
   const formattedThreads = (contextThreads || []).map((t, index) => {
     let icon = <MasterDataIcon />;
     if (t.id === 'sap_bw_s4hana' || t.domainPackId === 'sap_bw_s4hana' || t.name?.includes('SAP')) {
@@ -293,7 +148,6 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
     const isHealthy = isLive || (hasExecuted && (t.healthScore ?? 0) >= 80);
     const isWarning = hasExecuted && !isHealthy && (t.healthScore ?? 0) >= 60;
 
-    // Extract clean source and target names for the 3-node visual topology
     const rawPipeline = t.pipeline || `${t.source?.database || 'Source DB'} → AI rules → ${t.target?.table || 'Target Sink'}`;
     const parts = rawPipeline.split('→').map(s => s.trim());
     const sourceNodeLabel = parts[0] || t.source?.engine || 'Source DB';
@@ -375,224 +229,106 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
     <DataXAppShell onSwitchToMarketing={onSwitchToMarketing}>
       
       {/* =====================================================================
-          1. EDGE-TO-EDGE INTERACTIVE & FEEDBACK-BASED HERO SECTION
+          1. MINIMAL, CLEAN EDGE-TO-EDGE HERO SECTION + METRICS
       ===================================================================== */}
-      <section className="w-full bg-gradient-to-br from-[#070C1A] via-[#0E1936] to-[#1A2C5E] text-white border-b border-[#1E2E5A] relative overflow-hidden">
-        {/* Subtle Tech Grid & Radial Lighting */}
-        <div 
-          className="absolute inset-0 opacity-[0.07] pointer-events-none"
-          style={{
-            backgroundImage: 'radial-gradient(#60A5FA 1px, transparent 1px)',
-            backgroundSize: '24px 24px'
-          }}
-        />
-        <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-[#2D55F5]/20 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 left-1/3 w-80 h-80 rounded-full bg-[#1473E6]/15 blur-3xl pointer-events-none" />
+      <section className="w-full bg-gradient-to-r from-[#0B1226] via-[#101A38] to-[#1C2C5E] text-white border-b border-[#1E2E5A] relative overflow-hidden">
+        <div className="max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-10 py-8 lg:py-10 relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
+          
+          {/* Left: Minimal Tag, Headline, 3-Step Flow & 4 Metrics */}
+          <div className="max-w-2xl space-y-5">
+            {/* Pill Tag */}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1473E6] text-[#0A0F1F] font-bold text-xs tracking-tight">
+              <Zap className="w-3.5 h-3.5 fill-current" />
+              <span>AI rule builder</span>
+            </div>
 
-        <div className="max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-10 py-9 lg:py-11 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
-            
-            {/* Left Column (7 Cols): Headline, Interactive Rule Sandbox & Live KPI Strip */}
-            <div className="lg:col-span-7 space-y-5">
-              
-              {/* Top Interactive Status Badges */}
-              <div className="flex flex-wrap items-center gap-2.5">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1473E6] text-[#0A0F1F] font-bold text-xs tracking-tight shadow-sm">
-                  <Zap className="w-3.5 h-3.5 fill-current" />
-                  <span>AI Rule Builder &amp; Zero-Egress Studio</span>
-                </div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.07] border border-white/15 text-blue-200 text-xs font-mono">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>{simFeedback}</span>
-                </div>
+            {/* Clean Headline */}
+            <h1 className="text-2xl sm:text-3xl lg:text-[32px] font-bold text-white tracking-tight leading-[1.22]">
+              Describe the rules in plain English.<br className="hidden sm:inline" />
+              DataX writes them, tests them and keeps them running.
+            </h1>
+
+            {/* Minimal 3-Step Indicator */}
+            <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-[#C5CCE0]">
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-[#1473E6] text-[#0A0F1F] font-bold text-[11px] flex items-center justify-center shrink-0">
+                  1
+                </span>
+                <span>Connect a source</span>
               </div>
+              <span className="text-[#717E9E]">›</span>
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-[#1473E6] text-[#0A0F1F] font-bold text-[11px] flex items-center justify-center shrink-0">
+                  2
+                </span>
+                <span>Generate rules with AI</span>
+              </div>
+              <span className="text-[#717E9E]">›</span>
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-[#1473E6] text-[#0A0F1F] font-bold text-[11px] flex items-center justify-center shrink-0">
+                  3
+                </span>
+                <span>Test, then run live</span>
+              </div>
+            </div>
 
-              {/* Commanding Hero Headline */}
-              <div>
-                <h1 className="text-2xl sm:text-3xl xl:text-[38px] font-extrabold text-white tracking-tight leading-[1.15]">
-                  Describe the rules in plain English.<br className="hidden sm:inline" />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-[#60A5FA]">
-                    DataX writes them, tests them and keeps them running.
-                  </span>
-                </h1>
-                <p className="text-xs sm:text-sm text-[#B8C4DF] mt-2.5 max-w-2xl leading-relaxed">
-                  Click any live enterprise scenario below or type a rule in plain English to see real-time AST compilation, zero-egress PII scrubbing, and deterministic target commit telemetry.
+            {/* Clean 4-Metric Bar */}
+            <div className="bg-[#070D1F]/75 backdrop-blur-md border border-white/10 rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-white/10 w-full max-w-xl">
+              <div className="px-3 py-1 first:pl-1">
+                <p className="text-[11px] font-medium text-[#8F9BB3]">Active threads</p>
+                <p className="text-lg sm:text-xl font-bold text-white mt-0.5">
+                  {activeCount} / {formattedThreads.length}
                 </p>
               </div>
 
-              {/* Interactive Scenario Selector Pills */}
-              <div className="space-y-2.5 pt-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-blue-300/80 mr-1">
-                    Live Interactive Scenarios:
+              <div className="px-3 py-1">
+                <p className="text-[11px] font-medium text-[#8F9BB3]">Mean data health</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-lg sm:text-xl font-bold text-white">{meanHealth}%</span>
+                  <span className="bg-[#1473E6] text-[#0A0F1F] text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                    A+
                   </span>
-                  {HERO_LIVE_SCENARIOS.map((scen, idx) => {
-                    const isSelected = activeScenarioIdx === idx;
-                    return (
-                      <button
-                        key={scen.id}
-                        type="button"
-                        onClick={() => handleSelectScenario(idx)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                          isSelected
-                            ? 'bg-[#2D55F5] text-white shadow-md shadow-[#2D55F5]/30 border border-blue-400/50 scale-[1.02]'
-                            : 'bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 border border-white/10'
-                        }`}
-                      >
-                        <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-emerald-300 animate-ping' : 'bg-slate-400'}`} />
-                        <span>{scen.label}</span>
-                      </button>
-                    );
-                  })}
                 </div>
-
-                {/* Interactive Plain-English Rule Input & Instant Compile Feedback Bar */}
-                <form 
-                  onSubmit={handleRunHeroSimulation}
-                  className="bg-[#060B19]/85 backdrop-blur-xl border border-white/15 focus-within:border-[#60A5FA] rounded-2xl p-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shadow-inner transition-all"
-                >
-                  <div className="flex items-center gap-2.5 flex-1 pl-2.5 py-1">
-                    <Sparkles className={`w-4 h-4 shrink-0 ${isSimulating ? 'text-amber-300 animate-spin' : 'text-[#60A5FA]'}`} />
-                    <input
-                      type="text"
-                      value={customRuleInput}
-                      onChange={(e) => setCustomRuleInput(e.target.value)}
-                      placeholder="Describe any data quality, PII masking, or ML drift rule in plain English..."
-                      className="w-full bg-transparent text-xs sm:text-sm text-white placeholder:text-slate-400 focus:outline-none font-medium"
-                    />
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      type="submit"
-                      className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/10 transition-all cursor-pointer flex items-center gap-1.5"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${isSimulating ? 'animate-spin' : ''}`} />
-                      <span>Simulate</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (activeScenario.threadId) selectThread(activeScenario.threadId);
-                        navigateTo(activeScenario.targetScreen);
-                      }}
-                      className="px-4 py-2 rounded-xl bg-[#2D55F5] hover:bg-[#1E44E0] text-white text-xs font-bold shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
-                    >
-                      <span>Open in Studio</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </form>
               </div>
 
-              {/* Interactive 4-Metric Telemetry Bar */}
-              <div className="bg-[#070D1F]/80 backdrop-blur-md border border-white/10 rounded-2xl p-3.5 grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-white/10">
-                <div className="px-3 py-1 first:pl-1">
-                  <p className="text-[11px] font-medium text-[#8F9BB3]">Active pipelines</p>
-                  <div className="flex items-baseline gap-1.5 mt-0.5">
-                    <span className="text-lg sm:text-xl font-bold text-white">{activeCount || formattedThreads.length}</span>
-                    <span className="text-xs text-[#8F9BB3] font-medium">/ {formattedThreads.length} armed</span>
-                  </div>
-                </div>
+              <div className="px-3 py-1">
+                <p className="text-[11px] font-medium text-[#8F9BB3]">Runs this week</p>
+                <p className="text-lg sm:text-xl font-bold text-white mt-0.5">{totalRuns}</p>
+              </div>
 
-                <div className="px-3 py-1">
-                  <p className="text-[11px] font-medium text-[#8F9BB3]">Mean data health</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-lg sm:text-xl font-bold text-white">{meanHealth}%</span>
-                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                      A+
-                    </span>
-                  </div>
-                </div>
-
-                <div 
-                  onClick={() => navigateTo('history')}
-                  className="px-3 py-1 cursor-pointer group/stat"
-                  title="View Run Telemetry"
-                >
-                  <p className="text-[11px] font-medium text-[#8F9BB3] group-hover/stat:text-blue-300 transition-colors">
-                    Verified runs
+              <div className="px-3 py-1 last:pr-1 flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-medium text-[#8F9BB3]">Auto-fix</p>
+                  <p className="text-lg sm:text-xl font-bold text-[#1473E6] mt-0.5">
+                    {autoFixEnabled ? 'On' : 'Off'}
                   </p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-lg sm:text-xl font-bold text-white">{totalRuns > 0 ? totalRuns : 128}</span>
-                    <ArrowRight className="w-3 h-3 text-slate-400 group-hover/stat:translate-x-0.5 group-hover/stat:text-blue-300 transition-all" />
-                  </div>
                 </div>
-
-                <div className="px-3 py-1 last:pr-1 flex items-center justify-between">
-                  <div>
-                    <p className="text-[11px] font-medium text-[#8F9BB3]">Autonomous Auto-Fix</p>
-                    <p className={`text-lg sm:text-xl font-bold mt-0.5 ${autoFixEnabled ? 'text-[#38BDF8]' : 'text-slate-400'}`}>
-                      {autoFixEnabled ? 'Armed (On)' : 'Paused'}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setAutoFixEnabled && setAutoFixEnabled(!autoFixEnabled)}
-                    className={`w-10 h-5 rounded-full p-0.5 transition-colors cursor-pointer ${
-                      autoFixEnabled ? 'bg-[#1473E6]' : 'bg-slate-700'
-                    }`}
-                    title="Toggle Autonomous Auto-Fix"
-                  >
-                    <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                      autoFixEnabled ? 'translate-x-5' : 'translate-x-0'
-                    }`} />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setAutoFixEnabled && setAutoFixEnabled(!autoFixEnabled)}
+                  className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer ${
+                    autoFixEnabled ? 'bg-[#1473E6]' : 'bg-slate-700'
+                  }`}
+                  title="Toggle Auto-Fix"
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                    autoFixEnabled ? 'translate-x-4' : 'translate-x-0'
+                  }`} />
+                </button>
               </div>
             </div>
-
-            {/* Right Column (5 Cols): Live Animated Pipeline Telemetry Console */}
-            <div className="lg:col-span-5">
-              <div className="bg-[#081024]/90 backdrop-blur-xl border border-white/15 rounded-2xl p-5 shadow-2xl space-y-4 relative overflow-hidden">
-                {/* Console Top Bar */}
-                <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-xs font-bold tracking-wide uppercase text-slate-200">
-                      Live Execution Topology
-                    </span>
-                  </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#2D55F5]/30 border border-[#60A5FA]/40 text-[#93C5FD] text-[10px] font-mono font-bold">
-                    {activeScenario.badge}
-                  </span>
-                </div>
-
-                {/* Animated Orbital SVG Graphic */}
-                <div className="py-1">
-                  <AnimatedHeroPipelineGraphic 
-                    isSimulating={isSimulating} 
-                    activeScenario={activeScenario} 
-                  />
-                </div>
-
-                {/* Compiled AST Code & Live Metrics Readout */}
-                <div className="bg-[#050914] border border-white/10 rounded-xl p-3 space-y-2">
-                  <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-                    <span>COMPILED DETERMINISTIC RULE (AST):</span>
-                    <span className="text-emerald-400 font-bold">LATENCY: {activeScenario.latency}</span>
-                  </div>
-                  <div className="text-xs font-mono text-[#60A5FA] truncate">
-                    {activeScenario.astCode}
-                  </div>
-                  <div className="pt-1.5 border-t border-white/10 flex items-center justify-between text-[11px]">
-                    <span className="text-slate-300 flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Output: <strong className="text-white">{activeScenario.cleanRate}</strong></span>
-                    </span>
-                    <span className="text-blue-300 font-mono text-[10px]">
-                      Remediation: {activeScenario.autoFixed}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
           </div>
+
+          {/* Right: Clean Floating Orbital Graphic (No Box, Zero Clutter) */}
+          <div className="hidden lg:flex items-center justify-center shrink-0">
+            <HeroOrbitalGraphic />
+          </div>
+
         </div>
       </section>
 
       {/* =====================================================================
-          2. WELL-PLANNED MAIN WORKSPACE CONTENT BELOW HERO
+          2. MAIN WORKSPACE CONTENT BELOW HERO
       ===================================================================== */}
       <div className="max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-10 py-8 space-y-9">
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
 import { 
   Activity, 
   Layers, 
@@ -9,14 +9,12 @@ import {
   Settings, 
   Search, 
   HelpCircle, 
-  ArrowRight, 
   SlidersHorizontal,
   ChevronDown,
   ChevronRight,
   Zap,
   Menu,
   X,
-  Check,
   Shield,
   Cpu,
   Sparkles,
@@ -35,12 +33,37 @@ import GlobalSearchModal from './GlobalSearchModal';
 import OnboardingWizard from './OnboardingWizard';
 import UseCaseAdvisorModal from './UseCaseAdvisorModal';
 
+// Parent Layout Context so DataXAppShell stays mounted once at the top layout level
+const AppShellLayoutContext = createContext(false);
+
 export default function DataXAppShell({ 
   children, 
   showContextBar = false,
   compact = false,
   onSwitchToMarketing 
 }) {
+  const isAlreadyWrappedInParentShell = useContext(AppShellLayoutContext);
+
+  // If a child page also wraps with <DataXAppShell>, pass children directly
+  // so the parent layout sidebar remains 100% constant without duplicating or remounting.
+  if (isAlreadyWrappedInParentShell) {
+    return <>{children}</>;
+  }
+
+  return (
+    <AppShellLayoutContext.Provider value={true}>
+      <DataXMasterLayout 
+        showContextBar={showContextBar} 
+        compact={compact} 
+        onSwitchToMarketing={onSwitchToMarketing}
+      >
+        {children}
+      </DataXMasterLayout>
+    </AppShellLayoutContext.Provider>
+  );
+}
+
+function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketing }) {
   const { currentScreen, navigateTo } = useNavigation();
   const ruleEngine = useRuleEngine?.() || {};
   const { activeThread, threads = [], selectThread } = ruleEngine;
@@ -128,6 +151,7 @@ export default function DataXAppShell({
     if (screenKey === 'workflows' && (currentScreen === 'workflows' || currentScreen === 'threads' || currentScreen === 'home' || currentScreen === '')) return true;
     if (screenKey === 'ai-firewall' && (currentScreen === 'ai-firewall' || currentScreen === 'firewall' || currentScreen === 'rag-firewall' || currentScreen === 'agent-guard')) return true;
     if (screenKey === 'ml-certify' && (currentScreen === 'ml-certify' || currentScreen === 'ml-certification' || currentScreen === 'ml-gate')) return true;
+    if (screenKey === 'canvas' && (currentScreen === 'canvas' || currentScreen === 'workflow-builder' || currentScreen === 'connect-source' || currentScreen === 'generate-rules' || currentScreen === 'rules')) return true;
     if (screenKey === 'templates' && (currentScreen === 'templates' || currentScreen === 'domain-packs')) return true;
     if (screenKey === 'history' && (currentScreen === 'history' || currentScreen === 'runs')) return true;
     return currentScreen === screenKey;
@@ -135,6 +159,9 @@ export default function DataXAppShell({
 
   const allNavItems = [...CORE_PILLARS, ...PIPELINE_OPERATIONS, ...GOVERNANCE_ITEMS];
   const activeNavObj = allNavItems.find(item => isNavActive(item.screen)) || CORE_PILLARS[0];
+
+  // Show active pipeline context bar automatically on studio/operation screens
+  const shouldShowPipelinePicker = showContextBar || ['canvas', 'quarantine', 'shadow', 'audit', 'history', 'running-dry-run', 'dry-run-results', 'live-auto-fix'].includes(currentScreen);
 
   const renderSidebarNavButton = (item) => {
     const active = isNavActive(item.screen);
@@ -187,20 +214,20 @@ export default function DataXAppShell({
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#141416] text-slate-800 dark:text-slate-200 font-sans antialiased flex relative transition-colors duration-200 overflow-x-hidden">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#141416] text-slate-800 dark:text-slate-200 font-sans antialiased relative transition-colors duration-200">
       {/* 1. Ambient Background Drifting Mesh Flows */}
       <AmbientBackgroundFlow />
 
-      {/* 2. Sliding Left Navigation Sidebar (Desktop >= 1024px) */}
+      {/* 2. Constant Fixed Full-Height Left Sidebar (Never scrolls away on long pages) */}
       <aside
         aria-label="Primary Studio Sidebar"
-        className={`hidden lg:flex flex-col shrink-0 sticky top-0 h-screen z-40 bg-white/95 dark:bg-[#18181C]/95 backdrop-blur-xl border-r border-[#E3E6EE] dark:border-white/[0.08] transition-[width,transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden select-none shadow-xs ${
+        className={`hidden lg:flex flex-col fixed top-0 bottom-0 left-0 h-screen z-40 bg-white/95 dark:bg-[#18181C]/95 backdrop-blur-xl border-r border-[#E3E6EE] dark:border-white/[0.08] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] select-none shadow-xs w-[280px] xl:w-[292px] ${
           sidebarOpen 
-            ? 'w-[276px] xl:w-[292px] opacity-100 translate-x-0' 
-            : 'w-0 opacity-0 -translate-x-10 border-r-0 pointer-events-none'
+            ? 'translate-x-0' 
+            : '-translate-x-full'
         }`}
       >
-        <div className="w-[276px] xl:w-[292px] h-full flex flex-col justify-between">
+        <div className="w-full h-full flex flex-col justify-between">
           {/* Sidebar Brand Header + Slide Toggle */}
           <div className="h-16 px-4 flex items-center justify-between border-b border-[#E3E6EE]/80 dark:border-white/[0.08] shrink-0">
             <button
@@ -220,7 +247,7 @@ export default function DataXAppShell({
                   </span>
                 </div>
                 <span className="block text-[10px] text-[#5F6678] dark:text-slate-400 font-medium mt-0.5">
-                  Zero-Egress AI & Data Plane
+                  Zero-Egress AI &amp; Data Plane
                 </span>
               </div>
             </button>
@@ -293,7 +320,7 @@ export default function DataXAppShell({
             <div className="space-y-1">
               <div className="px-2 pb-1 flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#8E95A9] dark:text-slate-500">
-                  Governance & Security
+                  Governance &amp; Security
                 </span>
               </div>
               {GOVERNANCE_ITEMS.map(renderSidebarNavButton)}
@@ -327,14 +354,17 @@ export default function DataXAppShell({
         </div>
       </aside>
 
-      {/* 3. Right Main Content Viewport (Smoothly Resizes & Transitions when Sidebar Slides) */}
-      <div className="flex-1 min-w-0 flex flex-col relative z-10 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]">
-        
+      {/* 3. Right Main Content Viewport (Smoothly Transitions Padding/Width when Sidebar Slides) */}
+      <div 
+        className={`min-h-screen flex flex-col relative z-10 transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          sidebarOpen ? 'lg:pl-[280px] xl:pl-[292px]' : 'lg:pl-0'
+        }`}
+      >
         {/* Top Studio Utility Header Bar */}
-        <header className="sticky top-0 z-30 w-full h-16 bg-white/90 dark:bg-[#18181C]/90 backdrop-blur-xl border-b border-[#E3E6EE] dark:border-white/[0.08] px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 transition-colors">
+        <header className="sticky top-0 z-30 w-full h-16 bg-white/90 dark:bg-[#18181C]/90 backdrop-blur-xl border-b border-[#E3E6EE] dark:border-white/[0.08] px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 transition-colors shrink-0">
           {/* Left: Sidebar Toggle + Breadcrumb + Active Pipeline Context */}
           <div className="flex items-center gap-3 min-w-0">
-            {/* Desktop Sidebar Slide-Open Button (Visible when Sidebar is Closed, or quick toggle) */}
+            {/* Desktop Sidebar Slide Toggle Button */}
             <button
               type="button"
               onClick={toggleSidebar}
@@ -350,7 +380,7 @@ export default function DataXAppShell({
               ) : (
                 <>
                   <PanelLeftOpen className="w-4 h-4" />
-                  <span>Menu</span>
+                  <span>Sidebar</span>
                 </>
               )}
             </button>
@@ -365,7 +395,7 @@ export default function DataXAppShell({
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
 
-            {/* Show compact brand logo in top bar only when sidebar is slid closed or on mobile */}
+            {/* Show compact brand logo in top bar when sidebar is slid closed */}
             {!sidebarOpen && (
               <button
                 type="button"
@@ -386,8 +416,8 @@ export default function DataXAppShell({
               </span>
             </div>
 
-            {/* Active Pipeline Quick Selector (When showContextBar is true or on studio screens) */}
-            {showContextBar && (
+            {/* Active Pipeline Quick Selector */}
+            {shouldShowPipelinePicker && (
               <div className="hidden md:flex items-center gap-2 pl-3 ml-1 border-l border-[#E3E6EE] min-w-0" ref={threadPickerRef}>
                 <span className="text-[11px] font-semibold text-[#8E95A9] shrink-0">Pipeline:</span>
                 <div className="relative">
@@ -483,7 +513,7 @@ export default function DataXAppShell({
                 </div>
 
                 <div className="space-y-1">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 pb-1">Governance & Security</div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 pb-1">Governance &amp; Security</div>
                   {GOVERNANCE_ITEMS.map(renderSidebarNavButton)}
                 </div>
               </div>
@@ -492,7 +522,7 @@ export default function DataXAppShell({
         )}
 
         {/* Main Viewport Page Content */}
-        <main className="flex-1 w-full relative z-10 studio-page-enter">
+        <main className="flex-1 w-full relative z-10">
           {children}
         </main>
       </div>
