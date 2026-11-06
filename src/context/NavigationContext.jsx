@@ -38,8 +38,36 @@ const SCREEN_TITLES = {
 
 const NavigationContext = createContext(null);
 
+export function resolveScreenFromLocation(fallback = 'threads') {
+  if (typeof window === 'undefined') return fallback;
+
+  // 1. Check hash first (e.g. #settings, #ai-firewall, #history)
+  const hash = window.location.hash.replace('#', '').replace(/^\/+/, '');
+  if (hash && hash !== 'poc') {
+    if (hash.startsWith('runs/') || hash.startsWith('run/')) {
+      return 'history';
+    }
+    return hash;
+  }
+
+  // 2. Check pathname (e.g. /datax/settings, /datax/ai-firewall, /settings)
+  const pathname = window.location.pathname.toLowerCase().replace(/\/+$/, '');
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments.length > 0) {
+    const last = segments[segments.length - 1];
+    if (last && last !== 'datax' && last !== 'poc') {
+      if (last.startsWith('runs') || last.startsWith('run')) {
+        return 'history';
+      }
+      return last;
+    }
+  }
+
+  return fallback;
+}
+
 export function NavigationProvider({ children, initialScreen = 'threads' }) {
-  const [currentScreen, setCurrentScreen] = useState(initialScreen);
+  const [currentScreen, setCurrentScreen] = useState(() => resolveScreenFromLocation(initialScreen));
   const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
 
   // Sync online / offline status
@@ -54,24 +82,21 @@ export function NavigationProvider({ children, initialScreen = 'threads' }) {
     };
   }, []);
 
-  // Sync with window.location.hash
+  // Sync with window.location.hash and window.location.pathname popstate
   useEffect(() => {
-    const handleHash = () => {
-      const hash = window.location.hash.replace('#', '').replace(/^\/+/, '');
-      if (hash && hash !== 'poc') {
-        // Normalize deep links like runs/RUN-1234 to history
-        if (hash.startsWith('runs/') || hash.startsWith('run/')) {
-          setCurrentScreen('history');
-        } else {
-          setCurrentScreen(hash);
-        }
-      }
+    const syncLocation = () => {
+      const target = resolveScreenFromLocation(initialScreen);
+      setCurrentScreen(target);
     };
 
-    handleHash();
-    window.addEventListener('hashchange', handleHash);
-    return () => window.removeEventListener('hashchange', handleHash);
-  }, []);
+    syncLocation();
+    window.addEventListener('hashchange', syncLocation);
+    window.addEventListener('popstate', syncLocation);
+    return () => {
+      window.removeEventListener('hashchange', syncLocation);
+      window.removeEventListener('popstate', syncLocation);
+    };
+  }, [initialScreen]);
 
   // Dynamic Document Title Sync
   useEffect(() => {

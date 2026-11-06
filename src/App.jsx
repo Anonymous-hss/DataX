@@ -40,7 +40,14 @@ export default function App() {
         hash === '#running-dry-run' ||
         hash === '#dry-run-results' ||
         hash === '#live-auto-fix' ||
-        hash === '#history'
+        hash === '#history' ||
+        hash === '#settings' ||
+        hash === '#ai-firewall' ||
+        hash === '#ml-certify' ||
+        hash === '#connections' ||
+        hash === '#audit' ||
+        hash === '#roi' ||
+        hash === '#quarantine'
       ) {
         setActiveView('poc');
       } else if (hash === '#website') {
