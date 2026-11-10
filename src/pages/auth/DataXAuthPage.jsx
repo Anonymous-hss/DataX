@@ -1,26 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ShieldCheck, 
   Lock, 
-  ArrowLeft, 
   Database, 
-  Building2, 
   User, 
   LogOut, 
   CheckCircle2, 
   AlertCircle, 
   Loader2,
   Mail,
-  KeyRound
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
-const DataXLogo = ({ size = 36 }) => (
-  <svg width={size} height={size} viewBox="0 0 64 64" fill="none" className="shrink-0">
-    <rect width="64" height="64" rx="16" fill="#1473E6" />
-    <polygon points="14.5,49.5 24.5,49.5 49.5,14.5 39.5,14.5" fill="#FFFFFF" />
-    <polygon points="14.5,14.5 24.5,14.5 31.5,24.5 21.5,24.5" fill="#A5C8FF" />
-    <polygon points="32.5,39.5 42.5,39.5 49.5,49.5 39.5,49.5" fill="#A5C8FF" />
+// Official DataX Brand Logo matching 00.1 Sign in.svg
+const DataXLogo = ({ size = 32 }) => (
+  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className="shrink-0">
+    <path 
+      d="M23.2 0H8.8C3.9399 0 0 3.9399 0 8.8V23.2C0 28.0601 3.9399 32 8.8 32H23.2C28.0601 32 32 28.0601 32 23.2V8.8C32 3.9399 28.0601 0 23.2 0Z" 
+      fill="#2D55F5"
+    />
+    <path d="M7.2 24.8L20 7.2H25.2L12.4 24.8H7.2Z" fill="white" />
+    <path d="M6.8 7.2H12L15.52 12H10.32L6.8 7.2Z" fill="#D4FF3A" />
+    <path d="M16.88 20H22.08L25.6 24.8H20.4L16.88 20Z" fill="#D4FF3A" />
   </svg>
 );
 
@@ -31,6 +33,7 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -76,69 +79,60 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
   };
 
   return (
-    <div className="min-h-screen bg-[#141416] text-slate-100 flex flex-col justify-between font-sans relative overflow-hidden">
-      {/* Dynamic ambient glow effects */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-blue-600/15 via-indigo-600/5 to-transparent blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-24 -left-24 w-[450px] h-[450px] bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-
+    <div className="min-h-screen bg-[#F5F6FA] text-[#0A0F1F] flex flex-col justify-between font-sans selection:bg-[#2D55F5]/20 selection:text-[#2D55F5]">
       {/* Top Header */}
-      <header className="relative z-10 w-full px-6 py-5 flex items-center justify-between max-w-7xl mx-auto border-b border-slate-800/60">
-        <div className="flex items-center gap-3">
-          <DataXLogo size={34} />
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-white text-lg tracking-tight">DataX</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                PostgreSQL Enterprise Auth
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400 font-mono">Autonomous Decision Platform</p>
-          </div>
+      <header className="w-full px-6 sm:px-10 py-5 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <DataXLogo size={32} />
+          <span className="font-bold text-[#0A0F1F] text-[18px] tracking-tight">DataX</span>
         </div>
 
-        {onBackToWebsite && (
-          <button
-            type="button"
-            onClick={onBackToWebsite}
-            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors cursor-pointer"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to dataglow.ai</span>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => {
+            if (onBackToWebsite) {
+              onBackToWebsite();
+            } else {
+              window.location.href = 'https://dataglow.ai';
+            }
+          }}
+          className="flex items-center gap-1.5 text-xs sm:text-sm text-[#0A0F1F] hover:text-[#2D55F5] transition-colors cursor-pointer"
+        >
+          <span>← Back to dataglow.ai</span>
+        </button>
       </header>
 
-      {/* Main Auth Container */}
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-10 max-w-lg mx-auto w-full">
+      {/* Main Centered Sign-In Content */}
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-8 max-w-xl mx-auto w-full">
         {isSignedIn ? (
-          /* Already Signed In View */
-          <div className="w-full max-w-md bg-slate-900/90 border border-slate-800 rounded-2xl p-7 shadow-2xl backdrop-blur-xl text-center space-y-6">
-            <div className="w-16 h-16 rounded-full mx-auto overflow-hidden border-2 border-blue-500/50 shadow-lg bg-slate-800 flex items-center justify-center">
+          /* Already Signed In View - Clean Unified White Card */
+          <div className="w-full max-w-[440px] bg-white border border-[#E3E6EE] rounded-[20px] p-8 shadow-sm text-center space-y-6">
+            <div className="w-16 h-16 rounded-full mx-auto overflow-hidden border-2 border-[#2D55F5]/30 shadow-sm bg-[#EDEFF5] flex items-center justify-center">
               {user?.imageUrl ? (
                 <img src={user.imageUrl} alt={user?.fullName || 'User'} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full bg-blue-600/30 text-blue-400 font-bold text-xl flex items-center justify-center">
+                <div className="w-full h-full bg-[#2D55F5]/10 text-[#2D55F5] font-bold text-xl flex items-center justify-center">
                   {(user?.fullName || 'U').slice(0, 2).toUpperCase()}
                 </div>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Authenticated
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Authenticated
               </div>
-              <h2 className="text-xl font-bold text-white">{user?.fullName || 'Enterprise Member'}</h2>
-              <p className="text-xs text-slate-400 font-mono">{user?.primaryEmailAddress?.emailAddress}</p>
-              <p className="text-[11px] text-slate-500 font-mono">
-                Role: <span className="text-blue-400 font-bold">{user?.role || 'Data Engineer'}</span>
+              <h2 className="text-xl font-bold text-[#0A0F1F]">{user?.fullName || 'Enterprise Member'}</h2>
+              <p className="text-xs text-[#5F6678] font-mono">{user?.primaryEmailAddress?.emailAddress || email}</p>
+              <p className="text-[11px] text-[#5F6678] font-medium">
+                Workspace Role: <span className="text-[#2D55F5] font-semibold">{user?.role || 'Data Engineer'}</span>
               </p>
             </div>
 
-            <div className="space-y-2.5 pt-2">
+            <div className="space-y-3 pt-2">
               <button
                 type="button"
                 onClick={() => { window.location.hash = '#threads'; }}
-                className="w-full py-2.5 px-4 rounded-xl bg-[#1473E6] hover:bg-blue-600 text-white font-semibold text-xs transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
+                className="w-full h-10 rounded-full bg-[#2D55F5] hover:bg-blue-600 text-white font-medium text-xs sm:text-sm transition-all shadow-sm cursor-pointer flex items-center justify-center gap-2"
               >
                 <span>Launch DataX Workspace</span>
                 <span>→</span>
@@ -147,164 +141,196 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
               <button
                 type="button"
                 onClick={() => logout({ redirectUrl: '#login' })}
-                className="w-full py-2 px-4 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 hover:text-white font-medium text-xs transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="w-full h-10 rounded-full border border-[#CDD2DE] hover:bg-[#F5F6FA] text-[#0A0F1F] font-medium text-xs transition-all cursor-pointer flex items-center justify-center gap-2"
               >
-                <LogOut className="w-3.5 h-3.5 text-slate-400" />
+                <LogOut className="w-3.5 h-3.5 text-[#5F6678]" />
                 <span>Sign Out / Switch Account</span>
               </button>
             </div>
           </div>
         ) : (
-          /* Sign In / Sign Up Forms */
-          <div className="w-full max-w-md">
-            <div className="text-center mb-5 space-y-1.5">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                {mode === 'login' ? 'Sign in to DataX' : 'Create your DataX account'}
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-400">
-                {mode === 'login' 
-                  ? 'Access your enterprise data threads and autonomous auto-fix engine.' 
-                  : 'Start building automated decision pipelines with PostgreSQL isolation.'}
-              </p>
-            </div>
-
-            <div className="flex items-center bg-slate-900/80 p-1 rounded-xl border border-slate-800 mb-6">
-              <button
-                type="button"
-                onClick={() => switchMode('login')}
-                className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                  mode === 'login' ? 'bg-[#1473E6] text-white shadow-md' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => switchMode('register')}
-                className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                  mode === 'register' ? 'bg-[#1473E6] text-white shadow-md' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Register
-              </button>
-            </div>
-
-            {/* Error Banner */}
-            {authError && (
-              <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{authError}</span>
+          /* Sign In / Register Card */
+          <div className="w-full max-w-[440px]">
+            <div className="bg-white border border-[#E3E6EE] rounded-[20px] p-7 sm:p-9 shadow-sm">
+              {/* Header Title & Subtitle */}
+              <div className="mb-6">
+                <h1 className="text-[24px] font-bold text-[#0A0F1F] tracking-tight leading-tight">
+                  {mode === 'login' ? 'Sign in to DataX' : 'Create your DataX account'}
+                </h1>
+                <p className="text-xs sm:text-[13px] text-[#5F6678] mt-1">
+                  {mode === 'login' 
+                    ? 'Access your workflows and the auto-fix engine.' 
+                    : 'Start building automated decision pipelines with PostgreSQL isolation.'}
+                </p>
               </div>
-            )}
 
-            {/* Custom Dark Theme JWT Auth Card */}
-            <form onSubmit={handleSubmit} className="bg-slate-900/90 border border-slate-800 shadow-2xl rounded-2xl p-6 backdrop-blur-xl space-y-4">
-              {mode === 'register' && (
-                <div>
-                  <label className="block text-slate-300 text-xs font-medium mb-1.5">Full Name</label>
-                  <div className="relative">
-                    <User className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                    <input
-                      type="text"
-                      required
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="e.g. Jane Doe"
-                      className="w-full bg-slate-800/90 border border-slate-700 text-white rounded-xl text-xs pl-9 pr-3 py-2.5 focus:border-blue-500 focus:outline-none"
-                    />
-                  </div>
+              {/* Segmented Pill Switcher */}
+              <div className="bg-[#EDEFF5] p-1 rounded-full flex mb-6 h-[37px] items-center">
+                <button
+                  type="button"
+                  onClick={() => switchMode('login')}
+                  className={`flex-1 h-[29px] text-xs font-semibold rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                    mode === 'login' 
+                      ? 'bg-white text-[#0A0F1F] shadow-sm' 
+                      : 'text-[#5F6678] hover:text-[#0A0F1F]'
+                  }`}
+                >
+                  Sign in
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchMode('register')}
+                  className={`flex-1 h-[29px] text-xs font-semibold rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                    mode === 'register' 
+                      ? 'bg-white text-[#0A0F1F] shadow-sm' 
+                      : 'text-[#5F6678] hover:text-[#0A0F1F]'
+                  }`}
+                >
+                  Register
+                </button>
+              </div>
+
+              {/* Error Alert */}
+              {authError && (
+                <div className="mb-4 p-3 rounded-[10px] bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                  <span>{authError}</span>
                 </div>
               )}
 
-              <div>
-                <label className="block text-slate-300 text-xs font-medium mb-1.5">Enterprise Email</label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@company.com"
-                    className="w-full bg-slate-800/90 border border-slate-700 text-white rounded-xl text-xs pl-9 pr-3 py-2.5 focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-300 text-xs font-medium mb-1.5">Password</label>
-                <div className="relative">
-                  <KeyRound className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full bg-slate-800/90 border border-slate-700 text-white rounded-xl text-xs pl-9 pr-3 py-2.5 focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full mt-2 bg-[#1473E6] hover:bg-blue-600 text-white text-xs font-semibold rounded-xl py-2.5 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  <span>{mode === 'login' ? 'Sign In to Workspace' : 'Create Enterprise Account'}</span>
+              {/* Form Fields */}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {mode === 'register' && (
+                  <div>
+                    <label className="block text-xs font-semibold text-[#0A0F1F] mb-1.5">
+                      Full name
+                    </label>
+                    <div className="relative flex items-center">
+                      <User className="w-4 h-4 text-[#5F6678] absolute left-3.5 pointer-events-none" />
+                      <input
+                        type="text"
+                        required
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="e.g. Jane Doe"
+                        className="w-full h-10 pl-10 pr-3.5 rounded-[10px] bg-white border border-[#CDD2DE] text-xs sm:text-sm text-[#0A0F1F] placeholder:text-[#5F6678]/60 focus:outline-none focus:border-[#2D55F5] focus:ring-1 focus:ring-[#2D55F5] transition-all"
+                      />
+                    </div>
+                  </div>
                 )}
-              </button>
 
-              <div className="pt-2 text-center text-xs text-slate-400">
-                {mode === 'login' ? (
-                  <p>
-                    Don't have an enterprise account?{' '}
-                    <button type="button" onClick={() => switchMode('register')} className="text-blue-400 hover:text-blue-300 font-semibold cursor-pointer">
-                      Register
+                <div>
+                  <label className="block text-xs font-semibold text-[#0A0F1F] mb-1.5">
+                    Work email
+                  </label>
+                  <div className="relative flex items-center">
+                    <Mail className="w-4 h-4 text-[#5F6678] absolute left-3.5 pointer-events-none" />
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="name@company.com"
+                      className="w-full h-10 pl-10 pr-3.5 rounded-[10px] bg-white border border-[#CDD2DE] text-xs sm:text-sm text-[#0A0F1F] placeholder:text-[#5F6678]/60 focus:outline-none focus:border-[#2D55F5] focus:ring-1 focus:ring-[#2D55F5] transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#0A0F1F] mb-1.5">
+                    Password
+                  </label>
+                  <div className="relative flex items-center">
+                    <Lock className="w-4 h-4 text-[#5F6678] absolute left-3.5 pointer-events-none" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full h-10 pl-10 pr-10 rounded-[10px] bg-white border border-[#CDD2DE] text-xs sm:text-sm text-[#0A0F1F] placeholder:text-[#5F6678]/60 focus:outline-none focus:border-[#2D55F5] focus:ring-1 focus:ring-[#2D55F5] transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 text-[#5F6678] hover:text-[#0A0F1F] transition-colors focus:outline-none cursor-pointer"
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
                     </button>
-                  </p>
-                ) : (
-                  <p>
-                    Already have an account?{' '}
-                    <button type="button" onClick={() => switchMode('login')} className="text-blue-400 hover:text-blue-300 font-semibold cursor-pointer">
-                      Sign In
-                    </button>
-                  </p>
-                )}
-              </div>
-            </form>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full h-10 mt-2 rounded-full bg-[#2D55F5] hover:bg-blue-600 active:scale-[0.99] text-white font-medium text-xs sm:text-sm transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      <span>Authenticating...</span>
+                    </>
+                  ) : (
+                    <span>{mode === 'login' ? 'Sign in to workspace' : 'Create workspace account'}</span>
+                  )}
+                </button>
+
+                <div className="pt-2 text-center text-xs text-[#5F6678]">
+                  {mode === 'login' ? (
+                    <p>
+                      Don't have an account?{' '}
+                      <button 
+                        type="button" 
+                        onClick={() => switchMode('register')} 
+                        className="text-[#2D55F5] hover:underline font-semibold cursor-pointer ml-0.5"
+                      >
+                        Register
+                      </button>
+                    </p>
+                  ) : (
+                    <p>
+                      Already have an account?{' '}
+                      <button 
+                        type="button" 
+                        onClick={() => switchMode('login')} 
+                        className="text-[#2D55F5] hover:underline font-semibold cursor-pointer ml-0.5"
+                      >
+                        Sign in
+                      </button>
+                    </p>
+                  )}
+                </div>
+              </form>
+            </div>
           </div>
         )}
 
-        {/* Enterprise Security Markers */}
-        <div className="mt-8 flex items-center justify-center gap-6 text-[11px] text-slate-500 font-medium">
+        {/* Security / Compliance Badges matching 00.1 Sign in.svg */}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-6 text-xs text-[#5F6678]">
           <span className="flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4 text-emerald-500" />
-            SOC 2 Type II
+            <span className="w-2.5 h-2.5 rounded-full border border-[#5F6678] inline-block" />
+            <span>SOC 2 Type II</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <Database className="w-4 h-4 text-blue-500" />
-            PostgreSQL DB
+            <Database className="w-3.5 h-3.5 text-[#5F6678]" />
+            <span>PostgreSQL</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <Lock className="w-4 h-4 text-indigo-400" />
-            JWT 256-Bit
+            <Lock className="w-3.5 h-3.5 text-[#5F6678]" />
+            <span>JWT RS256</span>
           </span>
         </div>
-      </main>
 
-      {/* Footer */}
-      <footer className="relative z-10 w-full py-4 text-center text-xs text-slate-600 border-t border-slate-800/40">
-        <p>© 2026 DataGlow.ai Inc. DataX Decision Engine · All rights reserved.</p>
-      </footer>
+        {/* Copyright notice matching 00.1 Sign in.svg */}
+        <div className="mt-3.5 text-center text-xs text-[#5F6678]">
+          © 2026 DataGlow.ai Inc.
+        </div>
+      </main>
     </div>
   );
 }
