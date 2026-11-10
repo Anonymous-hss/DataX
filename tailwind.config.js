@@ -26,11 +26,10 @@ export default {
         }
       },
       fontFamily: {
-        geist: ['Geist', 'sans-serif'],
-        'geist-mono': ['Geist Mono', 'monospace'],
-        sans: ['Geist', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Geist', 'Outfit', 'sans-serif'],
-        mono: ['Geist Mono', 'JetBrains Mono', 'Fira Code', 'monospace'],
+        sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        display: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        body: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       boxShadow: {
         'glow-cyan': '0 0 25px -5px rgba(6, 182, 212, 0.4)',
