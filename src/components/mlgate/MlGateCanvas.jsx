@@ -313,99 +313,20 @@ export default function MlGateCanvas({ onSwitchToStudio }) {
 
   return (
     <div className="relative w-full h-full min-h-0 bg-[#F8FAFC] rounded-2xl border border-slate-200/80 overflow-hidden select-none flex flex-col shadow-xs font-sans">
-      {/* 1. TOP FLOATING TEMPLATE & ACTION BAR (Matches #canvas 100%) */}
-      <div className="absolute top-3.5 inset-x-5 flex flex-wrap items-center justify-between gap-2 z-30 pointer-events-none">
-        {/* Left: Template Quick Switcher Pill */}
-        <div className="relative pointer-events-auto bg-white/95 backdrop-blur-md rounded-xl border border-slate-200/90 shadow-sm p-1.5 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-2 pr-1 flex items-center gap-1">
-            <Zap className="w-3.5 h-3.5 text-blue-600" />
-            Template:
-          </span>
-          {ML_GATE_TEMPLATES.map(tmpl => (
-            <button
-              key={tmpl.id}
-              onClick={() => handleSelectTemplate(tmpl.id)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                selectedTemplateId === tmpl.id
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200/80'
-                  : 'hover:bg-slate-100 text-slate-700'
-              }`}
-            >
-              {tmpl.shortLabel || tmpl.name}
-            </button>
-          ))}
-
-          {/* All Blueprints Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setTemplateDropdownOpen(prev => !prev)}
-              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer flex items-center gap-1"
-            >
-              <span>All Blueprints ({ML_GATE_TEMPLATES.length})</span>
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${templateDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {templateDropdownOpen && (
-              <div
-                className="absolute left-0 mt-2 w-88 bg-white rounded-xl shadow-xl border border-slate-200 z-50 p-2"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="px-2 py-1.5 border-b border-slate-100 flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                    Verified ML Compliance Blueprints
-                  </span>
-                  <button
-                    onClick={() => setTemplateDropdownOpen(false)}
-                    className="text-xs text-slate-400 hover:text-slate-600 cursor-pointer"
-                  >
-                    Close
-                  </button>
-                </div>
-                <div className="divide-y divide-slate-100 mt-1">
-                  {ML_GATE_TEMPLATES.map(t => (
-                    <button
-                      key={t.id}
-                      onClick={() => handleSelectTemplate(t.id)}
-                      className="w-full text-left p-2.5 hover:bg-slate-50 rounded-lg transition-colors flex flex-col gap-0.5 cursor-pointer group"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-800 group-hover:text-blue-600">{t.name}</span>
-                        <span className="text-[10px] text-slate-400">{t.nodes.length} nodes</span>
-                      </div>
-                      <span className="text-[11px] text-slate-500 line-clamp-2">{t.description}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <span className="h-4 w-px bg-slate-200 mx-0.5" />
-          <button
-            onClick={handleClearCanvas}
-            className="px-2.5 py-1 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors cursor-pointer flex items-center gap-1"
-            title="Start from scratch with an empty canvas"
-          >
-            <RotateCcw className="w-3 h-3" />
-            Empty Canvas
-          </button>
-
-          {onSwitchToStudio && (
-            <>
-              <span className="h-4 w-px bg-slate-200 mx-0.5" />
-              <button
-                onClick={onSwitchToStudio}
-                className="px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer flex items-center gap-1.5"
-                title="Open Classic Studio Mode (Tabular PSI Workbench, SFT Corpus Cleanser, Certificate Ledger)"
-              >
-                <Sliders className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Studio Workbench</span>
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Right: Save, Dry Run, Run Live, Add Node (Matches #canvas 100%) */}
+      {/* 1. TOP ACTION BAR */}
+      <div className="absolute top-3.5 right-5 z-30 pointer-events-none">
         <div className="pointer-events-auto flex items-center gap-2">
+          {onSwitchToStudio && (
+            <button
+              onClick={onSwitchToStudio}
+              className="px-2.5 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+              title="Open Classic Studio Mode (Tabular PSI Workbench, SFT Corpus Cleanser, Certificate Ledger)"
+            >
+              <Sliders className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Studio Workbench</span>
+            </button>
+          )}
+
           <button
             onClick={handleSaveCanvas}
             className={`px-3.5 py-2 rounded-xl border text-xs font-semibold shadow-xs transition-all cursor-pointer flex items-center gap-1.5 ${
@@ -425,15 +346,6 @@ export default function MlGateCanvas({ onSwitchToStudio }) {
           >
             <FlaskConical className={`w-3.5 h-3.5 text-blue-600 ${isRunningSim && simMode === 'dry_run' ? 'animate-bounce' : ''}`} />
             <span>{isRunningSim && simMode === 'dry_run' ? 'Evaluating...' : 'Dry Run'}</span>
-          </button>
-
-          <button
-            onClick={() => handleRunCertification('live')}
-            disabled={isRunningSim || nodes.length === 0}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40"
-          >
-            <Play className={`w-3.5 h-3.5 fill-white ${isRunningSim && simMode === 'live' ? 'animate-spin' : ''}`} />
-            <span>{isRunningSim && simMode === 'live' ? 'Certifying...' : 'Run Live'}</span>
           </button>
 
           <button
@@ -761,54 +673,8 @@ export default function MlGateCanvas({ onSwitchToStudio }) {
         </div>
       </div>
 
-      {/* 4. FLOATING CANVAS RADAR MINIMAP (Matches #canvas 100%) */}
-      {showMinimap && (
-        <div className="absolute bottom-16 right-5 w-44 h-28 bg-white/95 rounded-xl border border-slate-200/90 shadow-lg p-2 z-30 pointer-events-none hidden md:flex flex-col justify-between backdrop-blur-xs">
-          <div className="flex items-center justify-between text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-            <span>Canvas Radar</span>
-            <span className="text-blue-600">{nodes.length} Nodes</span>
-          </div>
-          <div className="relative w-full h-18 bg-slate-50 rounded border border-slate-200/70 overflow-hidden">
-            {nodes.map(n => (
-              <div
-                key={n.id}
-                style={{
-                  left: `${Math.min(88, Math.max(5, (n.x / 1400) * 100))}%`,
-                  top: `${Math.min(78, Math.max(5, (n.y / 500) * 100))}%`
-                }}
-                className={`absolute w-3 h-2 rounded-2xs ${
-                  selectedNodeId === n.id ? 'bg-blue-600 ring-1 ring-blue-400' : 'bg-slate-400'
-                }`}
-              />
-            ))}
-          </div>
-          <div className="text-[8px] text-slate-400 font-mono text-right">
-            Press F to fit • Del to remove
-          </div>
-        </div>
-      )}
-
-      {/* 5. FLOATING BOTTOM TOOLBAR DOCK (Matches #canvas 100%) */}
-      <div className="absolute bottom-3 inset-x-3 sm:inset-x-5 flex flex-wrap md:flex-nowrap items-center justify-between gap-2 pointer-events-none z-30">
-        <div className="pointer-events-auto shrink-0 flex items-center gap-2">
-          <button
-            onClick={() => handleRunCertification('dry_run')}
-            disabled={isRunningSim || nodes.length === 0}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-slate-200/90 text-xs font-bold text-slate-800 shadow-md hover:bg-slate-50 transition-all cursor-pointer disabled:opacity-50"
-          >
-            <FlaskConical className="w-3.5 h-3.5 text-blue-600" />
-            <span>Test in Sandbox / Dry Run</span>
-          </button>
-          <button
-            onClick={() => handleRunCertification('live')}
-            disabled={isRunningSim || nodes.length === 0}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white shadow-md transition-all cursor-pointer disabled:opacity-50"
-          >
-            <Play className="w-3.5 h-3.5 fill-white" />
-            <span>Run Live</span>
-          </button>
-        </div>
-
+      {/* 5. FLOATING BOTTOM TOOLBAR DOCK */}
+      <div className="absolute bottom-3 inset-x-3 sm:inset-x-5 flex items-center justify-center pointer-events-none z-30">
         <div className="pointer-events-auto shrink-0 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200 shadow-lg p-1.5 flex items-center gap-1">
           <button
             onClick={() => setActiveTool('move')}
@@ -852,14 +718,6 @@ export default function MlGateCanvas({ onSwitchToStudio }) {
           >
             <Maximize2 className="w-3.5 h-3.5" />
             Fit
-          </button>
-          <button
-            onClick={() => setShowMinimap(v => !v)}
-            className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer ${
-              showMinimap ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-100'
-            }`}
-          >
-            Radar
           </button>
         </div>
       </div>

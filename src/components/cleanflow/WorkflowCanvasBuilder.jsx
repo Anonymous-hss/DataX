@@ -1680,122 +1680,8 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const getNode = (id) => nodes.find(n => n.id === id);
   return (
     <div className="relative w-full h-full min-h-0 bg-[#F8FAFC] rounded-2xl overflow-hidden select-none flex flex-col shadow-xs">
-      {/* Top Template Autofill & Reset Bar */}
-      <div className="absolute top-3.5 inset-x-5 flex items-center justify-between z-30 pointer-events-none">
-        {/* Template Quick Switcher */}
-        <div className="relative pointer-events-auto bg-white/95 backdrop-blur-md rounded-xl border border-slate-200/90 shadow-sm p-1.5 flex items-center gap-1.5">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-2 pr-1 flex items-center gap-1">
-            <Zap className="w-3.5 h-3.5 text-blue-600" />
-            Template:
-          </span>
-          <button
-            onClick={() => handleAutofillTemplate('sap_bw_s4hana')}
-            className="px-2.5 py-1 rounded-lg text-xs font-semibold hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
-          >
-            SAP Clean Core
-          </button>
-          <button
-            onClick={() => handleAutofillTemplate('financial_gl_ledger')}
-            className="px-2.5 py-1 rounded-lg text-xs font-semibold hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
-          >
-            Financial SOX
-          </button>
-          <button
-            onClick={() => handleAutofillTemplate('customer_master_reconciliation')}
-            className="px-2.5 py-1 rounded-lg text-xs font-semibold hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
-          >
-            Customer 360
-          </button>
-          <button
-            onClick={() => handleAutofillTemplate('enterprise_rag_knowledge')}
-            className="px-2.5 py-1 rounded-lg text-xs font-semibold hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
-          >
-            Legal RAG
-          </button>
-          <button
-            onClick={() => handleAutofillTemplate('ml_dataset_certification')}
-            className="px-2.5 py-1 rounded-lg text-xs font-semibold hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
-          >
-            ML Gate
-          </button>
-          {/* All 10 Templates Dropdown Trigger */}
-          <div className="relative">
-            <button
-              onClick={() => setIsTemplatesDropdownOpen(prev => !prev)}
-              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer flex items-center gap-1"
-            >
-              <span>All Templates ({Object.keys(TEMPLATE_AUTOFILLS).length})</span>
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isTemplatesDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {/* Dropdown Popover */}
-            {isTemplatesDropdownOpen && (
-              <div
-                className="absolute left-0 mt-2 w-96 max-h-[460px] overflow-y-auto bg-white rounded-xl shadow-xl border border-slate-200 z-50 p-2 scrollbar-thin"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="px-2 py-1.5 border-b border-slate-100 flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Enterprise Catalog ({Object.keys(TEMPLATE_AUTOFILLS).length})</span>
-                  <button
-                    onClick={() => setIsTemplatesDropdownOpen(false)}
-                    className="text-xs text-slate-400 hover:text-slate-600"
-                  >
-                    Close
-                  </button>
-                </div>
-                <div className="divide-y divide-slate-100">
-                  {Object.values(TEMPLATE_AUTOFILLS).map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => {
-                        handleAutofillTemplate(t.id);
-                        setIsTemplatesDropdownOpen(false);
-                      }}
-                      className="w-full text-left p-2.5 hover:bg-slate-50 rounded-lg transition-colors flex items-start gap-2.5 cursor-pointer group"
-                    >
-                      <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs">
-                        {t.priority?.includes('Tier 1') ? 'T1' :
-                          t.priority?.includes('Tier 2') ? 'T2' :
-                            t.priority?.includes('Tier 3') ? 'T3' :
-                              t.priority?.includes('Tier 4') ? 'T4' : 'T5'}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="text-xs font-bold text-slate-800 truncate group-hover:text-blue-600">
-                            {t.name}
-                          </span>
-                          <span className="text-[10px] text-slate-400 shrink-0">
-                            {t.nodes?.length} nodes
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
-                          {t.desc}
-                        </p>
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
-                            {t.category}
-                          </span>
-                          <span className="text-[10px] font-semibold text-emerald-600">
-                            {t.rules?.length || 4} rules
-                          </span>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          <span className="h-4 w-px bg-slate-200 mx-0.5" />
-          <button
-            onClick={handleClearCanvas}
-            className="px-2.5 py-1 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors cursor-pointer flex items-center gap-1"
-            title="Start from scratch with an empty canvas"
-          >
-            <RotateCcw className="w-3 h-3" />
-            Empty Canvas
-          </button>
-        </div>
-        {/* Top Right Action Buttons: Save, Dry Run, Run Live, Add Node */}
+      {/* Top Action Bar: Save, Dry Run, Add Node */}
+      <div className="absolute top-3.5 right-5 z-30 pointer-events-none">
         <div className="pointer-events-auto flex items-center gap-2">
           {/* Save Workflow */}
           <button
@@ -1834,16 +1720,6 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           >
             <FlaskConical className={`w-3.5 h-3.5 ${isExecutingDryRun ? 'animate-bounce text-blue-600' : 'text-blue-600'}`} />
             {isExecutingDryRun ? 'Evaluating...' : 'Dry Run'}
-          </button>
-          {/* Run Live */}
-          <button
-            onClick={handleRunLive}
-            disabled={isExecutingLiveRun || nodes.length === 0}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Commit compliant records live to Target ERP/Database"
-          >
-            <Play className={`w-3.5 h-3.5 fill-white ${isExecutingLiveRun ? 'animate-spin' : ''}`} />
-            {isExecutingLiveRun ? 'Posting...' : 'Run Live'}
           </button>
           {/* Add Node */}
           <button
@@ -2370,57 +2246,10 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
         </div>
       </div>
       
-      {/* Floating Canvas Minimap (Task 34) */}
-      {showMinimap && (
-        <div className="absolute bottom-16 right-5 w-44 h-28 bg-white/95 rounded-xl border border-slate-200/90 shadow-lg p-2 z-30 pointer-events-none hidden md:flex flex-col justify-between backdrop-blur-xs">
-          <div className="flex items-center justify-between text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-            <span>Canvas Radar</span>
-            <span className="text-blue-600">{nodes.length} Nodes</span>
-          </div>
-          <div className="relative w-full h-18 bg-slate-50 rounded border border-slate-200/70 overflow-hidden">
-            {nodes.map(n => (
-              <div
-                key={n.id}
-                style={{
-                  left: `${Math.min(88, Math.max(5, (n.x / 1400) * 100))}%`,
-                  top: `${Math.min(78, Math.max(5, (n.y / 500) * 100))}%`
-                }}
-                className={`absolute w-3 h-2 rounded-2xs ${
-                  selectedNodeId === n.id ? 'bg-blue-600 ring-1 ring-blue-400' : 'bg-slate-400'
-                }`}
-              />
-            ))}
-          </div>
-          <div className="text-[8px] text-slate-400 font-mono text-right">
-            Press F to fit • Del to remove
-          </div>
-        </div>
-      )}
-
-      {/* Floating Bottom Toolbar Dock - ALWAYS fits within window viewport */}
-      <div className="absolute bottom-3 inset-x-3 sm:inset-x-5 flex flex-wrap md:flex-nowrap items-center justify-between gap-2 pointer-events-none z-30">
-        {/* Left Action: Run Simulation / Dry Run directly on canvas */}
-        <div className="pointer-events-auto shrink-0 flex items-center gap-2">
-          <button
-            onClick={handleDryRun}
-            disabled={isExecutingDryRun || nodes.length === 0}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-slate-200/90 text-xs font-bold text-slate-800 shadow-md hover:bg-slate-50 transition-all cursor-pointer disabled:opacity-50"
-            title="Execute test dry run directly on canvas"
-          >
-            <FlaskConical className={`w-3.5 h-3.5 text-blue-600 ${isExecutingDryRun ? 'animate-bounce' : ''}`} />
-            <span className="hidden sm:inline">{isExecutingDryRun ? 'Evaluating...' : 'Test in Sandbox / Dry Run'}</span>
-            <span className="sm:hidden">{isExecutingDryRun ? '...' : 'Dry Run'}</span>
-          </button>
-          <button
-            onClick={handleRunLive}
-            disabled={isExecutingLiveRun || nodes.length === 0}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white shadow-md transition-all cursor-pointer disabled:opacity-50"
-            title="Commit compliant records live to Target Database"
-          >
-            <Play className={`w-3.5 h-3.5 fill-white ${isExecutingLiveRun ? 'animate-spin' : ''}`} />
-            <span>{isExecutingLiveRun ? 'Posting...' : 'Run Live'}</span>
-          </button>
-        </div>
+      {/* Floating Bottom Toolbar Dock */}
+      <div className="absolute bottom-3 inset-x-3 sm:inset-x-5 flex items-center justify-between pointer-events-none z-30">
+        <div className="w-1" />
+        
         {/* Center Floating Dock: Move | Pan | Fit | Add Node | Ask AI */}
         <div className="pointer-events-auto shrink-0 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200 shadow-lg p-1.5 flex items-center gap-1">
           <button
@@ -2440,15 +2269,6 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           >
             <Hand className="w-3.5 h-3.5" />
             Pan
-          </button>
-                    <button
-            onClick={() => setShowMinimap(!showMinimap)}
-            className={`w-5 h-5 flex items-center justify-center rounded cursor-pointer ${
-              showMinimap ? 'text-blue-600 bg-blue-50' : 'text-slate-400 hover:text-slate-600'
-            }`}
-            title="Toggle Minimap Radar"
-          >
-            <Eye className="w-3 h-3" />
           </button>
           <span className="h-3.5 w-px bg-slate-200 mx-0.5" />
           <button
@@ -2474,6 +2294,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
             Ask AI
           </button>
         </div>
+
         {/* Right Zoom Controls (- 100% + Fit/Recenter) */}
         <div className="pointer-events-auto shrink-0 bg-white rounded-xl border border-slate-200 shadow-md px-2 py-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
           <button
@@ -2496,16 +2317,6 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
             title="Zoom in"
           >
             +
-          </button>
-          <span className="h-3.5 w-px bg-slate-200 mx-0.5" />
-                    <button
-            onClick={() => setShowMinimap(!showMinimap)}
-            className={`w-5 h-5 flex items-center justify-center rounded cursor-pointer ${
-              showMinimap ? 'text-blue-600 bg-blue-50' : 'text-slate-400 hover:text-slate-600'
-            }`}
-            title="Toggle Minimap Radar"
-          >
-            <Eye className="w-3 h-3" />
           </button>
           <span className="h-3.5 w-px bg-slate-200 mx-0.5" />
           <button
