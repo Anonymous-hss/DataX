@@ -2,18 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { 
   Lock, 
   Database, 
-  User, 
   LogOut, 
   CheckCircle2, 
   AlertCircle, 
   Loader2,
-  Mail,
   Eye,
   EyeOff
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
-// Official DataX Brand Logo matching 00.1 Sign in.svg
+// Official DataX Brand Logo matching Figma SVGs
 const DataXLogo = ({ size = 32 }) => (
   <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className="shrink-0">
     <path 
@@ -23,6 +21,20 @@ const DataXLogo = ({ size = 32 }) => (
     <path d="M7.2 24.8L20 7.2H25.2L12.4 24.8H7.2Z" fill="white" />
     <path d="M6.8 7.2H12L15.52 12H10.32L6.8 7.2Z" fill="#D4FF3A" />
     <path d="M16.88 20H22.08L25.6 24.8H20.4L16.88 20Z" fill="#D4FF3A" />
+  </svg>
+);
+
+// Exact Pencil Icon from 00.2 Register.svg
+const PencilIcon = ({ className = "text-[#5F6678]" }) => (
+  <svg width="15" height="15" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M1 13H3.533L10.667 5.867L8.133 3.333L1 10.467V13Z" />
+  </svg>
+);
+
+// Exact Document/File Icon from 00.1 & 00.2 SVGs
+const DocumentIcon = ({ className = "text-[#5F6678]" }) => (
+  <svg width="14" height="15" viewBox="0 0 14 15" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M10.5 4L7.5 1H2V13H10.5V4ZM7.5 1V4H10.5" />
   </svg>
 );
 
@@ -102,7 +114,7 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
         </button>
       </header>
 
-      {/* Main Centered Sign-In Content */}
+      {/* Main Centered Content */}
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-8 max-w-xl mx-auto w-full">
         {isSignedIn ? (
           /* Already Signed In View - Clean Unified White Card */
@@ -157,10 +169,16 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
                 <h1 className="text-[24px] font-bold text-[#0A0F1F] tracking-tight leading-tight">
                   {mode === 'login' ? 'Sign in to DataX' : 'Create your DataX account'}
                 </h1>
-                <p className="text-xs sm:text-[13px] text-[#5F6678] mt-1">
+                <p className="text-xs sm:text-[13px] text-[#5F6678] mt-1 leading-snug">
                   {mode === 'login' 
                     ? 'Access your workflows and the auto-fix engine.' 
-                    : 'Start building automated decision pipelines with PostgreSQL isolation.'}
+                    : (
+                      <>
+                        Start building automated decision pipelines with PostgreSQL
+                        <br />
+                        isolation.
+                      </>
+                    )}
                 </p>
               </div>
 
@@ -171,8 +189,8 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
                   onClick={() => switchMode('login')}
                   className={`flex-1 h-[29px] text-xs font-semibold rounded-full flex items-center justify-center transition-all cursor-pointer ${
                     mode === 'login' 
-                      ? 'bg-white text-[#0A0F1F] shadow-sm' 
-                      : 'text-[#5F6678] hover:text-[#0A0F1F]'
+                      ? 'bg-white text-[#2D55F5] shadow-sm' 
+                      : 'text-[#474E61] hover:text-[#0A0F1F] font-medium'
                   }`}
                 >
                   Sign in
@@ -182,8 +200,8 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
                   onClick={() => switchMode('register')}
                   className={`flex-1 h-[29px] text-xs font-semibold rounded-full flex items-center justify-center transition-all cursor-pointer ${
                     mode === 'register' 
-                      ? 'bg-white text-[#0A0F1F] shadow-sm' 
-                      : 'text-[#5F6678] hover:text-[#0A0F1F]'
+                      ? 'bg-white text-[#2D55F5] shadow-sm' 
+                      : 'text-[#474E61] hover:text-[#0A0F1F] font-medium'
                   }`}
                 >
                   Register
@@ -206,7 +224,9 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
                       Full name
                     </label>
                     <div className="relative flex items-center">
-                      <User className="w-4 h-4 text-[#5F6678] absolute left-3.5 pointer-events-none" />
+                      <div className="absolute left-3.5 pointer-events-none flex items-center justify-center">
+                        <PencilIcon />
+                      </div>
                       <input
                         type="text"
                         required
@@ -224,7 +244,9 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
                     Work email
                   </label>
                   <div className="relative flex items-center">
-                    <Mail className="w-4 h-4 text-[#5F6678] absolute left-3.5 pointer-events-none" />
+                    <div className="absolute left-3.5 pointer-events-none flex items-center justify-center">
+                      <DocumentIcon />
+                    </div>
                     <input
                       type="email"
                       required
@@ -241,7 +263,7 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
                     Password
                   </label>
                   <div className="relative flex items-center">
-                    <Lock className="w-4 h-4 text-[#5F6678] absolute left-3.5 pointer-events-none" />
+                    <Lock className="w-3.5 h-3.5 text-[#5F6678] absolute left-3.5 pointer-events-none" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       required
@@ -273,10 +295,10 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin text-white" />
-                      <span>Authenticating...</span>
+                      <span>{mode === 'login' ? 'Authenticating...' : 'Creating account...'}</span>
                     </>
                   ) : (
-                    <span>{mode === 'login' ? 'Sign in to workspace' : 'Create workspace account'}</span>
+                    <span>{mode === 'login' ? 'Sign in to workspace' : 'Create account'}</span>
                   )}
                 </button>
 
@@ -310,7 +332,7 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
           </div>
         )}
 
-        {/* Security / Compliance Badges matching 00.1 Sign in.svg */}
+        {/* Security / Compliance Badges matching SVGs */}
         <div className="mt-6 flex flex-wrap items-center justify-center gap-6 text-xs text-[#5F6678]">
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full border border-[#5F6678] inline-block" />
@@ -326,7 +348,7 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
           </span>
         </div>
 
-        {/* Copyright notice matching 00.1 Sign in.svg */}
+        {/* Copyright notice matching SVGs */}
         <div className="mt-3.5 text-center text-xs text-[#5F6678]">
           © 2026 DataGlow.ai Inc.
         </div>
