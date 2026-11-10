@@ -456,11 +456,19 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             <button
               type="button"
-              onClick={() => navigateTo('new-workflow')}
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('open-start-thread-modal'));
+                if (currentScreen !== 'threads') {
+                  navigateTo('threads');
+                  setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('open-start-thread-modal'));
+                  }, 80);
+                }
+              }}
               className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#2D55F5] hover:bg-[#2045DC] text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>New workflow</span>
+              <span>New thread</span>
             </button>
 
             <NotificationCenter />
