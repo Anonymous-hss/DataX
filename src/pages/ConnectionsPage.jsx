@@ -138,7 +138,7 @@ export default function ConnectionsPage({ onSwitchToMarketing } = {}) {
           ...prev,
           [conn.id]: {
             status: 'error',
-            message: data.detail || data.message || `Connection failed (HTTP ${res.status}): Server rejected authentication`
+            message: data?.detail || data?.message || 'Connection failed: Server rejected authentication'
           }
         }));
       }

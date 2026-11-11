@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useUser } from './AuthContext';
 import * as XLSX from 'xlsx';
-import { SAP_BW_PROCUREMENT_DATA, SAP_BW_INVENTORY_DATA, USER_MASTER_DATA } from '../data/sampleDatasets';
+import { SAP_BW_PROCUREMENT_DATA, SAP_BW_INVENTORY_DATA, USER_MASTER_DATA, getTableData } from '../data/sampleDatasets';
 import { ONTOLOGY_GRAPH } from '../data/ontologyGraph';
 import { TEMPLATE_AUTOFILLS, getWorkflowTemplate } from '../data/workflowTemplates';
 
@@ -1575,7 +1575,7 @@ export function RuleEngineProvider({ children }) {
         ? sourceConfig.fileData
         : (rawRecordsRef.current && rawRecordsRef.current.length > 0)
         ? rawRecordsRef.current
-        : getTableData(tbl, engineKey, 100);
+        : (getTableData(tbl, engineKey, 100)?.rows || []);
       if (baseRows && baseRows.length > 0) {
         evaluatedRows = baseRows.map(r => evaluateRow(r, selectedActiveRules, autoFixEnabled, baseRows));
         setSampleData(evaluatedRows);
@@ -1738,8 +1738,7 @@ export function RuleEngineProvider({ children }) {
 
         return realRun;
       } else {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.detail || errJson.message || `Live execution failed with status ${res.status}`);
+        throw new Error('Live execution failed: no response data from pipeline engine');
       }
     } catch (err) {
       console.error('Live run execution failed:', err);

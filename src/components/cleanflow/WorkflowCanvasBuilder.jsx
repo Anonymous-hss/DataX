@@ -997,6 +997,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       setActiveStageNodeId(null);
     }
   };
+  const handleLiveRun = handleRunLive;
   const handleSaveWorkflow = async () => {
     try {
       const res = await saveWorkflow({
@@ -1561,7 +1562,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       system: 'RAG',
       table: ragTargetField || 'Knowledge Store',
       status: 'RAG Active',
-      rowCount: Top - Chunks
+      rowCount: 'Top Chunks'
     } : n));
     setIsPropertyModalOpen(false);
   };
