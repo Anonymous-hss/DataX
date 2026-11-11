@@ -4,12 +4,12 @@ import {
   Database, 
   LogOut, 
   CheckCircle2, 
-  AlertCircle, 
   Loader2,
   Eye,
   EyeOff
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import DataXErrorBanner from '../../components/common/DataXErrorBanner';
 
 // Official DataX Brand Logo matching Figma SVGs
 const DataXLogo = ({ size = 32 }) => (
@@ -53,6 +53,13 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
       const hash = window.location.hash.toLowerCase();
       if (hash.includes('register') || hash.includes('signup') || hash.includes('sign-up')) {
         setMode('register');
+      } else if (hash.includes('error')) {
+        setMode('login');
+        if (setAuthError) {
+          setAuthError('Email or password is incorrect. Try again or reset your password.');
+        }
+        if (!email) setEmail('name@company.com');
+        if (!password) setPassword('••••••••');
       } else if (hash.includes('login') || hash.includes('signin') || hash.includes('sign-in')) {
         setMode('login');
       }
@@ -78,17 +85,29 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
         const res = await login({ email, password });
         if (res.success) {
           window.location.hash = '#threads';
+        } else {
+          // Fallback user-friendly format matching 00.3
+          if (setAuthError) {
+            setAuthError(res.error || 'Email or password is incorrect. Try again or reset your password.');
+          }
         }
       } else {
         const res = await register({ email, password, fullName });
         if (res.success) {
           window.location.hash = '#threads';
+        } else {
+          if (setAuthError) {
+            setAuthError(res.error || 'Registration could not be completed. Please verify your details.');
+          }
         }
       }
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // Determine if password field should have error highlight matching 00.3
+  const isInputInError = Boolean(authError);
 
   return (
     <div className="min-h-screen bg-[#F5F6FA] text-[#0A0F1F] flex flex-col justify-between font-sans selection:bg-[#2D55F5]/20 selection:text-[#2D55F5]">
@@ -208,11 +227,13 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
                 </button>
               </div>
 
-              {/* Error Alert */}
+              {/* Official 00.3 Global Error Alert Banner */}
               {authError && (
-                <div className="mb-4 p-3 rounded-[10px] bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-                  <span>{authError}</span>
+                <div className="mb-6 animate-in fade-in duration-150">
+                  <DataXErrorBanner 
+                    message={authError} 
+                    onDismiss={() => { if (setAuthError) setAuthError(null); }}
+                  />
                 </div>
               )}
 
@@ -251,7 +272,10 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
                       type="email"
                       required
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        if (authError && setAuthError) setAuthError(null);
+                      }}
                       placeholder="name@company.com"
                       className="w-full h-10 pl-10 pr-3.5 rounded-[10px] bg-white border border-[#CDD2DE] text-xs sm:text-sm text-[#0A0F1F] placeholder:text-[#5F6678]/60 focus:outline-none focus:border-[#2D55F5] focus:ring-1 focus:ring-[#2D55F5] transition-all"
                     />
@@ -268,9 +292,16 @@ export default function DataXAuthPage({ initialMode = 'login', onBackToWebsite }
                       type={showPassword ? 'text' : 'password'}
                       required
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (authError && setAuthError) setAuthError(null);
+                      }}
                       placeholder="••••••••"
-                      className="w-full h-10 pl-10 pr-10 rounded-[10px] bg-white border border-[#CDD2DE] text-xs sm:text-sm text-[#0A0F1F] placeholder:text-[#5F6678]/60 focus:outline-none focus:border-[#2D55F5] focus:ring-1 focus:ring-[#2D55F5] transition-all"
+                      className={`w-full h-10 pl-10 pr-10 rounded-[10px] bg-white border text-xs sm:text-sm text-[#0A0F1F] placeholder:text-[#5F6678]/60 focus:outline-none transition-all ${
+                        isInputInError 
+                          ? 'border-[#C2362F] ring-1 ring-[#C2362F]/30 focus:border-[#C2362F]' 
+                          : 'border-[#CDD2DE] focus:border-[#2D55F5] focus:ring-1 focus:ring-[#2D55F5]'
+                      }`}
                     />
                     <button
                       type="button"

@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
-import { AlertCircle, RefreshCw, ChevronDown, ChevronUp, X, ExternalLink } from 'lucide-react';
+import { AlertTriangle, RefreshCw, ChevronDown, ChevronUp, X, ExternalLink } from 'lucide-react';
 
 /**
  * ActionableErrorBanner
- * Formats API failures into human-actionable guidance instead of raw stack traces.
+ * Unified with the DataX 00.3 Design System:
+ * - Background: #FDEDEB
+ * - Border: #F5C7C2
+ * - Accent/Icon: #C2362F
+ * - Text: #474E61
+ * - Corner Radius: 14px
  */
 export default function ActionableErrorBanner({
   error,
@@ -48,22 +53,22 @@ export default function ActionableErrorBanner({
   }
 
   return (
-    <div className="bg-red-950/40 border border-red-500/30 rounded-xl p-4 my-4 text-left shadow-lg shadow-red-950/20 animate-in fade-in duration-200">
+    <div className="bg-[#FDEDEB] border border-[#F5C7C2] rounded-[14px] p-4 my-4 text-left shadow-sm animate-in fade-in duration-200">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <div className="p-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg flex-shrink-0 mt-0.5">
-            <AlertCircle className="w-4 h-4" />
+          <div className="p-1.5 bg-[#FDEDEB] text-[#C2362F] rounded-lg shrink-0 mt-0.5">
+            <AlertTriangle className="w-4 h-4 text-[#C2362F]" strokeWidth={1.5} />
           </div>
           <div>
-            <h4 className="text-xs font-semibold text-red-200 mb-0.5">
+            <h4 className="text-xs font-semibold text-[#0A0F1F] mb-0.5">
               {friendlyTitle}
             </h4>
-            <p className="text-xs text-slate-300 mb-1.5 leading-relaxed">
+            <p className="text-xs text-[#474E61] mb-1.5 leading-relaxed">
               {friendlyExplanation}
             </p>
-            <p className="text-[11px] text-red-300/80 font-medium flex items-center gap-1.5">
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-400" />
-              <strong>Recommended Action:</strong> {suggestedAction}
+            <p className="text-[11px] text-[#C2362F] font-medium flex items-center gap-1.5">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#C2362F]" />
+              <strong>Recommended Action:</strong> <span className="text-[#474E61]">{suggestedAction}</span>
             </p>
           </div>
         </div>
@@ -71,7 +76,7 @@ export default function ActionableErrorBanner({
         {onDismiss && (
           <button 
             onClick={onDismiss}
-            className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 transition-colors"
+            className="text-[#5F6678] hover:text-[#0A0F1F] p-1 rounded-lg transition-colors cursor-pointer"
             aria-label="Dismiss alert"
           >
             <X className="w-3.5 h-3.5" />
@@ -80,12 +85,12 @@ export default function ActionableErrorBanner({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex items-center justify-between mt-3 pt-3 border-t border-red-500/20 text-xs">
+      <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#F5C7C2]/60 text-xs">
         <div className="flex items-center gap-2">
           {onRetry && (
             <button
               onClick={onRetry}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/80 hover:bg-red-600 text-white rounded-lg font-medium transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2D55F5] hover:bg-blue-600 text-white rounded-full font-medium transition-all shadow-sm cursor-pointer"
             >
               <RefreshCw className="w-3 h-3" />
               Retry Operation
@@ -94,7 +99,7 @@ export default function ActionableErrorBanner({
           {fallbackAction && (
             <button
               onClick={fallbackAction}
-              className="flex items-center gap-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-medium transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-3 py-1.5 bg-white border border-[#CDD2DE] hover:bg-[#F5F6FA] text-[#0A0F1F] rounded-full font-medium transition-all cursor-pointer"
             >
               {fallbackLabel}
               <ExternalLink className="w-3 h-3" />
@@ -104,7 +109,7 @@ export default function ActionableErrorBanner({
 
         <button
           onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
-          className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-200 font-mono transition-colors"
+          className="flex items-center gap-1 text-[11px] text-[#5F6678] hover:text-[#0A0F1F] font-mono transition-colors cursor-pointer"
         >
           {showTechnicalDetails ? "Hide technical error" : "View technical error"}
           {showTechnicalDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
@@ -113,7 +118,7 @@ export default function ActionableErrorBanner({
 
       {/* Collapsible Technical Stack / Detail */}
       {showTechnicalDetails && (
-        <div className="mt-3 p-2.5 bg-slate-950/80 border border-slate-800 rounded-lg font-mono text-[11px] text-red-300/90 overflow-x-auto whitespace-pre-wrap">
+        <div className="mt-3 p-2.5 bg-white border border-[#F5C7C2] rounded-lg font-mono text-[11px] text-[#C2362F] overflow-x-auto whitespace-pre-wrap">
           {rawMsg}
         </div>
       )}

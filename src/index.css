@@ -283,3 +283,25 @@ html.dark .text-emerald-500 {
 .bg-emerald-500\/10 {
   background-color: rgba(59, 126, 116, 0.1) !important;
 }
+
+/* Official DataX Design System - Unified Error System (00.3) */
+.datax-error-banner {
+  background-color: #FDEDEB;
+  border: 1px solid #F5C7C2;
+  border-radius: 14px;
+  color: #474E61;
+}
+
+.datax-error-icon {
+  color: #C2362F;
+}
+
+.datax-input-error {
+  border-color: #C2362F !important;
+  box-shadow: 0 0 0 1px rgba(194, 54, 47, 0.25) !important;
+}
+
+.datax-input-error:focus {
+  border-color: #C2362F !important;
+  box-shadow: 0 0 0 2px rgba(194, 54, 47, 0.35) !important;
+}
