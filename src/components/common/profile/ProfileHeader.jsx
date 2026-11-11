@@ -31,3 +31,4 @@ export default function ProfileHeader({ fullName, email, tenantId, initials, ima
     </div>
   );
 }
+

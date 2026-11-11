@@ -48,3 +48,4 @@ export default function AppearanceThemeSelector({ themeMode, onThemeChange }) {
     </div>
   );
 }
+

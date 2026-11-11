@@ -30,6 +30,7 @@ import NotificationCenter from './NotificationCenter';
 import DataXUserMenu from './DataXUserMenu';
 import AmbientBackgroundFlow from './AmbientBackgroundFlow';
 import GlobalSearchModal from './GlobalSearchModal';
+import NavigateFilterModal from './NavigateFilterModal';
 import OnboardingWizard from './OnboardingWizard';
 import UseCaseAdvisorModal from './UseCaseAdvisorModal';
 
@@ -79,6 +80,7 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
   });
 
   const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [navigateModalOpen, setNavigateModalOpen] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [advisorModalOpen, setAdvisorModalOpen] = useState(false);
   const [threadPickerOpen, setThreadPickerOpen] = useState(false);
@@ -107,12 +109,16 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
-  // Global keyboard shortcuts: ⌘K (Search) & ⌘B (Toggle Sliding Sidebar)
+  // Global keyboard shortcuts: ⌘K (Search), ⌘/ (Navigate & Filter), ⌘B (Toggle Sidebar)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setSearchModalOpen(prev => !prev);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+        e.preventDefault();
+        setNavigateModalOpen(prev => !prev);
       }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
         e.preventDefault();
@@ -456,6 +462,17 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             <button
               type="button"
+              onClick={() => setNavigateModalOpen(true)}
+              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F5F6FA] dark:bg-white/[0.05] border border-[#E3E6EE] dark:border-white/[0.08] text-xs text-[#5F6678] hover:border-[#2D55F5]/40 hover:text-[#0A0F1F] transition-all cursor-pointer"
+              title="Navigate & filter (⌘/)"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 text-[#8E95A9]" />
+              <span>Navigate</span>
+              <kbd className="text-[10px] font-mono text-[#5F6678] bg-white dark:bg-white/[0.08] px-1.5 py-0.5 rounded border border-[#E3E6EE]">⌘/</kbd>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setSearchModalOpen(true)}
               className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#F5F6FA] dark:bg-white/[0.05] border border-[#E3E6EE] dark:border-white/[0.08] text-xs text-[#5F6678] hover:border-[#2D55F5]/40 hover:text-[#0A0F1F] transition-all cursor-pointer"
               title="Search workflows, tables, rules (⌘K)"
@@ -542,6 +559,11 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
       <GlobalSearchModal 
         isOpen={searchModalOpen} 
         onClose={() => setSearchModalOpen(false)} 
+      />
+      <NavigateFilterModal 
+        isOpen={navigateModalOpen} 
+        onClose={() => setNavigateModalOpen(false)} 
+        onOpenAdvisor={() => setAdvisorModalOpen(true)} 
       />
       <OnboardingWizard 
         isOpen={onboardingOpen} 

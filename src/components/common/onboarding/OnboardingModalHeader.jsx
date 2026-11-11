@@ -32,3 +32,4 @@ export default function OnboardingModalHeader({ step, title, icon: Icon, onClose
     </div>
   );
 }
+

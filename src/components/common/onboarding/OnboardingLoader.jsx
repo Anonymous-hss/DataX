@@ -33,3 +33,4 @@ export default function OnboardingLoader({ title, subtitle }) {
     </motion.div>
   );
 }
+
