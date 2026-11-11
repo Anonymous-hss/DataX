@@ -81,53 +81,55 @@ export default function NavigateFilterModal({ isOpen, onClose, onOpenAdvisor }) 
   return (
     <AnimatePresence>
       <div 
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+        className="fixed inset-0 z-50 bg-slate-900/25 backdrop-blur-[2px] transition-opacity"
         role="dialog"
         aria-modal="true"
         onClick={onClose}
       >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: -10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, y: -10 }}
-          transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-          onClick={e => e.stopPropagation()}
-          className="bg-white dark:bg-[#18181C] border border-[#E3E6EE] dark:border-white/[0.08] rounded-[24px] max-w-[760px] w-full shadow-2xl shadow-slate-900/15 p-6 sm:p-7 text-left font-sans relative overflow-hidden"
-        >
-          {/* Header & Search Bar */}
-          <NavigateFilterHeader 
-            query={query}
-            setQuery={setQuery}
-            onClose={onClose}
-            inputRef={inputRef}
-          />
-
-          {/* Two-Column Directory & Workflow Context */}
-          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#E3E6EE] dark:divide-white/[0.08] py-4">
-            {/* Left Column: Platform Directory */}
-            <PlatformDirectoryColumn 
-              activeModuleId={activeModuleId}
-              onSelectModule={handleSelectModule}
+        <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative h-full pointer-events-none">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97, y: -8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.97, y: -8 }}
+            transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+            onClick={e => e.stopPropagation()}
+            className="pointer-events-auto absolute right-4 sm:right-6 lg:right-8 top-14 sm:top-16 bg-white dark:bg-[#18181C] border border-[#E3E6EE] dark:border-white/[0.08] rounded-[24px] w-[calc(100vw-32px)] sm:w-[700px] lg:w-[740px] shadow-2xl shadow-slate-900/20 p-6 sm:p-7 text-left font-sans overflow-hidden"
+          >
+            {/* Header & Search Bar */}
+            <NavigateFilterHeader 
               query={query}
+              setQuery={setQuery}
+              onClose={onClose}
+              inputRef={inputRef}
             />
 
-            {/* Right Column: Workflow Context */}
-            <WorkflowContextColumn 
-              selectedWorkflowId={selectedWorkflowId}
-              onSelectWorkflow={handleSelectWorkflow}
-              query={query}
-            />
-          </div>
+            {/* Two-Column Directory & Workflow Context */}
+            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#E3E6EE] dark:divide-white/[0.08] py-4">
+              {/* Left Column: Platform Directory */}
+              <PlatformDirectoryColumn 
+                activeModuleId={activeModuleId}
+                onSelectModule={handleSelectModule}
+                query={query}
+              />
 
-          {/* Bottom Footer Controls */}
-          <NavigateFilterFooter 
-            onOpenAdvisor={() => {
-              onClose();
-              if (onOpenAdvisor) onOpenAdvisor();
-            }}
-            onClearFilters={handleClearFilters}
-          />
-        </motion.div>
+              {/* Right Column: Workflow Context */}
+              <WorkflowContextColumn 
+                selectedWorkflowId={selectedWorkflowId}
+                onSelectWorkflow={handleSelectWorkflow}
+                query={query}
+              />
+            </div>
+
+            {/* Bottom Footer Controls */}
+            <NavigateFilterFooter 
+              onOpenAdvisor={() => {
+                onClose();
+                if (onOpenAdvisor) onOpenAdvisor();
+              }}
+              onClearFilters={handleClearFilters}
+            />
+          </motion.div>
+        </div>
       </div>
     </AnimatePresence>
   );

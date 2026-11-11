@@ -166,6 +166,16 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
   const allNavItems = [...CORE_PILLARS, ...PIPELINE_OPERATIONS, ...GOVERNANCE_ITEMS];
   const activeNavObj = allNavItems.find(item => isNavActive(item.screen)) || CORE_PILLARS[0];
 
+  const getBreadcrumbLabel = () => {
+    if (currentScreen === 'new-workflow' || currentScreen === 'start-workflow' || currentScreen === 'new-thread' || currentScreen === 'start-thread') {
+      return 'New workflow';
+    }
+    if (currentScreen === 'canvas' && activeThread?.name) {
+      return activeThread.name;
+    }
+    return activeNavObj.label;
+  };
+
   // Show active pipeline context bar automatically on studio/operation screens
   const shouldShowPipelinePicker = showContextBar || ['canvas', 'quarantine', 'shadow', 'audit', 'history', 'running-dry-run', 'dry-run-results', 'live-auto-fix'].includes(currentScreen);
 
@@ -245,7 +255,7 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
               <span className="text-[#8E95A9] font-medium">Studio</span>
               <ChevronRight className="w-3.5 h-3.5 text-[#CDD2DE] shrink-0" />
               <span className="font-bold text-[#0A0F1F] dark:text-white truncate text-sm">
-                {activeNavObj.label}
+                {getBreadcrumbLabel()}
               </span>
             </div>
 
@@ -341,13 +351,7 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
             <button
               type="button"
               onClick={() => {
-                window.dispatchEvent(new CustomEvent('open-start-thread-modal'));
-                if (currentScreen !== 'threads' && currentScreen !== 'workflows') {
-                  navigateTo('workflows');
-                  setTimeout(() => {
-                    window.dispatchEvent(new CustomEvent('open-start-thread-modal'));
-                  }, 80);
-                }
+                navigateTo('new-workflow');
               }}
               className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#2D55F5] hover:bg-[#2045DC] text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer"
             >

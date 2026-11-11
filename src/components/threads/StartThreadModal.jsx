@@ -94,9 +94,9 @@ export default function StartThreadModal({ isOpen, onClose }) {
   const { selectThread, setActiveThread, setWorkflowNodes, setWorkflowEdges } = useRuleEngine();
 
   const [selectedPack, setSelectedPack] = useState('sap');
-  const [threadName, setThreadName] = useState('User records clean-up');
+  const [threadName, setThreadName] = useState('SAP BW → S/4HANA Clean Core');
   const [description, setDescription] = useState(
-    'Check user records from production_db (email, name, role, status) and write clean rows to reconciled_db.'
+    'Extract InfoCube purchasing lines, fix legacy plant codes and stage clean orders.'
   );
   const [showAllPacks, setShowAllPacks] = useState(false);
 

@@ -13,7 +13,8 @@ import {
   UseCasesSection,
   WorkflowsFilterBar,
   WorkflowCard,
-  CreateCustomWorkflowCard
+  CreateCustomWorkflowCard,
+  WorkflowsEmptyState
 } from '../components/workflows';
 
 // --- Official DataX Brand Logo Squircle (Preserved for cross-page compatibility) ---
@@ -257,26 +258,30 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
           onOpenAdvisor={() => setAdvisorOpen(true)} 
         />
 
-        {/* 2. Hero Dark Banner with AI Rule Builder & Live Metrics */}
-        <WorkflowsHeroBanner 
-          activeCount={0}
-          totalCount={activeWorkflows.length}
-          meanHealth="99.2"
-          totalRuns={0}
-          autoFixEnabled={autoFixEnabled ?? true}
-          onToggleAutoFix={handleToggleAutoFix}
-        />
+        {/* 2. Hero Dark Banner with AI Rule Builder & Live Metrics (Shown on All overview) */}
+        {filter === 'all' && !search && (
+          <WorkflowsHeroBanner 
+            activeCount={0}
+            totalCount={activeWorkflows.length}
+            meanHealth="99.2"
+            totalRuns={0}
+            autoFixEnabled={autoFixEnabled ?? true}
+            onToggleAutoFix={handleToggleAutoFix}
+          />
+        )}
 
-        {/* 3. "Start from a use case" 3-Column Pillar Section */}
-        <UseCasesSection 
-          onOpenCanvas={() => {
-            if (selectThread) selectThread('sap_bw_s4hana');
-            navigateTo('canvas');
-          }}
-          onOpenFirewall={() => navigateTo('ai-firewall')}
-          onOpenMlGate={() => navigateTo('ml-certify')}
-          onOpenAdvisor={() => setAdvisorOpen(true)}
-        />
+        {/* 3. "Start from a use case" 3-Column Pillar Section (Shown on All overview) */}
+        {filter === 'all' && !search && (
+          <UseCasesSection 
+            onOpenCanvas={() => {
+              if (selectThread) selectThread('sap_bw_s4hana');
+              navigateTo('canvas');
+            }}
+            onOpenFirewall={() => navigateTo('ai-firewall')}
+            onOpenMlGate={() => navigateTo('ml-certify')}
+            onOpenAdvisor={() => setAdvisorOpen(true)}
+          />
+        )}
 
         {/* 4. Search & Segmented Filter Bar */}
         <WorkflowsFilterBar 
@@ -288,25 +293,35 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
           totalCount={activeWorkflows.length}
         />
 
-        {/* 5. Workflow Cards Grid (3 Columns) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredWorkflows.map((workflow) => (
-            <WorkflowCard 
-              key={workflow.id}
-              workflow={workflow}
-              onOpenCanvas={handleOpenCanvas}
-              onRunDryRun={handleRunDryRun}
-              onDelete={(wf) => setThreadToDelete(wf)}
-            />
-          ))}
-
-          {/* 6th Slot: Create Custom Workflow Card */}
-          <CreateCustomWorkflowCard 
-            onOpenCanvas={() => {
-              setIsStartThreadModalOpen(true);
+        {/* 5. Workflow Content Area: Empty State vs Cards Grid */}
+        {filteredWorkflows.length === 0 ? (
+          <WorkflowsEmptyState 
+            onShowReady={() => {
+              setFilter('all');
+              setSearch('');
             }}
+            onNewWorkflow={() => navigateTo('new-workflow')}
           />
-        </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredWorkflows.map((workflow) => (
+              <WorkflowCard 
+                key={workflow.id}
+                workflow={workflow}
+                onOpenCanvas={handleOpenCanvas}
+                onRunDryRun={handleRunDryRun}
+                onDelete={(wf) => setThreadToDelete(wf)}
+              />
+            ))}
+
+            {/* 6th Slot: Create Custom Workflow Card */}
+            <CreateCustomWorkflowCard 
+              onOpenCanvas={() => {
+                navigateTo('new-workflow');
+              }}
+            />
+          </div>
+        )}
 
       </div>
 

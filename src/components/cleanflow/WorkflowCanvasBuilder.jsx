@@ -62,6 +62,7 @@ import QuarantineModalPanel from './nodes/QuarantineModalPanel';
 import AddNodeCatalogModal from './modals/AddNodeCatalogModal';
 import CanvasTelemetryDrawer from './CanvasTelemetryDrawer';
 import { OPERATIONAL_CATALOG, sanitizeNode, resolveEngineKey } from './constants/nodeCatalog';
+import { RunningDryRunModal, DryRunResultsModal } from '../workflows/dryrun';
 import { addNotification } from '../../services/notificationService';
 import { useNavigation } from '../../context/NavigationContext';
 import { useRuleEngine } from '../../context/RuleEngineContext';
@@ -203,6 +204,8 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   }, [activeThread, setWorkflowNodes, setWorkflowEdges]);
   // Execution & Live Status State
   const [isExecutingDryRun, setIsExecutingDryRun] = useState(false);
+  const [isRunningDryRunModalOpen, setIsRunningDryRunModalOpen] = useState(false);
+  const [isDryRunResultsModalOpen, setIsDryRunResultsModalOpen] = useState(false);
   const [isExecutingLiveRun, setIsExecutingLiveRun] = useState(false);
   const [executionSummary, setExecutionSummary] = useState(null);
   const [isTelemetryDrawerOpen, setIsTelemetryDrawerOpen] = useState(false);
@@ -787,6 +790,8 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   // Execution Handlers (Dry Run & Live Run)
   const handleDryRun = async () => {
     setIsExecutingDryRun(true);
+    setIsRunningDryRunModalOpen(true);
+    setIsDryRunResultsModalOpen(false);
     setExecutionSummary(null);
     setExecutionError(null);
     setExecutionProgress(5);
@@ -867,7 +872,8 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           link: '#history'
         });
       }
-      setIsTelemetryDrawerOpen(true);
+      setIsRunningDryRunModalOpen(false);
+      setIsDryRunResultsModalOpen(true);
       setExecutionProgress(100);
       setExecutionPhase('completed');
     } catch (err) {
@@ -2979,6 +2985,43 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
         targetTable={executionSummary?.targetTable || tgtTable}
         targetEngine={executionSummary?.targetEngine || tgtDbType}
         discoveredColumns={executionSummary?.columns || discoveredColumns}
+      />
+
+      {/* SS 3: Running Dry Run Processing Modal Dialog */}
+      <RunningDryRunModal
+        isOpen={isRunningDryRunModalOpen}
+        onClose={() => setIsRunningDryRunModalOpen(false)}
+        onCancel={() => setIsRunningDryRunModalOpen(false)}
+        onComplete={() => {
+          setIsRunningDryRunModalOpen(false);
+          setIsDryRunResultsModalOpen(true);
+        }}
+        totalRows={executionSummary?.total || 1420}
+        tableName={executionSummary?.sourceTable || srcTable || 'OPUR_C01'}
+        rulesCount={activeRules?.length || 5}
+      />
+
+      {/* SS 4: Dry Run Results Outcome Modal Dialog */}
+      <DryRunResultsModal
+        isOpen={isDryRunResultsModalOpen}
+        onClose={() => setIsDryRunResultsModalOpen(false)}
+        onBack={() => setIsDryRunResultsModalOpen(false)}
+        onReRun={() => {
+          setIsDryRunResultsModalOpen(false);
+          handleDryRun();
+        }}
+        onRunLive={() => {
+          setIsDryRunResultsModalOpen(false);
+          handleLiveRun();
+        }}
+        totalRows={executionSummary?.total || 1420}
+        cleanCount={executionSummary?.clean || 1250}
+        autoFixedCount={executionSummary?.fixed || 126}
+        quarantinedCount={executionSummary?.quarantined || 170}
+        complianceRate={executionSummary?.health ? `${executionSummary.health}%` : '96.9%'}
+        tableName={executionSummary?.sourceTable || srcTable || 'OPUR_C01'}
+        targetTableName={executionSummary?.targetTable || tgtTable || 'OPUR_C01_clean'}
+        rulesCount={activeRules?.length || 5}
       />
     </div>
   );

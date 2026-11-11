@@ -11,6 +11,8 @@ import DomainPacksPage from '../../pages/DomainPacksPage';
 import ConnectionsPage from '../../pages/ConnectionsPage';
 import RulesPage from '../../pages/RulesPage';
 import CleanFlowStudio from '../../pages/cleanflow/CleanFlowStudio';
+import RunningDryRunPage from '../../pages/cleanflow/RunningDryRunPage';
+import DryRunResultsPage from '../../pages/cleanflow/DryRunResultsPage';
 import RunHistoryPage from '../../pages/RunHistoryPage';
 import SapBwPocDashboard from './SapBwPocDashboard';
 import DataXAuthPage from '../../pages/auth/DataXAuthPage';
@@ -125,19 +127,17 @@ function ScreenRenderer({ onBackToWebsite }) {
 
     case 'running-dry-run':
       return (
-        <CleanFlowStudio 
-          initialPage="06_07" 
-          onSwitchToMarketing={onBackToWebsite} 
-          onBackToRules={() => navigateTo('generate-rules')}
+        <RunningDryRunPage 
+          onComplete={() => navigateTo('dry-run-results')}
+          onCancel={() => navigateTo('canvas')}
         />
       );
 
     case 'dry-run-results':
       return (
-        <CleanFlowStudio 
-          initialPage="07" 
-          onSwitchToMarketing={onBackToWebsite} 
-          onBackToRules={() => navigateTo('generate-rules')}
+        <DryRunResultsPage 
+          onBack={() => navigateTo('canvas')}
+          onRunLive={() => navigateTo('live-auto-fix')}
         />
       );
 

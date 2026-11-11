@@ -27,3 +27,4 @@ export default function WorkflowsHeader({ onOpenAdvisor }) {
     </div>
   );
 }
+

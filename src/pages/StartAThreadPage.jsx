@@ -1,61 +1,22 @@
-import DataXAppShell from "../components/common/DataXAppShell";
 import React, { useState } from 'react';
-import { Link, useNavigation } from '../context/NavigationContext';
+import DataXAppShell from "../components/common/DataXAppShell";
+import { useNavigation } from '../context/NavigationContext';
 import { useRuleEngine } from '../context/RuleEngineContext';
-import DataXUserMenu from '../components/common/DataXUserMenu';
-import Button from '../components/ui/Button';
-import Tag from '../components/ui/Tag';
-import Input from '../components/ui/Input';
-import { SapLogo, MongoLogo } from '../components/icons/DatabaseLogos';
-
-// User-Provided Official DataX Logo
-const DataXLogo = ({ size = 32 }) => (
-  <svg width={size} height={size} viewBox="0 0 64 64" fill="none" className="shrink-0">
-    <rect width="64" height="64" rx="16" fill="#2D55F5" />
-    <polygon points="14.5,49.5 24.5,49.5 49.5,14.5 39.5,14.5" fill="#FFFFFF" />
-    <polygon points="14.5,14.5 24.5,14.5 31.5,24.5 21.5,24.5" fill="#A5C8FF" />
-    <polygon points="32.5,39.5 42.5,39.5 49.5,49.5 39.5,49.5" fill="#A5C8FF" />
-  </svg>
-);
-
-// Canvas Document Icon
-const CanvasDocIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D55F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-    <polyline points="14 2 14 8 20 8" />
-    <line x1="12" y1="18" x2="12" y2="12" />
-    <line x1="9" y1="15" x2="15" y2="15" />
-  </svg>
-);
-
-// Ledger Book Icon
-const LedgerIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5F6678" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-    <line x1="8" y1="6" x2="16" y2="6" />
-    <line x1="8" y1="10" x2="14" y2="10" />
-  </svg>
-);
-
-// Brain Icon for RAG starter
-const BrainDocIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D55F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.04z" />
-    <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-2.04z" />
-  </svg>
-);
-
-// Salesforce Icon for CRM starter
-const SalesforceDocIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D55F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
-  </svg>
-);
+import { 
+  ArrowLeft, 
+  GitBranch, 
+  Info, 
+  FileText, 
+  Database, 
+  Layers, 
+  FlaskConical, 
+  Cloud 
+} from 'lucide-react';
 
 export default function StartAThreadPage({ onSwitchToMarketing } = {}) {
   const { navigateTo } = useNavigation();
   const { selectThread, setActiveThread } = useRuleEngine();
+  
   const [threadName, setThreadName] = useState('SAP BW → S/4HANA Clean Core');
   const [description, setDescription] = useState('Extract InfoCube purchasing lines, fix legacy plant codes and stage clean orders.');
   const [selectedPack, setSelectedPack] = useState('sap');
@@ -64,44 +25,64 @@ export default function StartAThreadPage({ onSwitchToMarketing } = {}) {
     {
       id: 'scratch',
       title: 'Start from scratch',
-      desc: 'Start empty canvas or connect bespoke sources.',
-      icon: <CanvasDocIcon />,
-      badge: 'Custom'
+      desc: 'Empty canvas or bespoke sources',
+      badge: 'Custom',
+      badgeClass: 'bg-[#F1F3F9] text-[#5F6678] border-[#E3E6EE]',
+      icon: <FileText className="w-5 h-5 text-[#5F6678]" />
     },
     {
       id: 'sap',
       title: 'SAP BW → S/4HANA Clean Core',
       desc: 'InfoCube → S/4HANA BAPI · 5 rules',
-      icon: <SapLogo size={26} />,
-      badge: 'Tier 1'
+      badge: null,
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 28 28" fill="none">
+          <ellipse cx="14" cy="7" rx="10" ry="3.5" fill="#D4FF3A" stroke="#0A0F1F" strokeWidth="1.75" />
+          <path d="M4 7v6c0 1.93 4.48 3.5 10 3.5s10-1.57 10-3.5V7" stroke="#0A0F1F" strokeWidth="1.75" fill="none" />
+          <path d="M4 13v6c0 1.93 4.48 3.5 10 3.5s10-1.57 10-3.5v-6" stroke="#0A0F1F" strokeWidth="1.75" fill="none" />
+          <circle cx="9" cy="13" r="1.5" fill="#127A52" />
+          <circle cx="14" cy="13" r="1.5" fill="#127A52" />
+          <circle cx="19" cy="13" r="1.5" fill="#127A52" />
+        </svg>
+      )
     },
     {
       id: 'ledger',
       title: 'Financial GL & SOX 404 Audit',
       desc: 'Debits = Credits → BigQuery · 4 rules',
-      icon: <LedgerIcon />,
-      badge: 'Tier 1'
+      badge: 'Tier 2',
+      badgeClass: 'bg-[#EEF2FF] text-[#2D55F5] border-[#DCE4FF]',
+      icon: <Layers className="w-5 h-5 text-[#2D55F5]" />
     },
     {
       id: 'customer',
       title: 'Customer Master 360 & Vector',
-      desc: 'MongoDB → Vector Matcher → Neon · 4 rules',
-      icon: <MongoLogo size={22} />,
-      badge: 'Tier 2'
+      desc: 'MongoDB → Vector matcher → Neon · 4 rules',
+      badge: 'Tier 1',
+      badgeClass: 'bg-[#ECFDF5] text-[#059669] border-[#A7F3D0]',
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <polygon points="12 2 2 7 12 12 22 7 12 2" fill="#00ED64" fillOpacity="0.25" stroke="#00A344" strokeWidth="1.75" strokeLinejoin="round" />
+          <polyline points="2 12 12 17 22 12" stroke="#00A344" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+          <polyline points="2 17 12 22 22 17" stroke="#00A344" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )
     },
     {
       id: 'rag',
       title: 'Policy RAG & Legal Contracts',
-      desc: 'AWS S3 → RAG Enricher → Pinecone · 4 rules',
-      icon: <BrainDocIcon />,
-      badge: 'Tier 2'
+      desc: 'AWS S3 → RAG enricher → Pinecone · 4 rules',
+      badge: 'Tier 3',
+      badgeClass: 'bg-[#F5F3FF] text-[#7C3AED] border-[#DDD6FE]',
+      icon: <FlaskConical className="w-5 h-5 text-[#7C3AED]" />
     },
     {
       id: 'sfdc',
       title: 'Salesforce CRM → BigQuery',
-      desc: 'Salesforce Leads → BigQuery API · 4 rules',
-      icon: <SalesforceDocIcon />,
-      badge: 'Tier 3'
+      desc: 'Salesforce leads → BigQuery API · 4 rules',
+      badge: 'Tier 2',
+      badgeClass: 'bg-[#EEF2FF] text-[#2D55F5] border-[#DCE4FF]',
+      icon: <Cloud className="w-5 h-5 text-[#2D55F5]" />
     }
   ];
 
@@ -111,121 +92,137 @@ export default function StartAThreadPage({ onSwitchToMarketing } = {}) {
       setThreadName('SAP BW → S/4HANA Clean Core');
       setDescription('Extract InfoCube purchasing lines, fix legacy plant codes and stage clean orders.');
     } else if (pack.id === 'ledger') {
-      setThreadName('Financial General Ledger & SOX 404 Audit');
-      setDescription('Audit general ledger journal entries, enforce Debits = Credits zero balance, and stage audited entries.');
+      setThreadName('Financial GL & SOX 404 Audit');
+      setDescription('Debits = Credits zero imbalance verification, ISO currency cross-checks and ledger staging.');
     } else if (pack.id === 'customer') {
-      setThreadName('Customer Master & Identity Harmonizer');
-      setDescription('Harmonize duplicate customer accounts using cosine vector embeddings and write golden records.');
+      setThreadName('Customer Master 360 & Vector');
+      setDescription('Harmonize customer documents from MongoDB Atlas into Neon and enforce RFC-5322 email syntax.');
     } else if (pack.id === 'rag') {
-      setThreadName('Enterprise Policy RAG & Legal Contracts');
-      setDescription('Ingest contracts from AWS S3, retrieve compliance policy context, and index vector embeddings to Pinecone.');
+      setThreadName('Policy RAG & Legal Contracts');
+      setDescription('Ingest legal PDFs from AWS S3, compute cosine embeddings, and sync vector indices to Pinecone.');
     } else if (pack.id === 'sfdc') {
-      setThreadName('Salesforce CRM → BigQuery Revenue Pipeline');
-      setDescription('Cleanse corporate lead emails, route enterprise deals, and stream pipeline records to BigQuery.');
+      setThreadName('Salesforce CRM → BigQuery');
+      setDescription('Extract sales leads, enforce enterprise domain rules, and stream verified accounts to BigQuery.');
     } else {
       setThreadName('Custom Data Pipeline');
       setDescription('Connect bespoke database endpoints, configure custom LLM transformation rules, and define target mappings.');
     }
   };
 
-  const handleCreateThread = (e) => {
+  const handleCreateWorkflow = (e) => {
     e.preventDefault();
     let packKey = 'sap_bw_s4hana';
     if (selectedPack === 'customer') packKey = 'customer_master_reconciliation';
     else if (selectedPack === 'ledger') packKey = 'financial_gl_ledger';
     else if (selectedPack === 'rag') packKey = 'enterprise_rag_knowledge';
     else if (selectedPack === 'sfdc') packKey = 'salesforce_crm_bigquery';
-    else if (selectedPack === 'scratch') packKey = 'customer_master_reconciliation';
+    else if (selectedPack === 'scratch') packKey = 'sap_bw_s4hana';
 
-    selectThread(packKey);
-    setActiveThread(prev => ({
-      ...prev,
-      name: threadName,
-      desc: description
-    }));
+    if (selectThread) {
+      selectThread(packKey);
+    }
+    if (setActiveThread) {
+      setActiveThread(prev => ({
+        ...prev,
+        name: threadName,
+        desc: description
+      }));
+    }
 
-    // Navigates directly to Interactive Node Canvas
+    // Direct transition to interactive Visual Canvas
     navigateTo('canvas');
   };
 
   return (
     <DataXAppShell onSwitchToMarketing={onSwitchToMarketing}>
-
       {/* Sub-header with Back Arrow, Draft Tag, and Not Saved Yet */}
-      <div className="w-full bg-white border-b border-[#E3E6EE] px-6 h-12 flex items-center">
-        <div className="max-w-[1360px] w-full mx-auto flex items-center gap-3">
-          <Link
-            to="workflows"
-            className="w-7 h-7 rounded-full flex items-center justify-center text-[#474E61] hover:bg-[#F5F6FA] transition-colors"
+      <div className="w-full bg-white dark:bg-[#18181C] border-b border-[#E3E6EE] dark:border-white/[0.08] px-6 py-3">
+        <div className="max-w-[1440px] w-full mx-auto flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigateTo('workflows')}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[#474E61] dark:text-slate-300 hover:bg-[#F5F6FA] dark:hover:bg-white/[0.08] transition-colors cursor-pointer border border-[#E3E6EE] dark:border-white/[0.08]"
+            title="Back to workflows"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="19" y1="12" x2="5" y2="12" />
-              <polyline points="12 19 5 12 12 5" />
-            </svg>
-          </Link>
-          <span className="text-sm font-semibold text-[#0A0F1F]">New workflow</span>
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#EDEFF5] text-[#5F6678] text-[11px] font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#8E95A9]" /> Draft
-          </span>
-          <span className="text-xs text-[#8E95A9]">Not saved yet</span>
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-[#0A0F1F] dark:text-white">New workflow</span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#EDEFF5] dark:bg-white/[0.08] text-[#5F6678] dark:text-slate-300 text-xs font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#8E95A9]" />
+                Draft
+              </span>
+            </div>
+            <span className="text-[11px] text-[#8E95A9] dark:text-slate-500 font-medium">Not saved yet</span>
+          </div>
         </div>
       </div>
 
-      {/* Main Center Card (Figma Frame 02 Match) */}
-      <main className="flex-1 max-w-[660px] w-full mx-auto px-6 py-8">
-        <form onSubmit={handleCreateThread} className="bg-white border border-[#E3E6EE] rounded-[24px] p-7 md:p-8 shadow-sm space-y-6">
+      {/* Main Centered Form Card (Matches SS 2 Frame 01.2 exact layout) */}
+      <main className="flex-1 max-w-[700px] w-full mx-auto px-4 sm:px-6 py-8">
+        <form 
+          onSubmit={handleCreateWorkflow} 
+          className="bg-white dark:bg-[#18181C] border border-[#E3E6EE] dark:border-white/[0.08] rounded-[24px] p-7 sm:p-9 shadow-sm space-y-6"
+        >
           {/* Header Inside Card */}
-          <div className="flex items-start gap-4">
-            <div className="w-11 h-11 rounded-[14px] bg-[#EEF2FF] border border-[#DCE4FF] flex items-center justify-center text-[#2D55F5] shrink-0">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="6" cy="6" r="3" />
-                <circle cx="18" cy="18" r="3" />
-                <path d="M18 9v3a6 6 0 0 1-6 6H9" />
-              </svg>
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-[#EEF2FF] dark:bg-blue-950/40 border border-[#DCE4FF] dark:border-blue-800/40 flex items-center justify-center text-[#2D55F5] shrink-0">
+              <GitBranch className="w-5 h-5 stroke-[2.2]" />
             </div>
             <div>
-              <span className="text-xs text-[#5F6678] font-medium">New workflow</span>
-              <h1 className="text-[24px] font-bold text-[#0A0F1F] tracking-tight leading-tight mt-0.5">
+              <span className="text-xs text-[#5F6678] dark:text-slate-400 font-medium">New workflow</span>
+              <h1 className="text-2xl font-bold text-[#0A0F1F] dark:text-white tracking-tight leading-tight">
                 Start a workflow
               </h1>
             </div>
           </div>
 
-          {/* Form Fields */}
-          <div className="space-y-4">
+          {/* Form Inputs */}
+          <div className="space-y-5">
+            {/* Field 1: Workflow name */}
             <div>
-              <label className="block text-xs font-semibold text-[#0A0F1F] mb-1.5">Workflow name</label>
-              <Input
+              <label className="block text-xs font-semibold text-[#0A0F1F] dark:text-white mb-2">
+                Workflow name
+              </label>
+              <input
+                type="text"
                 value={threadName}
                 onChange={(e) => setThreadName(e.target.value)}
                 placeholder="Name your workflow..."
-                className="w-full text-sm font-medium"
                 required
+                className="w-full px-4 py-2.5 bg-white dark:bg-[#121215] border border-[#CDD2DE] dark:border-white/[0.12] rounded-xl text-sm font-medium text-[#0A0F1F] dark:text-white focus:outline-none focus:border-[#2D55F5] focus:ring-2 focus:ring-[#2D55F5]/15 transition-all"
               />
             </div>
 
+            {/* Field 2: Description */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-[#0A0F1F]">Description</label>
-                <span className="text-xs text-[#8E95A9]">Optional</span>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold text-[#0A0F1F] dark:text-white">
+                  Description
+                </label>
+                <span className="text-xs text-[#8E95A9] dark:text-slate-500 font-medium">Optional</span>
               </div>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
-                placeholder="Describe what you want to extract, validate and write..."
-                className="w-full px-3.5 py-2.5 bg-white border border-[#CDD2DE] rounded-xl text-xs sm:text-sm text-[#0A0F1F] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#2D55F5] focus:ring-2 focus:ring-[#2D55F5]/15 transition-all resize-none"
+                placeholder="Extract InfoCube purchasing lines, fix legacy plant codes and stage clean orders."
+                className="w-full px-4 py-2.5 bg-white dark:bg-[#121215] border border-[#CDD2DE] dark:border-white/[0.12] rounded-xl text-xs sm:text-sm text-[#0A0F1F] dark:text-white focus:outline-none focus:border-[#2D55F5] focus:ring-2 focus:ring-[#2D55F5]/15 transition-all resize-none"
               />
             </div>
 
-            {/* Start to point section */}
+            {/* Field 3: Starting point */}
             <div>
-              <label className="block text-xs font-semibold text-[#0A0F1F]">Start to point:</label>
-              <p className="text-xs text-[#5F6678] mt-0.5 mb-3">
+              <label className="block text-xs font-semibold text-[#0A0F1F] dark:text-white">
+                Starting point
+              </label>
+              <p className="text-xs text-[#5F6678] dark:text-slate-400 mt-0.5 mb-3.5">
                 Start empty, or pick a domain pack with ready-made steps and rules.
               </p>
 
-              {/* 2x2 Domain Packs Grid */}
+              {/* 2-Column Domain Grid (6 items) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {packs.map((pack) => {
                   const isSelected = selectedPack === pack.id;
@@ -233,40 +230,40 @@ export default function StartAThreadPage({ onSwitchToMarketing } = {}) {
                     <div
                       key={pack.id}
                       onClick={() => handleSelectPack(pack)}
-                      className={`p-3.5 rounded-[16px] border transition-all cursor-pointer flex items-start justify-between gap-2.5 ${
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start justify-between gap-2.5 select-none ${
                         isSelected
-                          ? 'border-[#2D55F5] bg-[#F5F8FF] shadow-[0_0_0_3px_rgba(45,85,245,0.12)]'
-                          : 'border-[#E3E6EE] bg-white hover:border-[#CDD2DE] hover:bg-[#F9FAFC]'
+                          ? 'border-[#2D55F5] bg-[#F5F8FF] dark:bg-blue-950/25 shadow-[0_0_0_1px_rgba(45,85,245,0.2)]'
+                          : 'border-[#E3E6EE] dark:border-white/[0.08] bg-white dark:bg-[#121215] hover:border-[#CDD2DE] dark:hover:border-white/[0.16] hover:bg-[#F9FAFC] dark:hover:bg-white/[0.02]'
                       }`}
                     >
                       <div className="flex items-start gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-[10px] bg-white border border-[#E3E6EE] flex items-center justify-center shrink-0 mt-0.5">
+                        <div className="w-8 h-8 rounded-xl bg-white dark:bg-[#18181C] border border-[#E3E6EE] dark:border-white/[0.08] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
                           {pack.icon}
                         </div>
                         <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <h4 className="text-xs font-bold text-[#0A0F1F] leading-tight truncate">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h4 className="text-xs font-bold text-[#0A0F1F] dark:text-white leading-tight truncate">
                               {pack.title}
                             </h4>
                             {pack.badge && (
-                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-blue-50 text-blue-600 border border-blue-200 shrink-0">
+                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md border shrink-0 ${pack.badgeClass || 'bg-slate-100 text-slate-600 border-slate-200'}`}>
                                 {pack.badge}
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] text-[#5F6678] mt-1 leading-snug">
+                          <p className="text-[11px] text-[#5F6678] dark:text-slate-400 mt-1 leading-snug line-clamp-2">
                             {pack.desc}
                           </p>
                         </div>
                       </div>
 
-                      {/* Radio Indicator */}
+                      {/* Radio Selection Indicator */}
                       <div className="shrink-0 mt-0.5">
                         <div
-                          className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${
                             isSelected
                               ? 'border-[#2D55F5] bg-[#2D55F5]'
-                              : 'border-[#CDD2DE] bg-white'
+                              : 'border-[#CDD2DE] dark:border-white/[0.2] bg-white dark:bg-[#18181C]'
                           }`}
                         >
                           {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
@@ -277,38 +274,39 @@ export default function StartAThreadPage({ onSwitchToMarketing } = {}) {
                 })}
               </div>
 
-              {/* Help Note */}
-              <p className="text-[11px] text-[#5F6678] mt-3 flex items-center gap-1.5">
-                <span>💡</span> Don't see your domain? Start from scratch. More domain packs are on the way.
-              </p>
+              {/* Informational Banner */}
+              <div className="mt-3.5 p-3 rounded-xl bg-[#F8FAFC] dark:bg-white/[0.03] border border-[#E3E6EE] dark:border-white/[0.08] flex items-center gap-2.5 text-xs text-[#5F6678] dark:text-slate-400">
+                <Info className="w-4 h-4 text-[#8E95A9] shrink-0" />
+                <span>Don't see your domain? Start from scratch. More domain packs are on the way.</span>
+              </div>
             </div>
           </div>
 
-          {/* Form Actions */}
-          <div className="pt-2 flex items-center justify-end gap-3 border-t border-[#F0F2F6]">
-            <Link to="workflows">
-              <Button variant="ghost" size="md">
+          {/* Form Actions Footer */}
+          <div className="pt-4 flex items-center justify-between border-t border-[#F0F2F6] dark:border-white/[0.08]">
+            <span className="text-xs text-[#8E95A9] dark:text-slate-500">
+              You can change everything later.
+            </span>
+
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => navigateTo('workflows')}
+                className="px-4 py-2 rounded-full border border-transparent hover:bg-slate-100 dark:hover:bg-white/[0.05] text-xs font-semibold text-[#5F6678] dark:text-slate-300 transition-colors cursor-pointer"
+              >
                 Cancel
-              </Button>
-            </Link>
-            <Button variant="primary" size="md" type="submit">
-              Create workflow →
-            </Button>
+              </button>
+              
+              <button
+                type="submit"
+                className="px-5 py-2.5 rounded-full bg-[#2D55F5] hover:bg-[#1E44D6] text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <span>Create workflow →</span>
+              </button>
+            </div>
           </div>
         </form>
       </main>
-
-      {/* Bottom Footer Note */}
-      <footer className="w-full bg-white border-t border-[#E3E6EE] px-6 py-3">
-        <div className="max-w-[1360px] mx-auto flex items-center justify-between text-xs text-[#8E95A9]">
-          <span>💡 You can change everything later.</span>
-          <div className="flex items-center gap-4">
-            <Link to="workflows" className="hover:text-[#0A0F1F] transition-colors">Workflows</Link>
-            <span>·</span>
-            <Link to="history" className="hover:text-[#0A0F1F] transition-colors">Runs</Link>
-          </div>
-        </div>
-      </footer>
     </DataXAppShell>
   );
 }
