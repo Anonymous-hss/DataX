@@ -1,392 +1,257 @@
-import DataXAppShell from "../components/common/DataXAppShell";
 import React, { useState } from 'react';
-import { Link, useNavigation } from '../context/NavigationContext';
+import DataXAppShell from '../components/common/DataXAppShell';
+import { useNavigation } from '../context/NavigationContext';
 import { useRuleEngine } from '../context/RuleEngineContext';
-import DataXUserMenu from '../components/common/DataXUserMenu';
-import { DataXLogo } from './ThreadsPage';
+import {
+  Search,
+  Check,
+  ArrowRight
+} from 'lucide-react';
+import iconSource from '../assets/icons/source.png';
+import iconPack from '../assets/icons/pack.png';
+import iconTarget from '../assets/icons/target.png';
+import iconLive from '../assets/icons/live.png';
+import iconSandbox from '../assets/icons/sandbox.png';
 
-// =========================================================================
-// Domain Category Icons
-// =========================================================================
-const SapIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D55F5" strokeWidth="1.75">
-    <ellipse cx="12" cy="5" rx="9" ry="3" />
-    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-  </svg>
-);
-
-const UserIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D55F5" strokeWidth="1.75">
-    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-  </svg>
-);
-
-const FinanceIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D55F5" strokeWidth="1.75">
-    <line x1="12" y1="1" x2="12" y2="23" />
-    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-  </svg>
-);
-
-const BrainIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D55F5" strokeWidth="1.75">
-    <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.04z" />
-    <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-2.04z" />
-  </svg>
-);
-
-const SalesforceIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D55F5" strokeWidth="1.75">
-    <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
-  </svg>
-);
-
-const TelemetryIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D55F5" strokeWidth="1.75">
-    <rect x="2" y="3" width="20" height="14" rx="2" />
-    <line x1="8" y1="21" x2="16" y2="21" />
-    <line x1="12" y1="17" x2="12" y2="21" />
-    <path d="M6 8l4 4 3-3 5 5" />
-  </svg>
-);
-
-const SnowflakeIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D55F5" strokeWidth="1.75">
-    <line x1="12" y1="2" x2="12" y2="22" />
-    <line x1="2" y1="12" x2="22" y2="12" />
-    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-    <line x1="4.93" y1="19.07" x2="19.07" y2="4.93" />
-  </svg>
-);
-
-const SupplyIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D55F5" strokeWidth="1.75">
-    <rect x="1" y="3" width="15" height="13" />
-    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-    <circle cx="5.5" cy="18.5" r="2.5" />
-    <circle cx="18.5" cy="18.5" r="2.5" />
-  </svg>
-);
-
-const HealthIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D55F5" strokeWidth="1.75">
-    <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-  </svg>
-);
-
-const LakehouseIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D55F5" strokeWidth="1.75">
-    <polygon points="12 2 2 7 12 12 22 7 12 2" />
-    <polyline points="2 17 12 22 22 17" />
-    <polyline points="2 12 12 17 22 12" />
-  </svg>
-);
-
-const CustomIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D55F5" strokeWidth="1.75">
-    <circle cx="12" cy="12" r="10" />
-    <line x1="12" y1="8" x2="12" y2="16" />
-    <line x1="8" y1="12" x2="16" y2="12" />
-  </svg>
-);
-
-// =========================================================================
-// 10 PRIORITIZED ENTERPRISE DOMAIN USE CASES CATALOG
-// =========================================================================
+// 10 Prioritized Enterprise Domain Templates matching 05.4
 const DOMAIN_PACK_CATALOG = [
-  // 1. SAP BW -> S/4HANA (Tier 1)
   {
     id: 'sap_bw_s4hana',
     packKey: 'sap_bw_s4hana',
     name: 'SAP BW → S/4HANA Clean Core Modernizer',
-    category: 'ERP Modernization',
-    tier: 'Tier 1 (Mission-Critical)',
+    category: 'ERP modernization',
+    tier: 'Tier 1',
     tierLevel: 1,
-    badge: 'SAP Certified Clean Core',
-    desc: 'Extract InfoCube purchasing lines, resolve legacy plant codes via plant ontology, split high-value purchase orders for human review, and commit verified orders into S/4HANA via BAPI.',
-    pipeline: 'SAP BW InfoCube → Clean Core Ontologies → S/4HANA BAPI',
-    icon: <SapIcon />,
+    badge: 'SAP certified clean core',
+    desc: 'Extract InfoCube purchasing lines, resolve legacy plant codes via ontology, split high-value POs for review and commit verified orders via BAPI.',
+    pipeline: 'SAP BW InfoCube → Clean core ontologies → S/4HANA BAPI',
+    icon: iconSource,
     nodeCount: 7,
     rulesCount: 5,
     rules: [
-      'Positive Line Quantity (> 0)',
-      'Calculation Equality (QTY * PRICE == TOTAL)',
-      'Mandatory Vendor Code Verification',
-      'Authorized S/4HANA Plant Ontology Lookup',
-      'Sequential Line Item Check'
-    ],
-    features: ['Ontology Graph Mappings', 'Automated BAPI Writeback', 'HITL Controller Gate']
+      'Positive line quantity (> 0)',
+      'Calculation equality (QTY × PRICE = TOTAL)',
+      'Mandatory vendor code',
+      'Authorized S/4HANA plant ontology lookup',
+      'Sequential line item check'
+    ]
   },
-
-  // 2. Financial GL & SOX 404 (Tier 1)
   {
     id: 'financial_gl_ledger',
     packKey: 'financial_gl_ledger',
     name: 'Financial General Ledger & SOX 404 Audit',
-    category: 'Finance & Compliance',
-    tier: 'Tier 1 (Mission-Critical)',
+    category: 'Finance & compliance',
+    tier: 'Tier 1',
     tierLevel: 1,
-    badge: 'SOX 404 & GAAP Compliant',
-    desc: 'Audit general ledger journal entries across disparate legacy systems, guarantee zero imbalance (Debits = Credits), gate entries exceeding $100K for CFO sign-off, and stage approved entries to BigQuery & financial vault.',
-    pipeline: 'ERP GL → SOX Intelligence Engine → BigQuery Gold Vault',
-    icon: <FinanceIcon />,
+    badge: 'SOX 404 & GAAP',
+    desc: 'Audit journal entries across legacy systems, guarantee zero imbalance and gate entries over $100K for CFO sign-off.',
+    pipeline: 'ERP GL → SOX engine → BigQuery gold vault',
+    icon: iconPack,
     nodeCount: 7,
     rulesCount: 4,
     rules: [
-      'Debits Equal Credits (Zero Imbalance)',
-      'Valid ISO-4217 Currency Standard',
-      'General Ledger Code Registry Check',
-      'Active Open Fiscal Period Guard'
-    ],
-    features: ['Audit Trail Immutable Logs', 'SOX 404 Guardrails', 'CFO Approval Gate']
+      'Debits equal credits',
+      'Valid ISO-4217 currency',
+      'GL code registry check',
+      'Active open fiscal period guard'
+    ]
   },
-
-  // 3. Customer Master 360 (Tier 2)
   {
     id: 'customer_master_reconciliation',
     packKey: 'customer_master_reconciliation',
     name: 'Customer 360 & Entity Resolution Harmonizer',
     category: 'Customer 360',
-    tier: 'Tier 2 (High Value)',
+    tier: 'Tier 2',
     tierLevel: 2,
-    badge: 'MongoDB ➔ Vector Deduplication',
-    desc: 'Harmonize raw customer documents from MongoDB Atlas, apply vector embeddings to resolve duplicate company names (e.g., "IBM Corp" ↔ "International Business Machines"), enforce RFC-5322 syntax, and write Golden Customer records to PostgreSQL Neon.',
-    pipeline: 'MongoDB Atlas → Vector Deduplication → PostgreSQL Gold',
-    icon: <UserIcon />,
+    badge: 'MongoDB → vector dedupe',
+    desc: 'Resolve duplicate company names with vector embeddings, enforce RFC-5322 syntax and write golden customer records.',
+    pipeline: 'MongoDB Atlas → Vector dedupe → PostgreSQL gold',
+    icon: iconPack,
     nodeCount: 6,
     rulesCount: 4,
     rules: [
-      'RFC-5322 Email Syntax Validation',
-      'Required Full Name & Capitalization',
-      'Non-Negative Account Balance Guard',
-      'Vector Similarity Entity Resolution (>= 85%)'
-    ],
-    features: ['Cross-DB Entity Resolution', 'Synthetic Identity Detection', 'Neon Replica']
+      'RFC-5322 email syntax',
+      'Full name & capitalization',
+      'Non-negative balance',
+      'Vector similarity entity resolution (≥ 85%)'
+    ]
   },
-
-  // 4. Enterprise Policy RAG & Legal Contracts (Tier 2)
   {
     id: 'enterprise_rag_knowledge',
     packKey: 'enterprise_rag_knowledge',
     name: 'Enterprise Policy RAG & Legal Contracts',
     category: 'Enterprise AI & RAG',
-    tier: 'Tier 2 (GenAI & Knowledge)',
+    tier: 'Tier 2',
     tierLevel: 2,
-    badge: 'AWS S3 ➔ Pinecone Vector DB',
-    desc: 'Ingest enterprise contract documents from AWS S3, retrieve internal compliance policy context via RAG Enricher, evaluate clause risk scores, route critical clauses to Legal Counsel, and persist embeddings into Pinecone Vector DB.',
-    pipeline: 'AWS S3 → RAG Enricher → Vector Matcher → Pinecone Vector DB',
-    icon: <BrainIcon />,
+    badge: 'AWS S3 → Pinecone',
+    desc: 'Ingest contracts, retrieve compliance context via RAG, score clause risk, route critical clauses to counsel and persist embeddings.',
+    pipeline: 'AWS S3 → RAG enricher → Vector matcher → Pinecone',
+    icon: iconSandbox,
     nodeCount: 8,
     rulesCount: 4,
     rules: [
-      'Valid Expiration Date in Future',
-      'Indemnity Risk Threshold (<= 80)',
-      'Governing Jurisdiction Standard',
-      'Mandatory Authorized Signatory Title'
-    ],
-    features: ['RAG Policy Augmentation', 'Pinecone Vector Store (1536d)', 'Legal Counsel HITL']
+      'Expiration date in future',
+      'Indemnity risk ≤ 80',
+      'Governing jurisdiction',
+      'Mandatory authorized signatory title'
+    ]
   },
-
-  // 5. Salesforce CRM -> BigQuery Lakehouse (Tier 3)
   {
     id: 'salesforce_crm_bigquery',
     packKey: 'salesforce_crm_bigquery',
     name: 'Salesforce CRM → BigQuery Revenue Pipeline',
-    category: 'RevOps & Sales',
-    tier: 'Tier 3 (Cloud Data Warehouse)',
+    category: 'RevOps & sales',
+    tier: 'Tier 3',
     tierLevel: 3,
-    badge: 'Salesforce ➔ Google BigQuery',
-    desc: 'Ingest live Accounts and Opportunities from Salesforce CRM, cleanse lead emails and corporate domains, route enterprise deals exceeding $250K to RevOps Director, and stream golden customer pipeline records to Google BigQuery.',
-    pipeline: 'Salesforce CRM → RevOps Validator → Google BigQuery',
-    icon: <SalesforceIcon />,
+    badge: 'Salesforce → BigQuery',
+    desc: 'Cleanse lead emails and domains, route deals over $250K to the RevOps director and stream golden pipeline records.',
+    pipeline: 'Salesforce CRM → RevOps validator → BigQuery',
+    icon: iconSource,
     nodeCount: 7,
     rulesCount: 4,
     rules: [
-      'Business Email Domain Validation',
-      'Positive Opportunity Deal Value',
-      'Valid CRM Sales Stage Sequence',
-      'Lead Quality Score Normalization'
-    ],
-    features: ['BigQuery Storage Write API', 'RevOps Director HITL', 'FREEMAIL Domain Filter']
+      'Business email domain',
+      'Positive deal value',
+      'Valid sales stage sequence',
+      'Lead quality score normalization'
+    ]
   },
-
-  // 6. SRE Telemetry & Vector Search Copilot (Tier 3)
   {
     id: 'support_telemetry_vector',
     packKey: 'support_telemetry_vector',
-    name: 'SRE Support Telemetry & Vector Incident Copilot',
-    category: 'DevOps & Telemetry',
-    tier: 'Tier 3 (Observability)',
+    name: 'SRE Telemetry & Vector Incident Copilot',
+    category: 'DevOps & telemetry',
+    tier: 'Tier 3',
     tierLevel: 3,
-    badge: 'Azure Blob ➔ Pinecone Copilot',
-    desc: 'Ingest raw application and system logs from Azure Blob Storage, sanitize client IPs and PII credentials, generate semantic error embeddings with OpenAI text-embedding-3-small, and index incident clusters into Pinecone.',
-    pipeline: 'Azure Blob → PII Anonymizer → Vector Matcher → Pinecone Index',
-    icon: <TelemetryIcon />,
+    badge: 'Azure Blob → Pinecone',
+    desc: 'Sanitize client IPs and credentials in logs, embed errors and index incident clusters for a support copilot.',
+    pipeline: 'Azure Blob → PII anonymizer → Vector matcher → Pinecone',
+    icon: iconLive,
     nodeCount: 6,
     rulesCount: 4,
     rules: [
-      'Client IP Obfuscation Mask (GDPR)',
-      'Structured Standard Log Level',
-      'Incident Semantic Cluster Match (>= 80%)',
-      'Server Latency Outlier Threshold'
-    ],
-    features: ['Parquet Log Stream Parsing', 'Vector Root Cause Indexing', 'GDPR Masking']
+      'Client IP obfuscation (GDPR)',
+      'Standard log level',
+      'Incident cluster match ≥ 80%',
+      'Server latency outlier threshold'
+    ]
   },
-
-  // 7. Snowflake Spend -> S/4HANA Procurement (Tier 3)
   {
     id: 'snowflake_s4hana_procurement',
     packKey: 'snowflake_s4hana_procurement',
     name: 'Snowflake Spend → S/4HANA Vendor Purchasing',
     category: 'Procurement & ERP',
-    tier: 'Tier 3 (Cloud Procurement)',
+    tier: 'Tier 3',
     tierLevel: 3,
-    badge: 'Snowflake ➔ S/4HANA BAPI',
-    desc: 'Extract historical vendor spend transactions from Snowflake Data Cloud, match vendor aliases against SAP master suppliers using Semantic Vector Matcher, and generate reconciled purchase requisitions in SAP S/4HANA.',
+    badge: 'Snowflake → S/4HANA',
+    desc: 'Extract spend transactions from Snowflake, match vendor aliases with semantic vector matcher and generate clean purchase requisitions.',
     pipeline: 'Snowflake Cloud → Semantic Vendor Resolver → S/4HANA Purchasing',
-    icon: <SnowflakeIcon />,
-    nodeCount: 6,
+    icon: iconSource,
+    nodeCount: 7,
     rulesCount: 4,
     rules: [
-      'Spend Ledger Calculation Accuracy',
-      'S/4HANA Vendor Ontology Resolution',
-      '10-Digit Cost Center Allocation Syntax',
-      'Active Fiscal Year Budget Alignment'
-    ],
-    features: ['Snowflake Warehouse Query', 'Fuzzy Vendor Entity Resolution', 'BAPI Purchase Commit']
+      'Positive requisition value',
+      'Active vendor master mapping',
+      'Currency cross-rate tolerance',
+      'Purchase org alignment'
+    ]
   },
-
-  // 8. Supply Chain & Warehouse Balancer (Tier 4)
   {
     id: 'supply_chain_inventory',
     packKey: 'supply_chain_inventory',
-    name: 'Multi-Echelon Supply Chain & Warehouse Balancer',
-    category: 'Supply Chain & Logistics',
-    tier: 'Tier 4 (Industry & Logistics)',
+    name: 'Supply Chain Multi-Echelon Inventory Balancer',
+    category: 'Supply chain',
+    tier: 'Tier 4',
     tierLevel: 4,
-    badge: 'WMS ➔ Multi-Echelon Balancer',
-    desc: 'Reconcile logistics warehouse counts with distribution center purchase orders from AWS S3, resolve SKU naming discrepancies, detect stockout risks below safety thresholds, and route stock transfer orders.',
+    badge: 'WMS → S/4HANA Inventory',
+    desc: 'Reconcile logistics warehouse counts with distribution center purchase orders, resolve SKU discrepancies and balance stock levels.',
     pipeline: 'AWS S3 WMS → SKU Harmonizer → S/4HANA Inventory',
-    icon: <SupplyIcon />,
+    icon: iconSource,
     nodeCount: 7,
     rulesCount: 4,
     rules: [
-      'GS1 Compliant UPC/EAN Barcode Syntax',
-      'Stock On Hand Non-Negative Guard',
-      'Safety Stock Reorder Point Breach Alert',
-      'Warehouse Bin Location Code Format'
-    ],
-    features: ['Inventory Drift Detection', 'Logistics Director HITL', 'Automated Stock Leveling']
+      'GS1 Compliant UPC/EAN Barcode',
+      'Stock on hand non-negative',
+      'Safety stock reorder point alert',
+      'Warehouse bin location format'
+    ]
   },
-
-  // 9. Healthcare Clinical HIPAA Vault (Tier 4)
   {
     id: 'healthcare_hipaa_clinical',
     packKey: 'healthcare_hipaa_clinical',
-    name: 'Healthcare Clinical Records & HIPAA Safe Harbor Vault',
-    category: 'Healthcare & Life Sciences',
-    tier: 'Tier 4 (Healthcare & Compliance)',
+    name: 'Healthcare Patient Master & HIPAA Sanitizer',
+    category: 'Healthcare',
+    tier: 'Tier 4',
     tierLevel: 4,
-    badge: 'HIPAA & HL7 Safe Harbor',
-    desc: 'Ingest EHR clinical encounters and patient staging records, strip all 18 HIPAA Safe Harbor direct identifiers, validate Medical Record Numbers (MRN) and National Provider Identifiers (NPI), and isolate questionable records.',
+    badge: 'HL7 → BigQuery HIPAA Vault',
+    desc: 'Ingest clinical encounters and patient records, strip all 18 HIPAA Safe Harbor identifiers and validate provider identifiers.',
     pipeline: 'EHR Clinical DB → Safe Harbor Sanitizer → BigQuery HIPAA Vault',
-    icon: <HealthIcon />,
+    icon: iconSandbox,
     nodeCount: 7,
     rulesCount: 5,
     rules: [
-      'HIPAA Safe Harbor De-Identification (No SSN/CC)',
-      'Institutional Medical Record Number (MRN) Validity',
-      'Date of Birth Plausibility Guard',
-      '10-Digit CMS National Provider Identifier (NPI)',
-      'HL7 Standard Administrative Sex Value'
-    ],
-    features: ['Safe Harbor De-Identification', 'NPI National Registry Check', 'Privacy Officer HITL']
+      'HIPAA Safe Harbor de-identification',
+      'Medical Record Number (MRN) validity',
+      'Date of birth plausibility guard',
+      '10-Digit CMS NPI provider check',
+      'HL7 standard administrative sex value'
+    ]
   },
-
-  // 10. Multi-Cloud Parquet Lakehouse (Tier 5)
   {
     id: 'multicloud_parquet_lakehouse',
     packKey: 'multicloud_parquet_lakehouse',
     name: 'Multi-Cloud Parquet Stream & Schema Drift Guard',
-    category: 'Data Lakehouse',
-    tier: 'Tier 5 (Multi-Cloud Infrastructure)',
+    category: 'Data lakehouse',
+    tier: 'Tier 5',
     tierLevel: 5,
-    badge: 'Parquet Stream ➔ Drift Guard',
-    desc: 'Stream high-throughput Parquet files from Azure Blob Storage, detect real-time column evolution and schema drift, isolate corrupt Snappy blocks, and mirror clean micro-batches simultaneously into BigQuery and Databricks.',
-    pipeline: 'Azure Blob Parquet → Schema Drift Guard → Google BigQuery & Databricks',
-    icon: <LakehouseIcon />,
+    badge: 'Azure Blob → BigQuery & Databricks',
+    desc: 'Stream high-throughput Parquet files, detect real-time column evolution and schema drift, and mirror clean micro-batches simultaneously.',
+    pipeline: 'Azure Blob Parquet → Schema Drift Guard → BigQuery & Databricks',
+    icon: iconTarget,
     nodeCount: 5,
     rulesCount: 4,
     rules: [
-      'Schema Drift Column Count Guard',
-      'Partition Date Plausibility Check',
-      'Payload MD5 Checksum Integrity',
-      'Primary Key Null Rate Zero Tolerance'
-    ],
-    features: ['Dual Cloud Writeback', 'Dead-Letter Parquet DLQ', 'Automated Schema Evolution']
-  },
-
-  // 11. Custom Builder (Blank Canvas)
-  {
-    id: 'custom_builder',
-    packKey: null,
-    name: 'Blank Canvas Custom Pipeline',
-    category: 'Custom Architecture',
-    tier: 'Custom Canvas',
-    tierLevel: 0,
-    badge: 'Custom Schema Canvas',
-    desc: 'Start from scratch with an empty canvas to connect bespoke database endpoints, configure custom LLM transformation rules, and define tailored target schema mappings.',
-    pipeline: 'Custom Source → User Rules Engine → Custom Target',
-    icon: <CustomIcon />,
-    nodeCount: 0,
-    rulesCount: 0,
-    rules: [
-      'Configure Custom Source Connector',
-      'Define Custom Field Constraints',
-      'Auto-generate Rules via AI LLM',
-      'Deploy to Custom Warehouse Destination'
-    ],
-    features: ['Custom SQL & Regex Rules', 'Any JDBC / ODBC Connector', 'Automated Profiling']
+      'Schema drift column count guard',
+      'Partition date plausibility check',
+      'Payload MD5 checksum integrity',
+      'Primary key null rate zero tolerance'
+    ]
   }
 ];
 
 export default function DomainPacksPage({ onSwitchToMarketing } = {}) {
   const { navigateTo } = useNavigation();
   const { selectThread } = useRuleEngine();
-  const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedTier, setSelectedTier] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [search, setSearch] = useState('');
 
-  const categories = [
-    'All',
-    'ERP Modernization',
-    'Finance & Compliance',
-    'Customer 360',
-    'Enterprise AI & RAG',
-    'RevOps & Sales',
-    'DevOps & Telemetry',
-    'Procurement & ERP',
-    'Supply Chain & Logistics',
-    'Healthcare & Life Sciences',
-    'Data Lakehouse'
+  const priorityTiers = [
+    { label: 'All tiers', value: 'All' },
+    { label: 'Tier 1 · Mission-critical', value: 1 },
+    { label: 'Tier 2 · AI & identity', value: 2 },
+    { label: 'Tier 3 · Cloud & RevOps', value: 3 },
+    { label: 'Tier 4 · Industry', value: 4 },
+    { label: 'Tier 5 · Multi-cloud', value: 5 }
   ];
 
-  const tiers = [
-    { label: 'All Tiers', value: 'All' },
-    { label: 'Tier 1: Mission-Critical', value: 1 },
-    { label: 'Tier 2: AI & Identity', value: 2 },
-    { label: 'Tier 3: Cloud & RevOps', value: 3 },
-    { label: 'Tier 4: Industry & Health', value: 4 },
-    { label: 'Tier 5: Multi-Cloud', value: 5 }
+  const domainCategories = [
+    { label: 'All', value: 'All' },
+    { label: 'ERP modernization', value: 'ERP modernization' },
+    { label: 'Finance & compliance', value: 'Finance & compliance' },
+    { label: 'Customer 360', value: 'Customer 360' },
+    { label: 'Enterprise AI & RAG', value: 'Enterprise AI & RAG' },
+    { label: 'RevOps & sales', value: 'RevOps & sales' },
+    { label: 'DevOps & telemetry', value: 'DevOps & telemetry' },
+    { label: 'Procurement & ERP', value: 'Procurement & ERP' },
+    { label: 'Supply chain', value: 'Supply chain' },
+    { label: 'Healthcare', value: 'Healthcare' },
+    { label: 'Data lakehouse', value: 'Data lakehouse' }
   ];
 
   const filteredPacks = DOMAIN_PACK_CATALOG.filter(pack => {
-    if (selectedCategory !== 'All' && pack.category !== selectedCategory) return false;
     if (selectedTier !== 'All' && pack.tierLevel !== selectedTier) return false;
+    if (selectedCategory !== 'All' && pack.category !== selectedCategory) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
       return (
@@ -394,212 +259,176 @@ export default function DomainPacksPage({ onSwitchToMarketing } = {}) {
         pack.desc.toLowerCase().includes(q) ||
         pack.category.toLowerCase().includes(q) ||
         pack.pipeline.toLowerCase().includes(q) ||
-        (pack.tier && pack.tier.toLowerCase().includes(q))
+        pack.tier.toLowerCase().includes(q)
       );
     }
     return true;
   });
 
   const handleDeployPack = (pack) => {
-    if (pack.id === 'custom_builder') {
-      navigateTo('canvas');
-      return;
-    }
     if (pack.packKey) {
       selectThread(pack.packKey);
     }
-    navigateTo('canvas');
+    window.location.hash = '#canvas';
   };
 
   return (
     <DataXAppShell onSwitchToMarketing={onSwitchToMarketing}>
-
-      {/* Subheader Banner */}
-      <section className="bg-white border-b border-[#E3E6EE] py-6 px-6">
-        <div className="max-w-[1360px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <main className="max-w-[1360px] mx-auto px-6 py-6 space-y-6 font-sans">
+        {/* Top Header Row matching 05.4 */}
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-xs font-medium text-[#5F6678]">
-              <Link to="workflows" className="hover:text-[#2D55F5]">Workflows</Link>
-              <span>/</span>
-              <span className="text-[#0A0F1F] font-semibold">Templates Catalog (10)</span>
-            </div>
-            <h1 className="text-2xl font-bold text-[#0A0F1F] tracking-tight mt-1">
-              Enterprise Use Cases & Topology Catalog
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+              Domain templates
             </h1>
-            <p className="text-sm text-[#5F6678] mt-1 max-w-3xl">
-              10 prioritized production pipelines spanning ERP, SOX 404 compliance, GenAI RAG, vector search, cloud data warehouses, and multi-cloud lakehouses — ready for 1-click deployment.
+            <p className="text-xs text-slate-500 mt-1 max-w-3xl">
+              10 production pipelines across ERP, SOX 404, GenAI RAG, vector search, warehouses and lakehouses. Load one onto the canvas in a click.
             </p>
           </div>
 
-          {/* Search Box */}
-          <div className="relative w-full md:w-80">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8E95A9]">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-            </span>
+          {/* Search Box on the Right */}
+          <div className="relative w-full sm:w-80 shrink-0">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               placeholder="Search by domain, tier, connector..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3.5 py-2 bg-[#F5F6FA] border border-[#E3E6EE] rounded-full text-xs text-[#0A0F1F] placeholder:text-[#8E95A9] focus:outline-none focus:border-[#2D55F5] focus:bg-white transition-all shadow-2xs"
+              className="w-full pl-9 pr-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 shadow-2xs transition-all"
             />
           </div>
         </div>
 
-        {/* Priority Tier Switcher */}
-        <div className="max-w-[1360px] mx-auto mt-5 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">Priority:</span>
-          {tiers.map((t) => (
-            <button
-              key={t.label}
-              onClick={() => setSelectedTier(t.value)}
-              className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                selectedTier === t.value
-                  ? 'bg-[#2D55F5] text-white shadow-2xs'
-                  : 'bg-white text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#F5F6FA] border border-[#E3E6EE]'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+        {/* Filter Rows matching 05.4 */}
+        <div className="space-y-2.5 pt-1">
+          {/* Row 1 - Priority */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs">
+            <span className="text-xs font-medium text-slate-500 shrink-0 mr-1">Priority</span>
+            {priorityTiers.map((t) => (
+              <button
+                key={t.label}
+                onClick={() => setSelectedTier(t.value)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  selectedTier === t.value
+                    ? 'border border-blue-200 bg-blue-50 text-blue-700 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Row 2 - Domain */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs">
+            <span className="text-xs font-medium text-slate-500 shrink-0 mr-1">Domain</span>
+            {domainCategories.map((cat) => (
+              <button
+                key={cat.label}
+                onClick={() => setSelectedCategory(cat.value)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  selectedCategory === cat.value
+                    ? 'bg-slate-900 text-white shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Category Filter Pills */}
-        <div className="max-w-[1360px] mx-auto mt-3 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition-all cursor-pointer ${
-                selectedCategory === cat
-                  ? 'bg-[#0A0F1F] text-white shadow-2xs'
-                  : 'bg-[#F5F6FA] text-[#5F6678] hover:text-[#0A0F1F] hover:bg-[#EBEEF5] border border-[#E3E6EE]'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* Main Grid */}
-      <main className="flex-1 max-w-[1360px] w-full mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* 3-Column Template Cards Grid matching 05.4 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredPacks.map((pack) => (
             <div
               key={pack.id}
-              className="bg-white rounded-[22px] border border-[#E3E6EE] p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
+              className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs flex flex-col justify-between hover:shadow-md transition-all space-y-4"
             >
-              <div>
-                {/* Header: Icon + Category + Priority Tier */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-[14px] bg-[#EEF2FF] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                      {pack.icon}
-                    </div>
-                    <div>
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-[#2D55F5]">
-                        {pack.category}
-                      </span>
-                      <h3 className="text-[15px] font-bold text-[#0A0F1F] tracking-tight leading-snug">
-                        {pack.name}
-                      </h3>
-                    </div>
+              <div className="space-y-3.5">
+                {/* Top Row: Icon + Category + Title */}
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
+                    <img src={pack.icon} alt={pack.name} className="w-6 h-6 object-contain" />
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-medium text-slate-500 block">
+                      {pack.category}
+                    </span>
+                    <h3 className="text-sm font-bold text-slate-900 leading-snug">
+                      {pack.name}
+                    </h3>
                   </div>
                 </div>
 
-                {/* Badges: Priority + Certification */}
-                <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                  {pack.tier && (
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                      pack.tierLevel === 1 ? 'bg-amber-50 text-amber-800 border-amber-200' :
-                      pack.tierLevel === 2 ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
-                      pack.tierLevel === 3 ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                      pack.tierLevel === 4 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                      'bg-purple-50 text-purple-700 border-purple-200'
-                    }`}>
-                      {pack.tier}
-                    </span>
-                  )}
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#EBF0FF] text-[#2D55F5] text-[10px] font-medium border border-[#D5E1FF]">
+                {/* Badges Row: Tier + Sub-badge + Nodes */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold text-blue-700 bg-blue-50/60 border border-blue-200">
+                    {pack.tier}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-medium text-slate-600 bg-slate-100 border border-slate-200/60">
                     {pack.badge}
                   </span>
-                  {pack.nodeCount > 0 && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-medium border border-slate-200">
-                      {pack.nodeCount} Nodes
-                    </span>
-                  )}
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-medium text-slate-600 bg-slate-100 border border-slate-200/60">
+                    {pack.nodeCount} nodes
+                  </span>
                 </div>
 
                 {/* Description */}
-                <p className="text-xs text-[#5F6678] leading-relaxed mt-3 line-clamp-3">
+                <p className="text-xs text-slate-600 leading-relaxed">
                   {pack.desc}
                 </p>
 
-                {/* Pipeline Flow Pill */}
-                <div className="mt-3.5 p-2 rounded-lg bg-[#F5F6FA] border border-[#E3E6EE] text-[11px] font-mono text-[#474E61]">
-                  <span className="text-[#8E95A9] mr-1">Flow:</span>
-                  <span className="text-slate-800 font-medium">{pack.pipeline}</span>
+                {/* Pipeline Flow Box */}
+                <div className="bg-slate-50 rounded-xl border border-slate-100 p-2.5 font-mono text-[11px] text-slate-700 truncate">
+                  {pack.pipeline}
                 </div>
 
-                {/* Rules List Preview */}
-                <div className="mt-4 pt-3 border-t border-[#F2F4F7]">
-                  <div className="flex items-center justify-between text-xs mb-2">
-                    <span className="font-semibold text-[#0A0F1F]">Pre-Configured Domain Rules</span>
-                    <span className="text-[11px] font-medium text-[#2D55F5] bg-blue-50 px-2 py-0.5 rounded-full">
-                      {pack.rulesCount > 0 ? `${pack.rulesCount} Rules` : 'Configurable'}
-                    </span>
+                {/* Pre-configured rules section */}
+                <div className="space-y-2 pt-1 border-t border-slate-100">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-700">Pre-configured rules</span>
+                    <span className="font-semibold text-blue-600 font-mono">{pack.rulesCount} rules</span>
                   </div>
-                  <ul className="space-y-1.5">
+                  <div className="space-y-1.5 text-xs text-slate-600">
                     {pack.rules.slice(0, 3).map((rule, idx) => (
-                      <li key={idx} className="text-[11px] text-[#5F6678] flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#2D55F5] shrink-0" />
+                      <div key={idx} className="flex items-center gap-2">
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                         <span className="truncate">{rule}</span>
-                      </li>
+                      </div>
                     ))}
                     {pack.rules.length > 3 && (
-                      <li className="text-[10px] text-[#8E95A9] italic pl-3">
-                        + {pack.rules.length - 3} more domain rules included
-                      </li>
+                      <p className="text-[11px] text-slate-400 font-medium pl-5">
+                        + {pack.rules.length - 3} more
+                      </p>
                     )}
-                  </ul>
-                </div>
-
-                {/* Feature Chips */}
-                {pack.features && (
-                  <div className="mt-3 flex flex-wrap gap-1">
-                    {pack.features.map((feat, fIdx) => (
-                      <span key={fIdx} className="px-1.5 py-0.5 rounded text-[10px] bg-slate-50 text-slate-600 border border-slate-200">
-                        {feat}
-                      </span>
-                    ))}
                   </div>
-                )}
+                </div>
               </div>
 
-              {/* Bottom Actions */}
-              <div className="mt-6 pt-4 border-t border-[#F2F4F7] flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-[11px] text-[#8E95A9]">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                  <span>Production Ready</span>
-                </div>
+              {/* Footer: Status Badge + Load Template Button */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                <span className="px-2.5 py-1 rounded-full text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Production ready
+                </span>
 
                 <button
                   onClick={() => handleDeployPack(pack)}
-                  className="px-4 py-2 rounded-xl bg-[#2D55F5] hover:bg-[#1E3EB8] text-white text-xs font-semibold shadow-xs hover:shadow-md transition-all cursor-pointer flex items-center gap-1.5 group-hover:bg-[#1E3EB8]"
+                  className="px-4 py-2 rounded-xl bg-[#2D55F5] hover:bg-[#2045DC] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
                 >
-                  <span>Load Template</span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
+                  <span>Load template</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
           ))}
         </div>
+
+        {/* Footer Note matching 05.4 */}
+        <p className="text-xs text-slate-400 text-center pt-4">
+          Showing {filteredPacks.length} of 10 · Procurement, Supply chain, Healthcare and Lakehouse templates continue below.
+        </p>
       </main>
     </DataXAppShell>
   );
