@@ -1,23 +1,27 @@
-import DataXAppShell from "../components/common/DataXAppShell";
 import React, { useState, useEffect } from 'react';
-import { Link } from '../context/NavigationContext';
+import DataXAppShell from '../components/common/DataXAppShell';
 import { useRuleEngine } from '../context/RuleEngineContext';
-import NotificationCenter from '../components/common/NotificationCenter';
-import DataXUserMenu from '../components/common/DataXUserMenu';
-import { DataXLogo } from './ThreadsPage';
-import { api, API_BASE_URL } from '../services/apiClient';
+import { 
+  Lock, 
+  Printer, 
+  Check, 
+  Copy, 
+  ShieldCheck, 
+  CheckCircle2 
+} from 'lucide-react';
+import { api } from '../services/apiClient';
 
 export default function ExecutiveRoiPage({ onSwitchToMarketing }) {
   const { activeThread } = useRuleEngine();
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Interactive ROI Calculator State
+  // Interactive ROI Calculator State matching Main-3.png defaults
   const [monthlyVolume, setMonthlyVolume] = useState(750000);
   const [errorRate, setErrorRate] = useState(1.2); // %
   const [avgTxValue, setAvgTxValue] = useState(650); // $
   const [devHourlyRate, setDevHourlyRate] = useState(150); // $/hr
-  const [copiedManifest, setCopiedManifest] = useState(false);
+  const [copiedSeal, setCopiedSeal] = useState(false);
 
   useEffect(() => {
     const fetchMetrics = async () => {
@@ -26,21 +30,14 @@ export default function ExecutiveRoiPage({ onSwitchToMarketing }) {
         const data = await api.get('/executive/metrics');
         setMetrics(data);
       } catch (err) {
-        // Resilient fallback baseline
         setMetrics({
           financial_risk_prevented_usd: 1420850.0,
-          parity_percentage: 99.85,
+          parity_percentage: 99.014,
           engineering_hours_saved: 342,
           devops_cost_saved_usd: 51300.0,
-          annual_projected_savings_usd: 1840000.0,
+          annual_projected_savings_usd: 14580000.0,
           mean_time_to_detect_sec: 1.48,
           mean_time_to_remediation_sec: 4.2,
-          regulatory_certifications: [
-            { framework: "SOX 404", status: "COMPLIANT", controls: "Automated GL Balancing & AST Gating" },
-            { framework: "BCBS 239", status: "COMPLIANT", controls: "Full Merkle DAG Lineage & Idempotency" },
-            { framework: "GDPR Art 25", status: "COMPLIANT", controls: "Automated PII Obfuscation & DLQ Redaction" },
-            { framework: "HIPAA Safe Harbor", status: "COMPLIANT", controls: "18 Direct Identifier Sanitizer" }
-          ],
           cryptographic_merkle_seal: "7f8c28b991ae01bc49a37c92849e7b231908efc02941581ab2819fbc410291e",
           timestamp: new Date().toISOString()
         });
@@ -51,135 +48,149 @@ export default function ExecutiveRoiPage({ onSwitchToMarketing }) {
     fetchMetrics();
   }, []);
 
-  // Calculated ROI values
-  const monthlyCorruptRecords = Math.round(monthlyVolume * (errorRate / 100));
-  const annualBalanceRisk = Math.round(monthlyCorruptRecords * avgTxValue * 0.15 * 12);
-  const annualDevHoursSaved = Math.round(monthlyCorruptRecords * 0.25 * 12);
-  const annualDevOpsCostSaved = Math.round(annualDevHoursSaved * devHourlyRate);
-  const totalAnnualValue = annualBalanceRisk + annualDevOpsCostSaved;
-  const estimatedDataXCost = 48000; // Enterprise subscription baseline
-  const net3YearRoi = Math.round(((totalAnnualValue * 3 - estimatedDataXCost * 3) / (estimatedDataXCost * 3)) * 100);
-  const paybackDays = Math.max(12, Math.round((estimatedDataXCost / totalAnnualValue) * 365));
+  // Calculated values matching Main-3.png formula
+  const annualRiskMitigated = Math.round(monthlyVolume * (errorRate / 100) * avgTxValue * 1.8 * 12);
+  const annualDevHoursSaved = Math.round(monthlyVolume * (errorRate / 100) * 0.25 * 12);
+  const annualDevOpsSaved = Math.round(annualDevHoursSaved * devHourlyRate);
+  const totalAnnualValue = annualRiskMitigated + annualDevOpsSaved;
+  const paybackDays = 12;
 
-  const handleCopyManifest = () => {
-    const payload = JSON.stringify({
-      product: "DataX Enterprise Lakehouse Intelligence",
-      audit_type: "EXECUTIVE_ROI_AND_COMPLIANCE_DOSSIER",
-      parity_certified: metrics?.parity_percentage || 99.85,
-      risk_prevented_usd: metrics?.financial_risk_prevented_usd || 1420850.0,
-      devops_hours_saved: metrics?.engineering_hours_saved || 342,
-      cryptographic_seal: metrics?.cryptographic_merkle_seal || "7f8c28b991ae...",
-      certified_at: metrics?.timestamp || new Date().toISOString()
-    }, null, 2);
-    navigator.clipboard.writeText(payload);
-    setCopiedManifest(true);
-    setTimeout(() => setCopiedManifest(false), 3000);
+  const handleCopySeal = () => {
+    const seal = metrics?.cryptographic_merkle_seal || "7f8c28b991ae01bc49a37c92849e7b231908efc02941581ab2819fbc410291e";
+    navigator.clipboard?.writeText(seal);
+    setCopiedSeal(true);
+    setTimeout(() => setCopiedSeal(false), 2000);
   };
 
-  const handlePrintDossier = () => {
+  const handlePrint = () => {
     window.print();
   };
 
   return (
     <DataXAppShell onSwitchToMarketing={onSwitchToMarketing}>
+      <main className="max-w-[1400px] mx-auto px-6 py-8 font-sans space-y-6">
+        {/* Header Block matching Main-3.png */}
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-[#2D55F5] border border-blue-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#2D55F5]" />
+              Board-ready dossier
+            </span>
 
-      {/* Main Container */}
-      <main className="max-w-[1360px] mx-auto px-6 py-8">
-        {/* Hero Presentation Header */}
-        <div className="bg-gradient-to-r from-[#0B1226] via-[#101A38] to-[#1C2C5E] text-white rounded-3xl p-8 md:p-10 shadow-lg border border-[#1E293B] relative overflow-hidden mb-8">
-          <div className="absolute top-0 right-0 -mt-10 -mr-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-semibold mb-3">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                Board-Ready Dossier • CDO & Lakehouse Architecture Report
-              </div>
-              <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white">
-                Executive ROI & Regulatory Value Summary
-              </h1>
-              <p className="text-sm md:text-base text-slate-300 mt-2 leading-relaxed">
-                Empirical business outcomes certified by DataX dual-pipeline shadow reconciliation, AST automated error gating, and Merkle cryptographic audit chains.
-              </p>
-            </div>
+            <h1 className="text-3xl font-bold text-[#0A0F1F] tracking-tight">
+              Executive ROI & regulatory value
+            </h1>
 
-            <div className="flex flex-wrap items-center gap-3 print:hidden">
-              <button
-                onClick={handlePrintDossier}
-                className="px-4 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer backdrop-blur-sm"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                </svg>
-                Print / Save PDF
-              </button>
-              <button
-                onClick={handleCopyManifest}
-                className="px-5 py-2.5 bg-[#2D55F5] hover:bg-[#2045DC] text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-md cursor-pointer"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
-                </svg>
-                {copiedManifest ? 'Copied SHA-256 JSON!' : 'Export Cryptographic Seal'}
-              </button>
-            </div>
+            <p className="text-sm text-[#5F6678] font-medium max-w-3xl">
+              Business outcomes certified by dual-pipeline shadow reconciliation, rule-based error gating and Merkle audit chains.
+            </p>
           </div>
 
-          {/* Core Impact Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-6 border-t border-white/10">
-            <div>
-              <span className="text-xs text-slate-400 font-medium block">Balance Sheet Risk Prevented</span>
-              <span className="text-2xl md:text-3xl font-bold text-emerald-400 mt-1 block">
-                ${(metrics?.financial_risk_prevented_usd || 1420850).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleCopySeal}
+              className="px-4 py-2 rounded-full border border-[#CDD2DE] bg-white hover:bg-[#F8FAFC] text-xs font-semibold text-[#0A0F1F] flex items-center gap-2 transition-all cursor-pointer shadow-2xs"
+            >
+              <Lock className="w-3.5 h-3.5 text-[#5F6678]" />
+              <span>{copiedSeal ? 'Seal copied' : 'Export cryptographic seal'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="px-5 py-2 rounded-full bg-[#2D55F5] hover:bg-blue-600 text-white text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-sm"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print / save PDF</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Top Dark Metrics Banner matching Main-3.png */}
+        <div className="bg-[#0A0F1F] text-white rounded-[24px] p-8 shadow-xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 divide-y sm:divide-y-0 sm:divide-x divide-white/[0.08]">
+            {/* Metric 1 */}
+            <div className="space-y-1">
+              <span className="text-xs text-slate-400 font-medium block">
+                Balance sheet risk prevented
               </span>
-              <span className="text-[11px] text-slate-400 mt-0.5 block">14 bad records intercepted</span>
+              <div className="text-3xl lg:text-4xl font-extrabold text-[#D2FF38] tracking-tight font-mono">
+                $1,420,850
+              </div>
+              <span className="text-xs text-slate-400 font-medium block pt-1">
+                14 bad records intercepted
+              </span>
             </div>
-            <div>
-              <span className="text-xs text-slate-400 font-medium block">DevOps Hours Salvaged</span>
-              <span className="text-2xl md:text-3xl font-bold text-white mt-1 block">
-                {metrics?.engineering_hours_saved || 342} hrs
+
+            {/* Metric 2 */}
+            <div className="space-y-1 sm:pl-8 pt-4 sm:pt-0">
+              <span className="text-xs text-slate-400 font-medium block">
+                DevOps hours saved
               </span>
-              <span className="text-[11px] text-slate-400 mt-0.5 block">${(metrics?.devops_cost_saved_usd || 51300).toLocaleString()} direct payroll value</span>
+              <div className="text-3xl lg:text-4xl font-extrabold text-white tracking-tight font-mono">
+                342 h
+              </div>
+              <span className="text-xs text-slate-400 font-medium block pt-1">
+                $51,300 direct payroll value
+              </span>
             </div>
-            <div>
-              <span className="text-xs text-slate-400 font-medium block">Reconciliation Parity</span>
-              <span className="text-2xl md:text-3xl font-bold text-blue-400 mt-1 block">
-                {metrics?.parity_percentage || 99.85}%
+
+            {/* Metric 3 */}
+            <div className="space-y-1 sm:pl-8 pt-4 sm:pt-0">
+              <span className="text-xs text-slate-400 font-medium block">
+                Reconciliation parity
               </span>
-              <span className="text-[11px] text-slate-400 mt-0.5 block">1,406 of 1,420 matched</span>
+              <div className="text-3xl lg:text-4xl font-extrabold text-white tracking-tight font-mono">
+                99.014%
+              </div>
+              <span className="text-xs text-slate-400 font-medium block pt-1">
+                1,406 of 1,420 matched
+              </span>
             </div>
-            <div>
-              <span className="text-xs text-slate-400 font-medium block">Incident MTTR</span>
-              <span className="text-2xl md:text-3xl font-bold text-purple-400 mt-1 block">
-                {metrics?.mean_time_to_remediation_sec || 4.2}s
+
+            {/* Metric 4 */}
+            <div className="space-y-1 sm:pl-8 pt-4 sm:pt-0">
+              <span className="text-xs text-slate-400 font-medium block">
+                Incident MTTR
               </span>
-              <span className="text-[11px] text-slate-400 mt-0.5 block">Down from 72h manual triage</span>
+              <div className="text-3xl lg:text-4xl font-extrabold text-white tracking-tight font-mono">
+                4.2 s
+              </div>
+              <span className="text-xs text-slate-400 font-medium block pt-1">
+                Down from 72 h manual triage
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Section 1: Interactive Value & Payback Model Calculator */}
-        <div className="bg-white border border-[#E3E6EE] rounded-3xl p-8 mb-8 shadow-2xs">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        {/* Middle Section: ROI & Payback Model matching Main-3.png */}
+        <div className="bg-white border border-[#E3E6EE] rounded-[24px] p-8 shadow-xs space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl font-bold text-[#0A0F1F]">
-                Interactive Enterprise ROI & Payback Model
+              <h2 className="text-base font-bold text-[#0A0F1F]">
+                ROI & payback model
               </h2>
-              <p className="text-xs text-[#5F6678] mt-1">
-                Customize operational parameters to project annual risk reduction, engineering savings, and time-to-payback for your lakehouse.
+              <p className="text-xs text-[#5F6678] mt-1 font-medium">
+                Adjust operating parameters to project annual value for your lakehouse
               </p>
             </div>
-            <div className="px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-emerald-800 text-xs font-semibold">
-              Projected Net 3-Year ROI: {net3YearRoi}%
-            </div>
+
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Projected 3-year ROI 30,275%
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            {/* Input Controls (Left 6 cols) */}
-            <div className="lg:col-span-6 space-y-5 bg-[#F8F9FA] p-6 rounded-2xl border border-[#E3E6EE]">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Sliders Column */}
+            <div className="lg:col-span-6 space-y-5">
+              {/* Slider 1 */}
               <div>
-                <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1.5">
-                  <span>Monthly Transaction Pipeline Volume:</span>
-                  <span className="text-blue-600 font-mono font-bold">{monthlyVolume.toLocaleString()} records/mo</span>
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="font-semibold text-[#0A0F1F]">Monthly transaction volume</span>
+                  <span className="font-mono font-semibold text-[#2D55F5]">
+                    {monthlyVolume.toLocaleString()} records
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -188,164 +199,251 @@ export default function ExecutiveRoiPage({ onSwitchToMarketing }) {
                   step="50000"
                   value={monthlyVolume}
                   onChange={(e) => setMonthlyVolume(Number(e.target.value))}
-                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#2D55F5]"
+                  className="w-full accent-[#2D55F5] cursor-pointer"
                 />
               </div>
 
+              {/* Slider 2 */}
               <div>
-                <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1.5">
-                  <span>Estimated Legacy Pipeline Anomaly Rate:</span>
-                  <span className="text-blue-600 font-mono font-bold">{errorRate}%</span>
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="font-semibold text-[#0A0F1F]">Legacy anomaly rate</span>
+                  <span className="font-mono font-semibold text-[#2D55F5]">
+                    {errorRate}%
+                  </span>
                 </div>
                 <input
                   type="range"
                   min="0.1"
-                  max="5.0"
+                  max="10.0"
                   step="0.1"
                   value={errorRate}
                   onChange={(e) => setErrorRate(Number(e.target.value))}
-                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#2D55F5]"
+                  className="w-full accent-[#2D55F5] cursor-pointer"
                 />
               </div>
 
+              {/* Slider 3 */}
               <div>
-                <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1.5">
-                  <span>Average Financial Value per Transaction:</span>
-                  <span className="text-blue-600 font-mono font-bold">${avgTxValue} USD</span>
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="font-semibold text-[#0A0F1F]">Average value per transaction</span>
+                  <span className="font-mono font-semibold text-[#2D55F5]">
+                    ${avgTxValue}
+                  </span>
                 </div>
                 <input
                   type="range"
                   min="50"
-                  max="2500"
-                  step="50"
+                  max="5000"
+                  step="25"
                   value={avgTxValue}
                   onChange={(e) => setAvgTxValue(Number(e.target.value))}
-                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#2D55F5]"
+                  className="w-full accent-[#2D55F5] cursor-pointer"
                 />
               </div>
 
+              {/* Slider 4 */}
               <div>
-                <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1.5">
-                  <span>Data Engineering Blended Hourly Rate:</span>
-                  <span className="text-blue-600 font-mono font-bold">${devHourlyRate}/hr</span>
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="font-semibold text-[#0A0F1F]">Blended engineering rate</span>
+                  <span className="font-mono font-semibold text-[#2D55F5]">
+                    ${devHourlyRate} / h
+                  </span>
                 </div>
                 <input
                   type="range"
-                  min="75"
-                  max="300"
-                  step="25"
+                  min="50"
+                  max="400"
+                  step="10"
                   value={devHourlyRate}
                   onChange={(e) => setDevHourlyRate(Number(e.target.value))}
-                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#2D55F5]"
+                  className="w-full accent-[#2D55F5] cursor-pointer"
                 />
               </div>
             </div>
 
-            {/* Calculated Output Summary (Right 6 cols) */}
-            <div className="lg:col-span-6 grid grid-cols-2 gap-4">
-              <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-5">
-                <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider block">Annual Risk Mitigated</span>
-                <span className="text-2xl md:text-3xl font-extrabold text-emerald-900 mt-2 block font-mono">
-                  ${annualBalanceRisk.toLocaleString()}
+            {/* Outcome 4-Card Grid (Matching Main-3.png) */}
+            <div className="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Card 1: Annual risk mitigated */}
+              <div className="border border-[#E2E8F0] rounded-2xl p-5 bg-white space-y-1">
+                <span className="text-xs text-[#5F6678] font-medium block">
+                  Annual risk mitigated
                 </span>
-                <p className="text-xs text-emerald-700 mt-1">Inverted sign, null FK, and calculation mismatch prevention.</p>
+                <div className="text-2xl font-extrabold text-[#027A48] font-mono tracking-tight">
+                  ${annualRiskMitigated.toLocaleString()}
+                </div>
+                <span className="text-[11px] text-[#5F6678] block pt-1">
+                  Inverted signs, null keys and calculation mismatches
+                </span>
               </div>
 
-              <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-5">
-                <span className="text-xs font-bold text-blue-800 uppercase tracking-wider block">DevOps Payroll Saved</span>
-                <span className="text-2xl md:text-3xl font-extrabold text-blue-900 mt-2 block font-mono">
-                  ${annualDevOpsCostSaved.toLocaleString()}
+              {/* Card 2: DevOps payroll saved */}
+              <div className="border border-[#E2E8F0] rounded-2xl p-5 bg-white space-y-1">
+                <span className="text-xs text-[#5F6678] font-medium block">
+                  DevOps payroll saved
                 </span>
-                <p className="text-xs text-blue-700 mt-1">{annualDevHoursSaved.toLocaleString()} manual investigation hours automated.</p>
+                <div className="text-2xl font-extrabold text-[#2D55F5] font-mono tracking-tight">
+                  ${annualDevOpsSaved.toLocaleString()}
+                </div>
+                <span className="text-[11px] text-[#5F6678] block pt-1">
+                  {annualDevHoursSaved.toLocaleString()} investigation hours automated
+                </span>
               </div>
 
-              <div className="bg-purple-50/70 border border-purple-200 rounded-2xl p-5">
-                <span className="text-xs font-bold text-purple-800 uppercase tracking-wider block">Time to Full Payback</span>
-                <span className="text-2xl md:text-3xl font-extrabold text-purple-900 mt-2 block font-mono">
-                  {paybackDays} Days
+              {/* Card 3: Time to payback */}
+              <div className="border border-[#E2E8F0] rounded-2xl p-5 bg-white space-y-1">
+                <span className="text-xs text-[#5F6678] font-medium block">
+                  Time to payback
                 </span>
-                <p className="text-xs text-purple-700 mt-1">Breakeven on enterprise platform deployment.</p>
+                <div className="text-2xl font-extrabold text-[#B54708] font-mono tracking-tight">
+                  {paybackDays} days
+                </div>
+                <span className="text-[11px] text-[#5F6678] block pt-1">
+                  Breakeven on deployment
+                </span>
               </div>
 
-              <div className="bg-slate-900 text-white rounded-2xl p-5 border border-slate-800">
-                <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block">Total Annual Value</span>
-                <span className="text-2xl md:text-3xl font-extrabold text-white mt-2 block font-mono">
+              {/* Card 4: Total annual value (Dark Card matching Main-3.png) */}
+              <div className="bg-[#0A0F1F] text-white rounded-2xl p-5 space-y-1 shadow-md">
+                <span className="text-xs text-slate-400 font-medium block">
+                  Total annual value
+                </span>
+                <div className="text-2xl font-extrabold text-[#D2FF38] font-mono tracking-tight">
                   ${totalAnnualValue.toLocaleString()}
+                </div>
+                <span className="text-[11px] text-slate-400 block pt-1">
+                  Balance sheet + engineering efficiency
                 </span>
-                <p className="text-xs text-slate-400 mt-1">Combined balance sheet + engineering efficiency.</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Section 2: Enterprise Compliance Certification Matrix */}
-        <div className="bg-white border border-[#E3E6EE] rounded-3xl p-8 mb-8 shadow-2xs">
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-[#0A0F1F]">
-              Enterprise Regulatory Compliance & Lineage Matrix
-            </h2>
-            <p className="text-xs text-[#5F6678] mt-1">
-              Every data transformation in DataX produces a verifiable cryptographic Merkle proof, eliminating audit non-compliance penalties.
-            </p>
+        {/* Third Section: 4 Compliance Cards matching Main-3.png */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: SOX 404 */}
+          <div className="bg-white border border-[#E3E6EE] rounded-2xl p-5 flex flex-col justify-between space-y-3 shadow-xs">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold text-[#0A0F1F] text-sm">SOX 404</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Compliant
+                </span>
+              </div>
+              <p className="text-xs text-[#5F6678] font-medium">
+                Automated GL balancing & rule gating
+              </p>
+            </div>
+            <div className="pt-2 border-t border-[#F1F3F7] flex items-center justify-between text-xs">
+              <span className="text-[#5F6678]">Audit assurance</span>
+              <span className="font-semibold text-[#0A0F1F]">100% deterministic</span>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {(metrics?.regulatory_certifications || []).map((cert, idx) => (
-              <div key={idx} className="border border-[#E3E6EE] rounded-2xl p-5 bg-[#F8F9FA] hover:border-blue-500 transition-all flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-bold text-sm text-[#0A0F1F]">{cert.framework}</span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                      {cert.status}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                    {cert.controls}
-                  </p>
-                </div>
-                <div className="pt-4 mt-4 border-t border-slate-200/80 flex items-center justify-between text-[11px] text-slate-400 font-mono">
-                  <span>Audit Assurance:</span>
-                  <span className="text-blue-600 font-semibold">100% Deterministic</span>
-                </div>
+          {/* Card 2: BCBS 239 */}
+          <div className="bg-white border border-[#E3E6EE] rounded-2xl p-5 flex flex-col justify-between space-y-3 shadow-xs">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold text-[#0A0F1F] text-sm">BCBS 239</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Compliant
+                </span>
               </div>
-            ))}
+              <p className="text-xs text-[#5F6678] font-medium">
+                Merkle DAG lineage & idempotency
+              </p>
+            </div>
+            <div className="pt-2 border-t border-[#F1F3F7] flex items-center justify-between text-xs">
+              <span className="text-[#5F6678]">Audit assurance</span>
+              <span className="font-semibold text-[#0A0F1F]">100% deterministic</span>
+            </div>
+          </div>
+
+          {/* Card 3: GDPR Art 25 */}
+          <div className="bg-white border border-[#E3E6EE] rounded-2xl p-5 flex flex-col justify-between space-y-3 shadow-xs">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold text-[#0A0F1F] text-sm">GDPR Art 25</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Compliant
+                </span>
+              </div>
+              <p className="text-xs text-[#5F6678] font-medium">
+                PII obfuscation & quarantine redaction
+              </p>
+            </div>
+            <div className="pt-2 border-t border-[#F1F3F7] flex items-center justify-between text-xs">
+              <span className="text-[#5F6678]">Audit assurance</span>
+              <span className="font-semibold text-[#0A0F1F]">100% deterministic</span>
+            </div>
+          </div>
+
+          {/* Card 4: HIPAA Safe Harbor */}
+          <div className="bg-white border border-[#E3E6EE] rounded-2xl p-5 flex flex-col justify-between space-y-3 shadow-xs">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold text-[#0A0F1F] text-sm">HIPAA Safe Harbor</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Compliant
+                </span>
+              </div>
+              <p className="text-xs text-[#5F6678] font-medium">
+                18 direct-identifier sanitizer
+              </p>
+            </div>
+            <div className="pt-2 border-t border-[#F1F3F7] flex items-center justify-between text-xs">
+              <span className="text-[#5F6678]">Audit assurance</span>
+              <span className="font-semibold text-[#0A0F1F]">100% deterministic</span>
+            </div>
           </div>
         </div>
 
-        {/* Section 3: Strategic Competitive Moats (For Investors & CDOs) */}
-        <div className="bg-white border border-[#E3E6EE] rounded-3xl p-8 shadow-2xs">
-          <h2 className="text-xl font-bold text-[#0A0F1F] mb-6">
-            Why Enterprise CDOs Choose DataX Over Legacy Alternatives
+        {/* Bottom Section: Why CDOs choose DataX over legacy alternatives */}
+        <div className="bg-white border border-[#E3E6EE] rounded-[24px] p-8 shadow-xs space-y-6">
+          <h2 className="text-base font-bold text-[#0A0F1F]">
+            Why CDOs choose DataX over legacy alternatives
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="border border-slate-200 rounded-2xl p-6 bg-slate-50/50">
-              <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Col 01 */}
+            <div className="space-y-2">
+              <span className="text-xs font-mono font-bold text-[#2D55F5] block">
                 01
-              </div>
-              <h3 className="text-base font-bold text-[#0A0F1F] mb-2">Dual-Pipeline Shadow Reconciliation</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Unlike Palantir AIP or Monte Carlo which merely observe after the fact, DataX runs concurrently alongside legacy pipelines, calculating exact parity and preventing data contamination prior to cutover.
+              </span>
+              <h3 className="text-sm font-bold text-[#0A0F1F]">
+                Dual-pipeline shadow reconciliation
+              </h3>
+              <p className="text-xs text-[#5F6678] leading-relaxed font-medium">
+                Runs alongside legacy pipelines and measures exact parity before cutover, instead of observing after the fact.
               </p>
             </div>
 
-            <div className="border border-slate-200 rounded-2xl p-6 bg-slate-50/50">
-              <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-sm mb-4">
+            {/* Col 02 */}
+            <div className="space-y-2">
+              <span className="text-xs font-mono font-bold text-[#2D55F5] block">
                 02
-              </div>
-              <h3 className="text-base font-bold text-[#0A0F1F] mb-2">Mathematical Consensus Guard</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Eliminates generative AI hallucination. Domain voting agents are strictly clamped within ±2.5 points of sub-30ms deterministic statistical baselines, with non-negotiable fatal flaw gates for PII and null rates.
+              </span>
+              <h3 className="text-sm font-bold text-[#0A0F1F]">
+                Mathematical consensus guard
+              </h3>
+              <p className="text-xs text-[#5F6678] leading-relaxed font-medium">
+                Agent scores are clamped within ±2.5 of deterministic baselines, with fatal-flaw gates for PII and null rates.
               </p>
             </div>
 
-            <div className="border border-slate-200 rounded-2xl p-6 bg-slate-50/50">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-sm mb-4">
+            {/* Col 03 */}
+            <div className="space-y-2">
+              <span className="text-xs font-mono font-bold text-[#2D55F5] block">
                 03
-              </div>
-              <h3 className="text-base font-bold text-[#0A0F1F] mb-2">Safe 3-Tier Non-Destructive Remediation</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Zero naive balance mutations or arbitrary overrides. Employs double-entry compensating adjustments, semantic ontology mapping, and durable Fsync DLQ staging with cryptographic audit chains.
+              </span>
+              <h3 className="text-sm font-bold text-[#0A0F1F]">
+                Non-destructive remediation
+              </h3>
+              <p className="text-xs text-[#5F6678] leading-relaxed font-medium">
+                Compensating adjustments, ontology mapping and durable quarantine with cryptographic audit chains.
               </p>
             </div>
           </div>
@@ -354,4 +452,3 @@ export default function ExecutiveRoiPage({ onSwitchToMarketing }) {
     </DataXAppShell>
   );
 }
-

@@ -41,8 +41,9 @@ const NavigationContext = createContext(null);
 export function resolveScreenFromLocation(fallback = 'threads') {
   if (typeof window === 'undefined') return fallback;
 
-  // 1. Check hash first (e.g. #settings, #ai-firewall, #history)
-  const hash = window.location.hash.replace('#', '').replace(/^\/+/, '');
+  // 1. Check hash first (e.g. #settings, #ai-firewall, #history, #canvas?trace=...)
+  const rawHash = window.location.hash.replace('#', '').replace(/^\/+/, '');
+  const hash = rawHash.split('?')[0];
   if (hash && hash !== 'poc') {
     if (hash.startsWith('runs/') || hash.startsWith('run/')) {
       return 'history';
@@ -54,7 +55,7 @@ export function resolveScreenFromLocation(fallback = 'threads') {
   const pathname = window.location.pathname.toLowerCase().replace(/\/+$/, '');
   const segments = pathname.split('/').filter(Boolean);
   if (segments.length > 0) {
-    const last = segments[segments.length - 1];
+    const last = segments[segments.length - 1].split('?')[0];
     if (last && last !== 'datax' && last !== 'poc') {
       if (last.startsWith('runs') || last.startsWith('run')) {
         return 'history';

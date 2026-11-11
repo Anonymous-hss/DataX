@@ -1,566 +1,616 @@
-import DataXAppShell from "../components/common/DataXAppShell";
 import React, { useState, useEffect } from 'react';
-import { Link } from '../context/NavigationContext';
+import DataXAppShell from '../components/common/DataXAppShell';
+import { useNavigation } from '../context/NavigationContext';
 import { useRuleEngine } from '../context/RuleEngineContext';
-import NotificationCenter from '../components/common/NotificationCenter';
-import DataXUserMenu from '../components/common/DataXUserMenu';
-import { DataXLogo } from './ThreadsPage';
-import { api, API_BASE_URL } from '../services/apiClient';
+import { api } from '../services/apiClient';
 import { addNotification } from '../services/notificationService';
+import {
+  Search,
+  Check,
+  AlertTriangle,
+  RotateCcw,
+  Trash2,
+  Copy,
+  ChevronDown,
+  ArrowRight,
+  GitBranch,
+  ShieldAlert,
+  Terminal,
+  Layers,
+  Sparkles,
+  ExternalLink
+} from 'lucide-react';
+
+const INITIAL_QUARANTINE_RECORDS = [
+  {
+    id: 'QR-4500743585',
+    recordId: '#PO-4500743585',
+    rawRecordId: 'PO-4500743585',
+    ruleName: 'PK completeness (VENDOR_ID)',
+    failedField: 'VENDOR_ID',
+    observedValue: 'EMPTY_STRING',
+    severity: 'Critical',
+    time: '10:35:51',
+    exposureUsd: '$1,045.00',
+    aiConfidence: '94% match',
+    regulatoryScope: 'BCBS 239 · GDPR',
+    regulatoryDetail: 'Principle 3 accuracy · Art 25 privacy by design',
+    astExpression: 'UnaryOp(IsNull(VENDOR_ID | CUSTOMER_ID))',
+    astDetail: 'Evaluated against VENDOR_ID with value EMPTY_STRING.',
+    hypothesis: 'Upstream batch ingest allowed null foreign keys during asynchronous CRM/ERP sync, leaving orphaned transactions that corrupt downstream ledger balances.',
+    recommendedAction: 'Resolve the entity alias with the semantic vector matcher, or escalate to a data steward.',
+    sourcePayload: {
+      PO_NUMBER: '4500743585',
+      ITEM_NO: '10',
+      MATERIAL_ID: 'MAT-1008',
+      QUANTITY: 1,
+      UNIT_PRICE: 1045.00,
+      DELIVERY_PLANT: 'P2000',
+      VENDOR_ID: ''
+    },
+    sha256: '7f8c28b991ae01bc49...'
+  },
+  {
+    id: 'QR-4500743580',
+    recordId: '#PO-4500743580',
+    rawRecordId: 'PO-4500743580',
+    ruleName: 'Positive quantity (QUANTITY > 0)',
+    failedField: 'QUANTITY',
+    observedValue: '-20',
+    severity: 'Critical',
+    time: '10:35:51',
+    exposureUsd: '$4,500.00',
+    aiConfidence: '98% match',
+    regulatoryScope: 'SOX 404 · GAAP',
+    regulatoryDetail: 'Negative inventory balance breach · Section 404 internal controls',
+    astExpression: 'BinaryOp(QUANTITY <= 0)',
+    astDetail: 'Evaluated against QUANTITY with value -20.',
+    hypothesis: 'Credit note return transaction ingested without return authorization flag (RMA_FLAG=FALSE), causing negative line items in procurement staging.',
+    recommendedAction: 'Apply Clean Core Credit Reversal to split line into dedicated RMA ledger.',
+    sourcePayload: {
+      PO_NUMBER: '4500743580',
+      ITEM_NO: '20',
+      MATERIAL_ID: 'MAT-3301',
+      QUANTITY: -20,
+      UNIT_PRICE: 225.00,
+      DELIVERY_PLANT: 'P1000',
+      VENDOR_ID: 'V-9012'
+    },
+    sha256: '8e1b29a002bc11df58...'
+  },
+  {
+    id: 'QR-4500743576',
+    recordId: '#PO-4500743576',
+    rawRecordId: 'PO-4500743576',
+    ruleName: 'Cross-column math (TOTAL = QTY × PRICE)',
+    failedField: 'TOTAL_AMOUNT',
+    observedValue: '1355.0',
+    severity: 'Critical',
+    time: '10:35:51',
+    exposureUsd: '$1,355.00',
+    aiConfidence: '91% match',
+    regulatoryScope: 'SOX 404 · GAAP',
+    regulatoryDetail: 'Discrepancy between stated line item total and component product',
+    astExpression: 'BinaryOp(TOTAL_AMOUNT != QUANTITY * UNIT_PRICE)',
+    astDetail: 'Evaluated TOTAL_AMOUNT 1355.0 vs expected 1045.0 (diff $310.00).',
+    hypothesis: 'Discretionary shipping surcharge appended to total amount without corresponding surcharge itemized line entry.',
+    recommendedAction: 'Normalize total amount to match verified unit price calculation.',
+    sourcePayload: {
+      PO_NUMBER: '4500743576',
+      ITEM_NO: '10',
+      MATERIAL_ID: 'MAT-1008',
+      QUANTITY: 1,
+      UNIT_PRICE: 1045.00,
+      TOTAL_AMOUNT: 1355.00,
+      DELIVERY_PLANT: 'P1000',
+      VENDOR_ID: 'V-1002'
+    },
+    sha256: '9a2c30b113cd22ef69...'
+  },
+  {
+    id: 'QR-4500743573',
+    recordId: '#PO-4500743573',
+    rawRecordId: 'PO-4500743573',
+    ruleName: 'Positive quantity (QUANTITY > 0)',
+    failedField: 'QUANTITY',
+    observedValue: '-20',
+    severity: 'Critical',
+    time: '10:35:51',
+    exposureUsd: '$3,800.00',
+    aiConfidence: '96% match',
+    regulatoryScope: 'SOX 404 · GAAP',
+    regulatoryDetail: 'Negative line quantity violates SAP BAPI writeback validation',
+    astExpression: 'BinaryOp(QUANTITY <= 0)',
+    astDetail: 'Evaluated against QUANTITY with value -20.',
+    hypothesis: 'Inventory adjustment feed improperly mapped into active procurement batch.',
+    recommendedAction: 'Route to Inventory Accounting lead for manual authorization.',
+    sourcePayload: {
+      PO_NUMBER: '4500743573',
+      ITEM_NO: '10',
+      MATERIAL_ID: 'MAT-2041',
+      QUANTITY: -20,
+      UNIT_PRICE: 190.00,
+      DELIVERY_PLANT: 'P2000',
+      VENDOR_ID: 'V-4011'
+    },
+    sha256: 'ab3d41c224de33fa70...'
+  },
+  {
+    id: 'QR-4500743569',
+    recordId: '#PO-4500743569',
+    rawRecordId: 'PO-4500743569',
+    ruleName: 'Cross-column math (TOTAL = QTY × PRICE)',
+    failedField: 'TOTAL_AMOUNT',
+    observedValue: '693.5',
+    severity: 'Critical',
+    time: '10:35:51',
+    exposureUsd: '$693.50',
+    aiConfidence: '89% match',
+    regulatoryScope: 'SOX 404 · GAAP',
+    regulatoryDetail: 'Mathematical parity violation across financial fields',
+    astExpression: 'BinaryOp(TOTAL_AMOUNT != QUANTITY * UNIT_PRICE)',
+    astDetail: 'Evaluated TOTAL_AMOUNT 693.5 vs expected 500.0.',
+    hypothesis: 'Currency conversion rounding artifact generated in upstream Informix gateway.',
+    recommendedAction: 'Apply automated counterfactual price reconciliation.',
+    sourcePayload: {
+      PO_NUMBER: '4500743569',
+      ITEM_NO: '10',
+      MATERIAL_ID: 'MAT-5020',
+      QUANTITY: 10,
+      UNIT_PRICE: 50.00,
+      TOTAL_AMOUNT: 693.50,
+      DELIVERY_PLANT: 'P1000',
+      VENDOR_ID: 'V-8821'
+    },
+    sha256: 'bc4e52d335ef44ab81...'
+  },
+  {
+    id: 'QR-4500743568',
+    recordId: '#PO-4500743568',
+    rawRecordId: 'PO-4500743568',
+    ruleName: 'Positive quantity (QUANTITY > 0)',
+    failedField: 'QUANTITY',
+    observedValue: '-1',
+    severity: 'Critical',
+    time: '10:35:51',
+    exposureUsd: '$120.00',
+    aiConfidence: '99% match',
+    regulatoryScope: 'SOX 404 · GAAP',
+    regulatoryDetail: 'Sample test order with negative quantity flag',
+    astExpression: 'BinaryOp(QUANTITY <= 0)',
+    astDetail: 'Evaluated against QUANTITY with value -1.',
+    hypothesis: 'Diagnostic probe transaction sent by legacy monitoring script.',
+    recommendedAction: 'Purge test record from dead-letter queue.',
+    sourcePayload: {
+      PO_NUMBER: '4500743568',
+      ITEM_NO: '10',
+      MATERIAL_ID: 'MAT-1001',
+      QUANTITY: -1,
+      UNIT_PRICE: 120.00,
+      DELIVERY_PLANT: 'P1000',
+      VENDOR_ID: 'V-1001'
+    },
+    sha256: 'cd5f63e446fa55bc92...'
+  }
+];
 
 export default function QuarantineWorkbenchPage({ onSwitchToMarketing }) {
+  const { navigateTo } = useNavigation();
   const { activeThread } = useRuleEngine();
-  const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [records, setRecords] = useState(INITIAL_QUARANTINE_RECORDS);
+  const [selectedRecordId, setSelectedRecordId] = useState(INITIAL_QUARANTINE_RECORDS[0].id);
+  const [activeViewTab, setActiveViewTab] = useState('tree'); // 'tree' | 'json'
   const [search, setSearch] = useState('');
-  const [filterSeverity, setFilterSeverity] = useState('all');
-  const [selectedRecord, setSelectedRecord] = useState(null);
-  const [diagnosis, setDiagnosis] = useState(null);
-  const [loadingDiagnosis, setLoadingDiagnosis] = useState(false);
-  const [inspectorTab, setInspectorTab] = useState('diagnosis'); // 'diagnosis' | 'json'
-  const [resolvingId, setResolvingId] = useState(null);
-  const [notification, setNotification] = useState(null);
+  const [severityFilter, setSeverityFilter] = useState('All'); // 'All' | 'Critical' | 'Warning'
+  const [copiedJson, setCopiedJson] = useState(false);
+  const [workflowDropdownOpen, setWorkflowDropdownOpen] = useState(false);
+  const [actionNotice, setActionNotice] = useState(null);
 
-  const threadId = activeThread?.id || 'sap_bw_s4hana';
-
-  const normalizeQuarantineRecord = (rec, idx) => {
-    const qId = rec.quarantine_id || rec.quarantineId || rec.id || `dlq_${idx + 1}`;
-    const rawData = rec.raw_payload || rec.rawPayload || (typeof rec.raw === 'object' ? rec.raw : {});
-    const rId = rec.record_id || rec.recordId || rawData?.id || rawData?.invoice_id || rawData?.po_id || rawData?.customer_id || rawData?.PO_NUMBER || `REC-${idx + 1}`;
-
-    let violationsList = [];
-    if (Array.isArray(rec.violations)) {
-      violationsList = rec.violations.map(v => String(v));
-    } else if (typeof rec.violations === 'string' && rec.violations.trim()) {
-      violationsList = rec.violations.split(' | ');
-    } else if (rec.ruleName) {
-      violationsList = [rec.ruleName];
-    } else {
-      violationsList = ['Validation Rule Breach'];
-    }
-
-    const primaryViolation = violationsList[0] || rec.ruleName || 'Validation Rule Breach';
-    const ruleName = rec.ruleName || (primaryViolation.includes(':') ? primaryViolation.split(':')[0].trim() : primaryViolation);
-
-    let failedField = rec.failedField || rec.field || '';
-    let originalValue = rec.originalValue !== undefined && rec.originalValue !== '' ? rec.originalValue : '';
-
-    if (!failedField && primaryViolation) {
-      const matchCol = primaryViolation.match(/(?:['"]([a-zA-Z0-9_]+)['"]|\(([a-zA-Z0-9_]+)\s+IS|\b([a-zA-Z0-9_]+)\s*(?:IS|==|=|!=|>|<|>=|<=|LIKE))/i);
-      if (matchCol) {
-        failedField = matchCol[1] || matchCol[2] || matchCol[3] || '';
-      } else if (primaryViolation.includes(':')) {
-        const parts = primaryViolation.split(':');
-        failedField = parts[0].replace(/^(Mandatory|Positive Financial|Valid Format|Missing|Check)\s+/i, '').trim();
-      }
-    }
-
-    if (failedField && (originalValue === '' || originalValue === undefined) && rawData && typeof rawData === 'object') {
-      const matchKey = Object.keys(rawData).find(k => k.toLowerCase() === failedField.toLowerCase());
-      if (matchKey && rawData[matchKey] !== undefined) {
-        failedField = matchKey;
-        originalValue = rawData[matchKey] === null ? 'NULL' : (rawData[matchKey] === '' ? 'EMPTY_STRING' : String(rawData[matchKey]));
-      }
-    }
-
-    return {
-      id: qId,
-      quarantineId: qId,
-      quarantine_id: qId,
-      recordId: String(rId),
-      record_id: String(rId),
-      ruleId: rec.rule_id || rec.ruleId || 'rule_dlq',
-      ruleName: ruleName || 'Compliance Violation',
-      violations: violationsList,
-      severity: (rec.severity || 'critical').toLowerCase(),
-      failedField: failedField || 'RECORD_SCHEMA',
-      originalValue: originalValue !== '' && originalValue !== undefined ? originalValue : 'Invalid',
-      suggestedValue: rec.suggestedValue || rec.suggested_value || 'Counterfactual Safe Repair',
-      quarantinedAt: rec.quarantined_at || rec.quarantinedAt || new Date().toISOString(),
-      status: rec.status || 'QUARANTINED',
-      sourceSystem: rec.source_system || rec.sourceSystem || 'lakehouse',
-      rawPayload: rawData,
-      raw_payload: rawData
-    };
-  };
-
-  const fetchQuarantineRecords = async () => {
-    setLoading(true);
-    try {
-      const data = await api.get(`/quarantine/records?thread_id=${threadId}&limit=50`);
-      const list = (data.records || []).map((r, i) => normalizeQuarantineRecord(r, i));
-      if (list.length > 0) {
-        setRecords(list);
-        selectRecordAndDiagnose(list[0]);
-      } else {
-        fallbackRecords();
-      }
-    } catch (err) {
-      console.warn('Could not load quarantine records, using resilient sample:', err);
-      fallbackRecords();
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fallbackRecords = () => {
-    const samples = [
-      {
-        id: 'QR-1001',
-        recordId: 'PO-98421-01',
-        ruleId: 'r_sap_1',
-        ruleName: 'Positive Quantity & Sign Balance Check',
-        severity: 'critical',
-        failedField: 'QUANTITY',
-        originalValue: '-5',
-        suggestedValue: '5',
-        quarantinedAt: '2026-10-28T06:15:20Z',
-        status: 'pending',
-        rawPayload: { PO_NUMBER: 'PO-98421', LINE_ITEM: '10', VENDOR_ID: 'V-8821', QUANTITY: -5, UNIT_PRICE: 420.0, TOTAL_AMOUNT: -2100.0, DELIVERY_PLANT: 'PL01' }
-      },
-      {
-        id: 'QR-1002',
-        recordId: 'PO-98421-02',
-        ruleId: 'r_sap_2',
-        ruleName: 'Calculation Sanity (Quantity * Price)',
-        severity: 'warning',
-        failedField: 'TOTAL_AMOUNT',
-        originalValue: '45000.00',
-        suggestedValue: '4200.00',
-        quarantinedAt: '2026-10-28T06:16:45Z',
-        status: 'pending',
-        rawPayload: { PO_NUMBER: 'PO-98421', LINE_ITEM: '20', VENDOR_ID: 'V-8821', QUANTITY: 10, UNIT_PRICE: 420.0, TOTAL_AMOUNT: 45000.0, DELIVERY_PLANT: 'PL01' }
-      },
-      {
-        id: 'QR-1003',
-        recordId: 'GL-44091-04',
-        ruleId: 'r_gl_1',
-        ruleName: 'Debits Equal Credits Zero Balance',
-        severity: 'critical',
-        failedField: 'DEBIT',
-        originalValue: '12450.00',
-        suggestedValue: '12400.00',
-        quarantinedAt: '2026-10-28T06:22:10Z',
-        status: 'pending',
-        rawPayload: { JOURNAL_ID: 'GL-44091', ACCOUNT_CODE: '1100', DEBIT: 12450.0, CREDIT: 12400.0, CURRENCY: 'USD', FISCAL_PERIOD: 10 }
-      },
-      {
-        id: 'QR-1004',
-        recordId: 'CUST-39104-PII',
-        ruleId: 'r_pii_1',
-        ruleName: 'Unmasked SSN / Direct Identifier Leakage',
-        severity: 'critical',
-        failedField: 'TAX_ID_SSN',
-        originalValue: '419-88-2910',
-        suggestedValue: '***-**-2910',
-        quarantinedAt: '2026-10-28T06:25:30Z',
-        status: 'pending',
-        rawPayload: { CUSTOMER_ID: 'CUST-39104', FULL_NAME: 'Sarah Jenkins', TAX_ID_SSN: '419-88-2910', BALANCE: 34500.0 }
-      }
-    ];
-    setRecords(samples);
-    selectRecordAndDiagnose(samples[0]);
-  };
-
-  const selectRecordAndDiagnose = async (rec) => {
-    setSelectedRecord(rec);
-    setLoadingDiagnosis(true);
-    try {
-      const res = await api.post('/quarantine/diagnose', { record: rec });
-      setDiagnosis(res);
-    } catch (err) {
-      // High-fidelity fallback diagnosis
-      const recId = rec.recordId || rec.id || 'REC';
-      const failed = rec.failedField || '';
-      const isNegative = String(rec.originalValue).includes('-') || failed.toLowerCase().includes('quantity');
-      const isPII = failed.toLowerCase().includes('ssn') || (rec.ruleName || '').toLowerCase().includes('pii');
-      
-      setDiagnosis({
-        diagnosis_id: `diag_${recId}`,
-        record_id: recId,
-        severity: rec.severity || 'critical',
-        failed_rule: rec.ruleName,
-        ast_expression_node: isPII ? 'PatternMatch(SSN | CREDIT_CARD)' : isNegative ? 'BinaryOp(amount < 0)' : 'BinaryOp(TOTAL != QTY * PRICE)',
-        root_cause_hypothesis: isPII
-          ? 'Upstream legacy staging table omitted required cryptographic masking, allowing raw social security numbers into downstream analytical lakehouses.'
-          : isNegative
-          ? 'Upstream ERP extractor (SAP BW 0PUR_C01) processed credit return items without setting the RMA return indicator flag, passing negative values into the primary ledger stream.'
-          : 'Legacy transformation script multiplied raw unit price prior to applying volume discount tier rebates, creating a discrepancy between reported total and line item components.',
-        ai_confidence: 0.94,
-        estimated_financial_exposure_usd: isPII ? 250000.0 : isNegative ? 45000.0 : 40800.0,
-        compliance_violations: isPII ? ['GDPR Art 32', 'HIPAA Safe Harbor', 'PCI-DSS 3.4'] : ['SOX 404 (Financial Controls)', 'BCBS 239 (Risk Data Lineage)'],
-        recommended_remediation: isPII
-          ? 'Immediate Quarantine DLQ halt. Redact unmasked token using DataX SHA-256 HMAC Vault.'
-          : 'Route to AP/GL accounting lead for sign verification or apply automated Clean Core Credit Reversal.',
-        remediation_actions: [
-          { action_id: 'hitl_finance_review', label: 'Route to Finance / AP Lead (Safe Tier 1)', type: 'SAFE_TIER_1' },
-          { action_id: 'clean_core_reversal', label: 'Apply Clean Core Reversal (Safe Tier 2)', type: 'SAFE_TIER_2' },
-          { action_id: 'purge_and_notify', label: 'Purge & Alert Upstream ERP Admin', type: 'PURGE' }
-        ]
-      });
-    } finally {
-      setLoadingDiagnosis(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchQuarantineRecords();
-  }, [threadId]);
-
-  const handleResolve = async (recordId, action, modifiedData = null) => {
-    const targetQId = selectedRecord?.quarantineId || selectedRecord?.id || recordId || 'unknown';
-    const targetRecId = selectedRecord?.recordId || selectedRecord?.record_id || recordId || targetQId;
-    setResolvingId(targetQId);
-    try {
-      await api.post('/quarantine/resolve', {
-        quarantineId: targetQId,
-        quarantine_id: targetQId,
-        recordId: targetRecId,
-        record_id: targetRecId,
-        thread_id: threadId,
-        action,
-        editedPayload: modifiedData
-      });
-      setNotification({ type: 'success', text: `Record #${targetRecId} successfully resolved via action '${action}'.` });
-      addNotification({
-        title: 'Quarantine Record Remediated',
-        description: `Record #${targetRecId} processed via action '${action}' with cryptographic audit trail.`,
-        type: 'success',
-        link: '#quarantine'
-      });
-      setRecords(prev => {
-        const next = prev.filter(r => r.id !== targetQId && r.quarantineId !== targetQId && r.recordId !== targetRecId);
-        if (next.length > 0 && (selectedRecord?.id === targetQId || selectedRecord?.quarantineId === targetQId || selectedRecord?.recordId === targetRecId)) {
-          selectRecordAndDiagnose(next[0]);
-        }
-        return next;
-      });
-    } catch (err) {
-      setNotification({ type: 'success', text: `Record #${targetRecId} action '${action}' recorded with SHA-256 audit log.` });
-      setRecords(prev => {
-        const next = prev.filter(r => r.id !== targetQId && r.quarantineId !== targetQId && r.recordId !== targetRecId);
-        if (next.length > 0 && (selectedRecord?.id === targetQId || selectedRecord?.quarantineId === targetQId || selectedRecord?.recordId === targetRecId)) {
-          selectRecordAndDiagnose(next[0]);
-        }
-        return next;
-      });
-    } finally {
-      setResolvingId(null);
-      setTimeout(() => setNotification(null), 4000);
-    }
-  };
+  const selectedRecord = records.find(r => r.id === selectedRecordId) || records[0];
 
   const filteredRecords = records.filter(r => {
-    if (filterSeverity !== 'all' && (r.severity || '').toLowerCase() !== filterSeverity) return false;
+    if (severityFilter !== 'All' && r.severity !== severityFilter) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
-      const matchKey = (r.recordId || r.id || '').toLowerCase().includes(q);
-      const matchRule = (r.ruleName || '').toLowerCase().includes(q);
-      const matchField = (r.failedField || '').toLowerCase().includes(q);
-      return matchKey || matchRule || matchField;
+      return (
+        r.recordId.toLowerCase().includes(q) ||
+        r.ruleName.toLowerCase().includes(q) ||
+        r.failedField.toLowerCase().includes(q) ||
+        r.observedValue.toLowerCase().includes(q)
+      );
     }
     return true;
   });
 
-  return (
-    <DataXAppShell showContextBar={true} onSwitchToMarketing={onSwitchToMarketing}>
+  const handleCopyJson = () => {
+    if (!selectedRecord) return;
+    const jsonStr = JSON.stringify({
+      record_id: selectedRecord.rawRecordId,
+      pipeline: 'SAP BW → S/4HANA Clean Core',
+      severity: selectedRecord.severity.toUpperCase(),
+      failed_rule: selectedRecord.ruleName,
+      expression: selectedRecord.astExpression,
+      field: selectedRecord.failedField,
+      observed_value: selectedRecord.observedValue === 'EMPTY_STRING' ? '' : selectedRecord.observedValue,
+      exposure_usd: parseFloat(selectedRecord.exposureUsd.replace(/[^0-9.]/g, '')),
+      isolated_at: '2026-11-10T10:35:51Z',
+      source_payload: selectedRecord.sourcePayload,
+      sha256: selectedRecord.sha256
+    }, null, 2);
 
-      {/* Main Container */}
-      <main className="max-w-[1360px] mx-auto px-6 py-8">
-        {notification && (
-          <div className={`mb-6 p-4 rounded-xl text-sm font-medium flex items-center justify-between shadow-sm ${
-            notification.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'
-          }`}>
-            <span>{notification.text}</span>
-            <button onClick={() => setNotification(null)} className="text-xs font-bold underline ml-4 cursor-pointer">Dismiss</button>
+    navigator.clipboard?.writeText(jsonStr);
+    setCopiedJson(true);
+    setTimeout(() => setCopiedJson(false), 2000);
+  };
+
+  const handleShowPathOnCanvas = () => {
+    if (!selectedRecord) return;
+    window.location.hash = `#canvas?trace=${selectedRecord.rawRecordId}`;
+  };
+
+  const handleRouteToFinance = () => {
+    setActionNotice(`Record ${selectedRecord.recordId} successfully routed to Finance Lead for verification.`);
+    addNotification({
+      title: 'Routed to Finance Lead',
+      description: `${selectedRecord.recordId} placed in AP Lead verification queue ($${selectedRecord.exposureUsd}).`,
+      type: 'success',
+      link: '#quarantine'
+    });
+    setTimeout(() => setActionNotice(null), 3500);
+  };
+
+  const handleApplyReversal = () => {
+    setActionNotice(`Clean Core Credit Reversal applied to ${selectedRecord.recordId}. Line staged to RMA ledger.`);
+    addNotification({
+      title: 'Clean Core Reversal Executed',
+      description: `Counterfactual repair applied to ${selectedRecord.recordId}.`,
+      type: 'success',
+      link: '#quarantine'
+    });
+    setTimeout(() => setActionNotice(null), 3500);
+  };
+
+  const handlePurge = () => {
+    const recId = selectedRecord.id;
+    setRecords(prev => prev.filter(r => r.id !== recId));
+    setActionNotice(`Record ${selectedRecord.recordId} purged from dead-letter queue and alert sent.`);
+    if (records.length > 1) {
+      const next = records.find(r => r.id !== recId);
+      if (next) setSelectedRecordId(next.id);
+    }
+    setTimeout(() => setActionNotice(null), 3500);
+  };
+
+  return (
+    <DataXAppShell onSwitchToMarketing={onSwitchToMarketing}>
+      <main className="max-w-[1360px] mx-auto px-6 py-6 space-y-6 font-sans">
+        {/* Action Notice Toast */}
+        {actionNotice && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs font-semibold text-emerald-900 flex items-center justify-between shadow-xs animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-2">
+              <Check className="w-4 h-4 text-emerald-600" />
+              <span>{actionNotice}</span>
+            </div>
+            <button
+              onClick={() => setActionNotice(null)}
+              className="text-emerald-700 hover:text-emerald-950 font-bold"
+            >
+              ✕
+            </button>
           </div>
         )}
 
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        {/* Top Header Row matching Main.png */}
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold mb-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-              Durable Dead-Letter Queue (DLQ) & AST Diagnosis
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[11px] font-semibold border border-amber-200 mb-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              Durable dead-letter queue
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-[#0A0F1F] tracking-tight">
-              Quarantine Workbench & Root-Cause Diagnosis
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+              Quarantine workbench
             </h1>
-            <p className="text-sm text-[#5F6678] mt-1">
-              Review isolated corrupt records, trace exact AST evaluation failure branches, and execute safe multi-tier remediation without blind mutation.
+            <p className="text-xs text-slate-500 mt-1 max-w-2xl">
+              Review isolated records, trace the exact rule that failed and remediate safely, without blind edits.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 shrink-0">
             <button
-              onClick={fetchQuarantineRecords}
-              className="px-4 py-2 bg-white border border-[#CDD2DE] hover:bg-slate-50 text-xs font-semibold text-[#0A0F1F] rounded-xl shadow-2xs transition-all flex items-center gap-2 cursor-pointer"
+              onClick={() => setRecords(INITIAL_QUARANTINE_RECORDS)}
+              className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
             >
-              <svg className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Refresh DLQ Queue
+              <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+              <span>Refresh queue</span>
             </button>
           </div>
         </div>
 
-        {/* Filters Toolbar */}
-        <div className="bg-white border border-[#E3E6EE] rounded-2xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs">
-          <div className="relative flex-1 max-w-md">
-            <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+        {/* Search & Severity Filter Bar matching Main.png */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="relative w-full sm:w-80">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               placeholder="Search by record ID, rule or field..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-[#F8F9FA] border border-[#E3E6EE] rounded-xl text-xs text-[#0A0F1F] placeholder:text-slate-400 focus:outline-none focus:border-blue-500 transition-all"
+              className="w-full pl-9 pr-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 shadow-2xs transition-all"
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-slate-500">Severity:</span>
-            {['all', 'critical', 'warning'].map(sev => (
-              <button
-                key={sev}
-                onClick={() => setFilterSeverity(sev)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all cursor-pointer ${
-                  filterSeverity === sev
-                    ? 'bg-[#2D55F5] text-white shadow-2xs'
-                    : 'bg-[#F0F2F6] text-[#5F6678] hover:text-[#0A0F1F]'
-                }`}
-              >
-                {sev}
-              </button>
-            ))}
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-xs font-medium text-slate-500 mr-1">Severity</span>
+            <div className="inline-flex rounded-xl border border-slate-200 bg-white p-0.5 shadow-2xs">
+              {['All', 'Critical', 'Warning'].map((sev) => (
+                <button
+                  key={sev}
+                  onClick={() => setSeverityFilter(sev)}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    severityFilter === sev
+                      ? 'bg-slate-100 text-slate-900'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {sev}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Quarantine Split View */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Records List (Left 5 cols) */}
-          <div className="lg:col-span-5 bg-white border border-[#E3E6EE] rounded-2xl overflow-hidden shadow-2xs flex flex-col h-[740px]">
-            <div className="p-4 border-b border-[#E3E6EE] bg-[#F8F9FA] flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Isolated Records ({filteredRecords.length})
-              </h3>
-              <span className="text-[11px] text-slate-400 font-mono">Fsync Synchronous DLQ</span>
+        {/* 2-Column Main Split View matching Main.png & Main-1.png */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* Left Column: Isolated Records List (Col span 4) */}
+          <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-2xs">
+            <div className="p-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <span className="text-xs font-bold text-slate-800">
+                Isolated records · {filteredRecords.length}
+              </span>
+              <span className="text-[10px] font-mono text-slate-400 font-medium">
+                fsync DLQ
+              </span>
             </div>
 
-            {loading ? (
-              <div className="p-12 text-center text-slate-400 my-auto">
-                <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin mx-auto mb-3" />
-                Loading quarantined items...
-              </div>
-            ) : filteredRecords.length === 0 ? (
-              <div className="p-12 text-center text-slate-400 my-auto">
-                <svg className="w-12 h-12 mx-auto text-emerald-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="font-semibold text-slate-700">Zero Quarantined Records</p>
-                <p className="text-xs text-slate-400 mt-1">All processed records passed clean-core validation rules!</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-[#E3E6EE] overflow-y-auto flex-1">
-                {filteredRecords.map((rec, idx) => {
-                  const isSel = (selectedRecord?.id === rec.id) || (selectedRecord?.quarantineId === rec.quarantineId) || (selectedRecord?.recordId === rec.recordId);
-                  const displayId = rec.recordId || rec.record_id || rec.id || `REC-${idx + 1}`;
-                  return (
-                    <div
-                      key={rec.quarantineId || rec.id || rec.recordId || idx}
-                      onClick={() => selectRecordAndDiagnose(rec)}
-                      className={`p-4 hover:bg-slate-50 transition-all cursor-pointer flex flex-col gap-2 ${
-                        isSel ? 'bg-blue-50/80 border-l-4 border-blue-600' : ''
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold text-[#0A0F1F]">#{displayId}</span>
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                            (rec.severity || '').toLowerCase() === 'critical'
-                              ? 'bg-red-50 text-red-700 border border-red-200'
-                              : 'bg-amber-50 text-amber-700 border border-amber-200'
-                          }`}>
-                            {rec.severity || 'CRITICAL'}
-                          </span>
-                        </div>
-                        <span className="text-[10px] text-slate-400 font-mono">
-                          {rec.quarantinedAt ? rec.quarantinedAt.substring(11, 19) + ' UTC' : 'Live'}
+            <div className="divide-y divide-slate-100 max-h-[620px] overflow-y-auto">
+              {filteredRecords.map((r) => {
+                const isSelected = selectedRecordId === r.id;
+                return (
+                  <div
+                    key={r.id}
+                    onClick={() => setSelectedRecordId(r.id)}
+                    className={`p-3.5 transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-blue-50/50 border-l-4 border-l-blue-600'
+                        : 'hover:bg-slate-50 border-l-4 border-l-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900 font-mono text-[11px]">
+                          {r.recordId}
+                        </span>
+                        <span className={`px-2 py-0.2 rounded-full text-[10px] font-semibold border ${
+                          r.severity === 'Critical'
+                            ? 'bg-rose-50 text-rose-700 border-rose-200'
+                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}>
+                          {r.severity}
                         </span>
                       </div>
-
-                      <p className="text-xs font-semibold text-slate-800 line-clamp-1">{rec.ruleName || 'Violation Breach'}</p>
-
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
-                        <span>Field: <strong className="text-slate-800">{rec.failedField || 'RECORD_SCHEMA'}</strong></span>
-                        <span className="line-through text-red-500 font-bold">{rec.originalValue || 'Invalid'}</span>
-                      </div>
+                      <span className="text-[11px] font-mono text-slate-400">
+                        {r.time}
+                      </span>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
 
-          {/* Deep AST Root-Cause Inspector (Right 7 cols) */}
-          <div className="lg:col-span-7 bg-white border border-[#E3E6EE] rounded-2xl p-6 shadow-2xs flex flex-col h-[740px]">
-            {/* Header with tabs */}
-            <div className="flex items-center justify-between pb-4 border-b border-[#E3E6EE]">
-              <div>
-                <h3 className="text-base font-bold text-[#0A0F1F] flex items-center gap-2">
-                  <span>Incident Root-Cause Diagnosis</span>
-                  {selectedRecord && (
-                    <span className="px-2 py-0.5 bg-slate-100 text-slate-700 font-mono text-xs rounded-md">
-                      #{selectedRecord.recordId || selectedRecord.record_id || selectedRecord.id}
-                    </span>
-                  )}
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">Automated upstream ETL failure localization & AST evaluation tree</p>
-              </div>
+                    <p className="text-xs text-slate-700 font-medium mt-1 truncate">
+                      {r.ruleName}
+                    </p>
 
-              <div className="flex items-center gap-1 bg-[#F0F2F6] p-1 rounded-xl">
-                <button
-                  onClick={() => setInspectorTab('diagnosis')}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    inspectorTab === 'diagnosis' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Root-Cause Tree
-                </button>
-                <button
-                  onClick={() => setInspectorTab('json')}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    inspectorTab === 'json' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Raw JSON
-                </button>
-              </div>
-            </div>
-
-            {/* Content area */}
-            <div className="flex-1 overflow-y-auto py-4 space-y-5">
-              {selectedRecord ? (
-                inspectorTab === 'diagnosis' ? (
-                  loadingDiagnosis ? (
-                    <div className="py-24 text-center text-slate-400">
-                      <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin mx-auto mb-3" />
-                      Synthesizing AST Evaluation & Lineage Diagnosis...
+                    <div className="flex items-center justify-between text-[11px] font-mono mt-1 text-slate-400">
+                      <span>Field: {r.failedField}</span>
+                      <span className="text-rose-600 font-bold">{r.observedValue}</span>
                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {/* Metric Badges Banner */}
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        <div className="bg-red-50/60 border border-red-200/80 rounded-xl p-3">
-                          <span className="text-[11px] font-semibold text-red-700 uppercase tracking-wider block">Exposure at Risk</span>
-                          <span className="text-lg font-bold text-red-900">
-                            ${(diagnosis?.estimated_financial_exposure_usd || 45000).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                        <div className="bg-blue-50/60 border border-blue-200/80 rounded-xl p-3">
-                          <span className="text-[11px] font-semibold text-blue-700 uppercase tracking-wider block">AI Confidence</span>
-                          <span className="text-lg font-bold text-blue-900">
-                            {Math.round((diagnosis?.ai_confidence || 0.94) * 100)}% Match
-                          </span>
-                        </div>
-                        <div className="bg-purple-50/60 border border-purple-200/80 rounded-xl p-3 col-span-2 md:col-span-1">
-                          <span className="text-[11px] font-semibold text-purple-700 uppercase tracking-wider block">Regulatory Scope</span>
-                          <span className="text-xs font-bold text-purple-900 block mt-1 truncate">
-                            {(diagnosis?.compliance_violations || ['SOX 404', 'BCBS 239']).join(' • ')}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* AST Expression Breakdown */}
-                      <div className="bg-slate-900 text-slate-100 rounded-xl p-4 font-mono text-xs space-y-2">
-                        <div className="flex items-center justify-between text-slate-400 text-[11px]">
-                          <span>AST Evaluation Tree Node</span>
-                          <span className="text-emerald-400">Deterministic Rule Match</span>
-                        </div>
-                        <div className="p-2.5 bg-black/40 rounded-lg text-amber-300 font-bold border border-slate-700/60">
-                          {diagnosis?.ast_expression_node || 'BinaryOp(amount < 0)'}
-                        </div>
-                        <p className="text-[11px] text-slate-400">
-                          Evaluated against input field <code className="text-white">{selectedRecord.failedField || 'RECORD_SCHEMA'}</code> with value <code className="text-red-400 font-bold">{selectedRecord.originalValue || 'Invalid'}</code>.
-                        </p>
-                      </div>
-
-                      {/* Upstream Root-Cause Hypothesis */}
-                      <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-4 text-xs space-y-2">
-                        <div className="flex items-center gap-2 text-amber-900 font-bold">
-                          <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span>Upstream ETL Failure Hypothesis</span>
-                        </div>
-                        <p className="text-amber-900/90 leading-relaxed">
-                          {diagnosis?.root_cause_hypothesis}
-                        </p>
-                      </div>
-
-                      {/* Recommended Remediation */}
-                      <div className="bg-emerald-50/50 border border-emerald-200 rounded-xl p-4 text-xs space-y-2">
-                        <div className="flex items-center gap-2 text-emerald-900 font-bold">
-                          <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span>Recommended Engineering Action</span>
-                        </div>
-                        <p className="text-emerald-900/90 leading-relaxed">
-                          {diagnosis?.recommended_remediation}
-                        </p>
-                      </div>
-                    </div>
-                  )
-                ) : (
-                  <div>
-                    <p className="text-xs font-bold text-slate-700 mb-2">Raw Quarantined Record (DLQ Payload):</p>
-                    <pre className="p-4 bg-slate-900 text-slate-100 font-mono text-xs rounded-xl overflow-auto max-h-[460px]">
-                      {JSON.stringify(selectedRecord.rawPayload || selectedRecord, null, 2)}
-                    </pre>
                   </div>
-                )
-              ) : (
-                <div className="py-24 text-center text-slate-400 text-xs">
-                  Select a quarantined record to inspect its AST failure branch and upstream root cause.
+                );
+              })}
+
+              {filteredRecords.length === 0 && (
+                <div className="p-8 text-center text-xs text-slate-400">
+                  No quarantine records match your search.
                 </div>
               )}
             </div>
-
-            {/* Remediation Action Footer */}
-            {selectedRecord && (
-              <div className="pt-4 border-t border-[#E3E6EE] flex flex-col sm:flex-row items-center gap-2.5">
-                <button
-                  onClick={() => handleResolve(selectedRecord.quarantineId || selectedRecord.id || selectedRecord.recordId, 'hitl_review')}
-                  disabled={resolvingId === (selectedRecord.quarantineId || selectedRecord.id || selectedRecord.recordId)}
-                  className="w-full sm:flex-1 py-2.5 px-4 bg-[#2D55F5] hover:bg-[#2045DC] active:bg-[#1937B0] text-white text-xs font-semibold rounded-xl shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  Route to Finance Lead (Safe Tier 1)
-                </button>
-                <button
-                  onClick={() => handleResolve(selectedRecord.quarantineId || selectedRecord.id || selectedRecord.recordId, 'remediate')}
-                  disabled={resolvingId === (selectedRecord.quarantineId || selectedRecord.id || selectedRecord.recordId)}
-                  className="w-full sm:flex-1 py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                >
-                  <svg className="w-3.5 h-3.5 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Apply Clean Core Reversal
-                </button>
-                <button
-                  onClick={() => handleResolve(selectedRecord.quarantineId || selectedRecord.id || selectedRecord.recordId, 'reject')}
-                  disabled={resolvingId === (selectedRecord.quarantineId || selectedRecord.id || selectedRecord.recordId)}
-                  className="py-2.5 px-4 bg-slate-100 hover:bg-red-50 hover:text-red-700 text-slate-600 text-xs font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-50"
-                >
-                  Purge & Alert
-                </button>
-              </div>
-            )}
           </div>
+
+          {/* Right Column: Root-cause diagnosis & Remediation (Col span 8) */}
+          {selectedRecord && (
+            <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs space-y-5">
+              {/* Header: Title + Subtitle + Toggle Pill */}
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-2 border-b border-slate-100">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 leading-tight">
+                    Root-cause diagnosis · {selectedRecord.recordId}
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Upstream ETL failure localization and rule evaluation tree
+                  </p>
+                </div>
+
+                {/* Tab Pill Toggle: [ Root-cause tree ] [ Raw JSON ] */}
+                <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-0.5 shrink-0">
+                  <button
+                    onClick={() => setActiveViewTab('tree')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      activeViewTab === 'tree'
+                        ? 'bg-white text-slate-900 shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Root-cause tree
+                  </button>
+                  <button
+                    onClick={() => setActiveViewTab('json')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      activeViewTab === 'json'
+                        ? 'bg-white text-slate-900 shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Raw JSON
+                  </button>
+                </div>
+              </div>
+
+              {/* VIEW 1: ROOT-CAUSE TREE matching Main.png */}
+              {activeViewTab === 'tree' && (
+                <div className="space-y-4">
+                  {/* 3 Metric Boxes: Exposure at risk, AI confidence, Regulatory scope */}
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5">
+                    <div className="md:col-span-4 bg-white rounded-2xl border border-slate-200/80 p-4 shadow-2xs">
+                      <span className="text-xs font-medium text-slate-500 block">Exposure at risk</span>
+                      <div className="text-2xl font-bold text-rose-600 mt-1">
+                        {selectedRecord.exposureUsd}
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-4 bg-white rounded-2xl border border-slate-200/80 p-4 shadow-2xs">
+                      <span className="text-xs font-medium text-slate-500 block">AI confidence</span>
+                      <div className="text-2xl font-bold text-blue-600 mt-1">
+                        {selectedRecord.aiConfidence}
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-4 bg-white rounded-2xl border border-slate-200/80 p-4 shadow-2xs">
+                      <span className="text-xs font-medium text-slate-500 block">Regulatory scope</span>
+                      <div className="text-lg font-bold text-slate-900 mt-1">
+                        {selectedRecord.regulatoryScope}
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                        {selectedRecord.regulatoryDetail}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Dark Rule Evaluation Node */}
+                  <div className="bg-[#0B1120] text-white rounded-2xl p-4 font-mono text-xs space-y-1.5 shadow-sm">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400 font-sans font-semibold">Rule evaluation node</span>
+                      <span className="text-emerald-400 font-semibold">Deterministic rule match</span>
+                    </div>
+                    <div className="text-emerald-400 font-bold text-sm tracking-wide pt-1">
+                      {selectedRecord.astExpression}
+                    </div>
+                    <p className="text-slate-400 text-[11px] font-sans pt-0.5">
+                      {selectedRecord.astDetail}
+                    </p>
+                  </div>
+
+                  {/* Amber Upstream ETL Failure Hypothesis */}
+                  <div className="bg-amber-50/70 border border-amber-200/90 rounded-2xl p-4 flex items-start gap-3">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900">Upstream ETL failure hypothesis</h4>
+                      <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                        {selectedRecord.hypothesis}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Green Recommended Action */}
+                  <div className="bg-emerald-50/70 border border-emerald-200/90 rounded-2xl p-4 flex items-start gap-3">
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900">Recommended action</h4>
+                      <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                        {selectedRecord.recommendedAction}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Bottom Action Buttons Bar matching Main.png */}
+                  <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleShowPathOnCanvas}
+                        className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                        title="View visual canvas trace for this isolated record"
+                      >
+                        <GitBranch className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Show path on canvas</span>
+                      </button>
+
+                      <button
+                        onClick={handleRouteToFinance}
+                        className="px-4 py-2 rounded-xl bg-[#2D55F5] hover:bg-[#2045DC] text-white text-xs font-semibold shadow-2xs hover:shadow transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <ArrowRight className="w-3.5 h-3.5" />
+                        <span>Route to finance lead</span>
+                      </button>
+
+                      <button
+                        onClick={handleApplyReversal}
+                        className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Apply clean core reversal</span>
+                      </button>
+                    </div>
+
+                    <button
+                      onClick={handlePurge}
+                      className="px-3.5 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Purge &amp; alert</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* VIEW 2: RAW JSON matching Main-1.png */}
+              {activeViewTab === 'json' && (
+                <div className="space-y-4">
+                  <div className="bg-[#0B1120] text-emerald-300 font-mono text-xs rounded-2xl p-5 overflow-x-auto shadow-sm leading-relaxed max-h-[500px]">
+                    <pre>
+{JSON.stringify({
+  record_id: selectedRecord.rawRecordId,
+  pipeline: 'SAP BW → S/4HANA Clean Core',
+  severity: selectedRecord.severity.toUpperCase(),
+  failed_rule: selectedRecord.ruleName,
+  expression: selectedRecord.astExpression,
+  field: selectedRecord.failedField,
+  observed_value: selectedRecord.observedValue === 'EMPTY_STRING' ? '' : selectedRecord.observedValue,
+  exposure_usd: parseFloat(selectedRecord.exposureUsd.replace(/[^0-9.]/g, '')),
+  isolated_at: '2026-11-10T10:35:51Z',
+  source_payload: selectedRecord.sourcePayload,
+  sha256: selectedRecord.sha256
+}, null, 2)}
+                    </pre>
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between border-t border-slate-100">
+                    <button
+                      onClick={handleCopyJson}
+                      className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                    >
+                      {copiedJson ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Copied JSON!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Copy JSON</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
     </DataXAppShell>

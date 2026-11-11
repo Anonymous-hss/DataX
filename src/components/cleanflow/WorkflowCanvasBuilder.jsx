@@ -215,6 +215,27 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const [isTelemetryDrawerOpen, setIsTelemetryDrawerOpen] = useState(false);
   const [executionError, setExecutionError] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Quarantine Visual Canvas Trace State (Matching Main-5.png)
+  const [traceRecordId, setTraceRecordId] = useState(() => {
+    if (typeof window === 'undefined') return null;
+    const match = window.location.hash.match(/trace=([^&]+)/);
+    return match ? decodeURIComponent(match[1]) : null;
+  });
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const match = window.location.hash.match(/trace=([^&]+)/);
+      setTraceRecordId(match ? decodeURIComponent(match[1]) : null);
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const handleExitTrace = () => {
+    setTraceRecordId(null);
+    window.location.hash = '#canvas';
+  };
   // Phased Multi-Stage Execution States
   const [executionPhase, setExecutionPhase] = useState('idle'); // 'idle' | 'extracting' | 'compiling' | 'routing' | 'committing' | 'completed'
   const [activeStageNodeId, setActiveStageNodeId] = useState(null);
@@ -1976,19 +1997,33 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           backgroundPosition: `${pan.x}px ${pan.y}px`
         }}
       >
-        {/* Floating Top-Left Helper Pill matching 02.1 / 02.18 */}
-        <div className="absolute top-4 left-6 z-20 pointer-events-none font-sans">
-          {nodes.length === 0 ? (
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 dark:bg-[#18181C]/95 backdrop-blur-md border border-[#E2E8F0] dark:border-white/[0.1] shadow-xs text-xs text-[#5F6678] dark:text-slate-300">
-              <span>ⓘ This workflow has no nodes yet.</span>
-            </div>
-          ) : (
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 dark:bg-[#18181C]/95 backdrop-blur-md border border-[#E2E8F0] dark:border-white/[0.1] shadow-xs text-xs text-[#5F6678] dark:text-slate-300">
-              <Sparkles className="w-3.5 h-3.5 text-[#2D55F5]" />
-              <span>Click a node to configure it. Drag ports to rewire.</span>
-            </div>
-          )}
-        </div>
+        {/* Floating Top-Left Helper Pill or Trace Banner (Matching Main-5.png) */}
+        {traceRecordId ? (
+          <div className="absolute top-4 left-6 z-30 pointer-events-auto font-sans flex items-center gap-2.5 bg-[#0A0F1F] text-white px-3.5 py-1.5 rounded-full shadow-xl">
+            <Zap className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-xs font-semibold">Tracing #{traceRecordId}</span>
+            <button
+              type="button"
+              onClick={handleExitTrace}
+              className="ml-2 text-[11px] text-slate-300 hover:text-white bg-white/10 hover:bg-white/20 px-2.5 py-0.5 rounded-full transition-colors cursor-pointer"
+            >
+              Exit trace
+            </button>
+          </div>
+        ) : (
+          <div className="absolute top-4 left-6 z-20 pointer-events-none font-sans">
+            {nodes.length === 0 ? (
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 dark:bg-[#18181C]/95 backdrop-blur-md border border-[#E2E8F0] dark:border-white/[0.1] shadow-xs text-xs text-[#5F6678] dark:text-slate-300">
+                <span>ⓘ This workflow has no nodes yet.</span>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 dark:bg-[#18181C]/95 backdrop-blur-md border border-[#E2E8F0] dark:border-white/[0.1] shadow-xs text-xs text-[#5F6678] dark:text-slate-300">
+                <Sparkles className="w-3.5 h-3.5 text-[#2D55F5]" />
+                <span>Click a node to configure it. Drag ports to rewire.</span>
+              </div>
+            )}
+          </div>
+        )}
         {/* World transform container */}
         <div
           style={{
@@ -2413,11 +2448,17 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                 className={`workflow-node-card relative group bg-white dark:bg-[#18181C] rounded-2xl border transition-all select-none p-4 ${
                   activeTool === 'pan' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
                 } ${
-                  isStageActive
-                    ? 'border-[#2D55F5] ring-4 ring-[#2D55F5]/30 shadow-xl scale-[1.02]'
-                    : isSelected
-                      ? 'border-[#2D55F5] ring-3 ring-[#2D55F5]/25 shadow-xl'
-                      : 'border-[#CDD2DE] dark:border-white/[0.12] hover:border-[#2D55F5]/60 hover:shadow-lg shadow-sm'
+                  traceRecordId && (node.type === 'hitl' || node.type === 'target')
+                    ? 'opacity-35 pointer-events-none border-[#CDD2DE]'
+                    : traceRecordId && node.type === 'rules'
+                      ? 'border-2 border-rose-500 ring-4 ring-rose-500/20 shadow-xl'
+                      : traceRecordId
+                        ? 'border-[#2D55F5] ring-2 ring-blue-500/20 shadow-lg'
+                        : isStageActive
+                          ? 'border-[#2D55F5] ring-4 ring-[#2D55F5]/30 shadow-xl scale-[1.02]'
+                          : isSelected
+                            ? 'border-[#2D55F5] ring-3 ring-[#2D55F5]/25 shadow-xl'
+                            : 'border-[#CDD2DE] dark:border-white/[0.12] hover:border-[#2D55F5]/60 hover:shadow-lg shadow-sm'
                 }`}
               >
                 {/* 1. INPUT PORT (Left Side) */}
@@ -2529,14 +2570,181 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                   <span className="truncate max-w-[150px]">{specLeft}</span>
                   <span className="font-semibold text-[#0F172A] dark:text-slate-300 shrink-0">{specRight}</span>
                 </div>
+
+                {/* Quarantine Trace Record Pills (Matching Main-5.png) */}
+                {traceRecordId && (
+                  <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap z-30 pointer-events-none">
+                    {node.type === 'source' && (
+                      <span className="bg-[#0A0F1F] text-white text-[11px] font-mono px-3 py-1 rounded-full shadow-md">
+                        QUANTITY = -20
+                      </span>
+                    )}
+                    {node.type === 'rules' && (
+                      <span className="bg-rose-600 text-white text-[11px] font-semibold px-3 py-1 rounded-full shadow-md">
+                        Positive quantity · failed
+                      </span>
+                    )}
+                    {node.type === 'conditional' && (
+                      <span className="bg-[#0A0F1F] text-white text-[11px] font-semibold px-3 py-1 rounded-full shadow-md">
+                        FALSE path
+                      </span>
+                    )}
+                    {node.type === 'router' && (
+                      <span className="bg-[#0A0F1F] text-white text-[11px] font-semibold px-3 py-1 rounded-full shadow-md">
+                        Quarantined
+                      </span>
+                    )}
+                    {node.type === 'quarantine' && (
+                      <span className="bg-[#0A0F1F] text-white text-[11px] font-mono px-3 py-1 rounded-full shadow-md">
+                        Stored 10:35:51
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
       </div>
       
-      {/* Floating Bottom Toolbar Dock (Matching Figma 02.1) */}
-      <div className="absolute bottom-4 inset-x-4 sm:inset-x-6 flex items-center justify-between pointer-events-none z-30">
+      {/* Trace Dock (Matching Main-5.png) or Floating Bottom Toolbar Dock (Matching Figma 02.1) */}
+      {traceRecordId ? (
+        <div className="absolute bottom-4 inset-x-4 sm:inset-x-6 z-40 bg-white/98 dark:bg-[#18181C]/98 backdrop-blur-md rounded-2xl border border-[#CDD2DE] dark:border-white/[0.12] shadow-2xl p-4 sm:p-5 flex flex-col gap-3 font-sans animate-in slide-in-from-bottom duration-200">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <h3 className="text-sm font-bold text-[#0A0F1F] dark:text-white">
+                Path of #{traceRecordId}
+              </h3>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-600 border border-rose-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                Critical
+              </span>
+              <span className="text-xs text-[#5F6678] dark:text-slate-400">
+                5 of 7 nodes · failed at step 2
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigateTo('quarantine')}
+                className="px-3.5 py-1.5 rounded-full border border-[#CDD2DE] dark:border-white/[0.12] bg-white dark:bg-[#18181C] hover:bg-[#F8FAFC] text-xs font-semibold text-[#0A0F1F] dark:text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-[#5F6678]" />
+                <span>Back to quarantine</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const rulesNode = nodes.find(n => n.type === 'rules');
+                  if (rulesNode) openNodeSettings(rulesNode);
+                }}
+                className="px-3.5 py-1.5 rounded-full border border-[#CDD2DE] dark:border-white/[0.12] bg-white dark:bg-[#18181C] hover:bg-[#F8FAFC] text-xs font-semibold text-[#0A0F1F] dark:text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+              >
+                <PenTool className="w-3.5 h-3.5 text-[#5F6678]" />
+                <span>Edit rule</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleDryRun}
+                className="px-4 py-1.5 rounded-full bg-[#2D55F5] hover:bg-blue-600 text-xs font-semibold text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+              >
+                <FlaskConical className="w-3.5 h-3.5" />
+                <span>Replay row in sandbox</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 5 Step Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 pt-1">
+            {/* 1. Source */}
+            <div className="bg-[#F8FAFC] dark:bg-white/[0.03] border border-[#E2E8F0] dark:border-white/[0.08] rounded-xl p-3 flex flex-col justify-between text-xs">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-[#0A0F1F] dark:text-white flex items-center gap-1.5">
+                    <span className="w-4 h-4 rounded-full bg-slate-900 text-white text-[10px] flex items-center justify-center font-bold">1</span>
+                    Source
+                  </span>
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                </div>
+                <div className="text-[#344054] dark:text-slate-300 font-medium text-[11px]">Read from 0PUR_C01</div>
+              </div>
+              <div className="text-[10px] text-[#5F6678] dark:text-slate-400 font-mono mt-2">
+                QUANTITY -20 · UNIT_PRICE 12.40
+              </div>
+            </div>
+
+            {/* 2. AI rules */}
+            <div className="bg-rose-50/80 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 rounded-xl p-3 flex flex-col justify-between text-xs">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-rose-950 dark:text-rose-200 flex items-center gap-1.5">
+                    <span className="w-4 h-4 rounded-full bg-slate-900 text-white text-[10px] flex items-center justify-center font-bold">2</span>
+                    AI rules
+                  </span>
+                  <X className="w-3.5 h-3.5 text-rose-600" />
+                </div>
+                <div className="text-rose-800 dark:text-rose-300 font-medium text-[11px]">Positive quantity failed</div>
+              </div>
+              <div className="text-[10px] text-rose-700 dark:text-rose-400 font-mono mt-2">
+                QUANTITY &gt; 0 · got -20 · no safe auto-fix
+              </div>
+            </div>
+
+            {/* 3. Router */}
+            <div className="bg-[#F8FAFC] dark:bg-white/[0.03] border border-[#E2E8F0] dark:border-white/[0.08] rounded-xl p-3 flex flex-col justify-between text-xs">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-[#0A0F1F] dark:text-white flex items-center gap-1.5">
+                    <span className="w-4 h-4 rounded-full bg-slate-900 text-white text-[10px] flex items-center justify-center font-bold">3</span>
+                    Router
+                  </span>
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                </div>
+                <div className="text-[#344054] dark:text-slate-300 font-medium text-[11px]">TOTAL_AMOUNT ≤ 50,000</div>
+              </div>
+              <div className="text-[10px] text-[#5F6678] dark:text-slate-400 font-mono mt-2">
+                Took the FALSE path
+              </div>
+            </div>
+
+            {/* 4. Split */}
+            <div className="bg-[#F8FAFC] dark:bg-white/[0.03] border border-[#E2E8F0] dark:border-white/[0.08] rounded-xl p-3 flex flex-col justify-between text-xs">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-[#0A0F1F] dark:text-white flex items-center gap-1.5">
+                    <span className="w-4 h-4 rounded-full bg-slate-900 text-white text-[10px] flex items-center justify-center font-bold">4</span>
+                    Split
+                  </span>
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                </div>
+                <div className="text-[#344054] dark:text-slate-300 font-medium text-[11px]">Health gate</div>
+              </div>
+              <div className="text-[10px] text-[#5F6678] dark:text-slate-400 font-mono mt-2">
+                Marked Quarantined
+              </div>
+            </div>
+
+            {/* 5. DLQ */}
+            <div className="bg-[#F8FAFC] dark:bg-white/[0.03] border border-[#E2E8F0] dark:border-white/[0.08] rounded-xl p-3 flex flex-col justify-between text-xs">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-[#0A0F1F] dark:text-white flex items-center gap-1.5">
+                    <span className="w-4 h-4 rounded-full bg-slate-900 text-white text-[10px] flex items-center justify-center font-bold">5</span>
+                    DLQ
+                  </span>
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                </div>
+                <div className="text-[#344054] dark:text-slate-300 font-medium text-[11px]">Quarantine store</div>
+              </div>
+              <div className="text-[10px] text-[#5F6678] dark:text-slate-400 font-mono mt-2">
+                Stored with rule and value
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="absolute bottom-4 inset-x-4 sm:inset-x-6 flex items-center justify-between pointer-events-none z-30">
         {/* Left: Zoom Controls Pill */}
         <div className="pointer-events-auto bg-white/95 dark:bg-[#18181C]/95 backdrop-blur-md rounded-2xl border border-[#CDD2DE] dark:border-white/[0.12] shadow-lg px-2.5 py-1.5 flex items-center gap-2 text-xs font-semibold text-[#0F172A] dark:text-white">
           <button
@@ -2659,6 +2867,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           </div>
         </div>
       </div>
+      )}
 
       {/* =========================================================================
           EXECUTING PIPELINE BOTTOM DRAWER (Matching Figma 02.13 Sandbox run · Executing)
