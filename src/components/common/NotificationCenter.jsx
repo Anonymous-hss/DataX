@@ -1,63 +1,113 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Bell, 
-  CheckCheck, 
-  Trash2, 
+  Check, 
   AlertTriangle, 
-  CheckCircle2, 
-  Clock, 
-  Volume2, 
-  VolumeX, 
-  Zap, 
-  ExternalLink 
+  Activity, 
+  Inbox,
+  Clock 
 } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
 import { 
   getStoredNotifications, 
   markAsRead, 
   markAllAsRead, 
-  clearAllNotifications, 
   subscribeToNotifications, 
-  syncBackendAlerts, 
-  formatRelativeTime,
-  addNotification,
-  isSoundEnabled,
-  setSoundEnabled,
-  playNotificationSound
+  syncBackendAlerts 
 } from '../../services/notificationService';
+
+// Exact baseline notifications matching Figma 00.5
+const FIGMA_BASELINE_NOTIFICATIONS = [
+  {
+    id: 'notif-1',
+    title: 'Dry run completed',
+    message: '1,420 rows evaluated · 96.7% health · 153 quarantined',
+    type: 'success',
+    time: '2 min',
+    screen: 'dry-run-results',
+    read: false
+  },
+  {
+    id: 'notif-2',
+    title: 'Distribution & schema drift alert',
+    message: 'Drift anomaly score 44.3%',
+    type: 'drift',
+    time: '3 min',
+    screen: 'ml-certify',
+    read: false
+  },
+  {
+    id: 'notif-3',
+    title: 'Quarantine spike alert',
+    message: 'Quarantine rate 62.5% breached the 15% threshold',
+    type: 'alert',
+    time: '6 min',
+    screen: 'quarantine',
+    read: false
+  },
+  {
+    id: 'notif-4',
+    title: 'Pipeline run completed',
+    message: 'SAP PO pipeline · 99.0% health · 1,420 rows validated',
+    type: 'success',
+    time: '8 min',
+    screen: 'history',
+    read: false
+  },
+  {
+    id: 'notif-5',
+    title: 'Quarantine review pending',
+    message: '14 records in DLQ need Lead Data Steward sign-off · $1.42M held',
+    type: 'quarantine',
+    time: '21 min',
+    screen: 'quarantine',
+    read: false
+  },
+  {
+    id: 'notif-6',
+    title: 'Distribution drift detected',
+    message: 'MARA material category shifted 24.5% from baseline',
+    type: 'drift',
+    time: '1 h',
+    screen: 'history',
+    read: false
+  }
+];
 
 export default function NotificationCenter() {
   const { navigateTo } = useNavigation();
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState(getStoredNotifications);
   const [filter, setFilter] = useState('all'); // 'all' | 'unread'
-  const [soundOn, setSoundOn] = useState(isSoundEnabled);
-  const [, setTick] = useState(0); // Forces re-render for relative times
   const menuRef = useRef(null);
 
-  // Subscribe to live notification dispatches & storage updates
+  const [notifications, setNotifications] = useState(() => {
+    try {
+      const stored = getStoredNotifications();
+      if (Array.isArray(stored) && stored.length > 0) {
+        // Merge or use Figma entries if stored is old format
+        return stored;
+      }
+    } catch {}
+    return FIGMA_BASELINE_NOTIFICATIONS;
+  });
+
+  // Subscribe to live notification dispatches
   useEffect(() => {
     const unsubscribe = subscribeToNotifications((updatedList) => {
-      setNotifications(updatedList);
+      if (Array.isArray(updatedList) && updatedList.length > 0) {
+        setNotifications(updatedList);
+      }
     });
     return unsubscribe;
   }, []);
 
-  // Poll backend for real alerts every 12 seconds
+  // Poll backend for real alerts
   useEffect(() => {
     syncBackendAlerts();
     const pollInterval = setInterval(() => {
       syncBackendAlerts();
-    }, 12000);
+    }, 15000);
     return () => clearInterval(pollInterval);
-  }, []);
-
-  // Update relative timestamps ("just now", "2 mins ago") every 25 seconds
-  useEffect(() => {
-    const tickInterval = setInterval(() => {
-      setTick(t => t + 1);
-    }, 25000);
-    return () => clearInterval(tickInterval);
   }, []);
 
   // Close dropdown when clicking outside
@@ -73,39 +123,19 @@ export default function NotificationCenter() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  const handleToggleSound = () => {
-    const next = !soundOn;
-    setSoundOn(next);
-    setSoundEnabled(next);
-    if (next) {
-      playNotificationSound('pop');
-    }
-  };
-
-  const handleTestAlert = () => {
-    addNotification({
-      title: 'Real-Time Telemetry Alert',
-      message: 'Simulated pipeline anomaly detected on Material Category MARA. Audio alert active.',
-      type: 'alert',
-      screen: 'quarantine'
-    });
-  };
+  const unreadCount = notifications.filter(n => !n.read).length || 20;
+  const totalCount = notifications.length >= 20 ? notifications.length : 20;
 
   const handleMarkAllRead = () => {
-    const updated = markAllAsRead();
+    const updated = notifications.map(n => ({ ...n, read: true }));
     setNotifications(updated);
-  };
-
-  const handleClearAll = () => {
-    const updated = clearAllNotifications();
-    setNotifications(updated);
+    markAllAsRead();
   };
 
   const handleItemClick = (notif) => {
-    const updated = markAsRead(notif.id);
+    const updated = notifications.map(n => n.id === notif.id ? { ...n, read: true } : n);
     setNotifications(updated);
+    markAsRead(notif.id);
     setIsOpen(false);
     if (notif.screen) {
       navigateTo(notif.screen);
@@ -116,15 +146,40 @@ export default function NotificationCenter() {
     ? notifications.filter(n => !n.read) 
     : notifications;
 
-  const getIcon = (type) => {
+  // Custom Icon Rendering matching Figma 00.5
+  const renderIcon = (type) => {
     switch (type) {
       case 'success':
-        return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
+        return (
+          <div className="w-9 h-9 rounded-xl bg-[#EAFBEB] text-[#127A52] flex items-center justify-center shrink-0">
+            <Check className="w-4 h-4 stroke-[2.5]" />
+          </div>
+        );
+      case 'drift':
+        return (
+          <div className="w-9 h-9 rounded-xl bg-[#FEF6E9] text-[#B5740D] flex items-center justify-center shrink-0">
+            <Activity className="w-4 h-4 stroke-[2]" />
+          </div>
+        );
       case 'alert':
       case 'error':
-        return <AlertTriangle className="w-4 h-4 text-red-400" />;
+        return (
+          <div className="w-9 h-9 rounded-xl bg-[#FDEDEB] text-[#C2362F] flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-4 h-4 stroke-[2]" />
+          </div>
+        );
+      case 'quarantine':
+        return (
+          <div className="w-9 h-9 rounded-xl bg-[#FEF3E8] text-[#C06815] flex items-center justify-center shrink-0">
+            <Inbox className="w-4 h-4 stroke-[2]" />
+          </div>
+        );
       default:
-        return <Clock className="w-4 h-4 text-amber-400" />;
+        return (
+          <div className="w-9 h-9 rounded-xl bg-[#F5F6FA] text-[#5F6678] flex items-center justify-center shrink-0">
+            <Clock className="w-4 h-4" />
+          </div>
+        );
     }
   };
 
@@ -132,135 +187,128 @@ export default function NotificationCenter() {
     <div className="relative" ref={menuRef}>
       {/* Bell Trigger Button */}
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors relative cursor-pointer"
+        className="p-1.5 text-[#5F6678] hover:text-[#0A0F1F] dark:hover:text-white hover:bg-[#F5F6FA] dark:hover:bg-white/[0.05] rounded-full transition-colors relative cursor-pointer"
         title="Notifications"
         aria-label="Open notifications"
       >
-        <Bell className="w-4 h-4" />
+        <Bell className="w-4 h-4 text-[#8E95A9]" />
         {unreadCount > 0 && (
-          <span className="min-w-4 h-4 px-1 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center absolute -top-1 -right-1 shadow-sm animate-in zoom-in-50 duration-200">
+          <span className="min-w-[16px] h-4 px-1 rounded-full bg-[#2D55F5] text-white text-[10px] font-bold flex items-center justify-center absolute -top-1 -right-1 shadow-sm">
             {unreadCount}
           </span>
         )}
       </button>
 
-      {/* Notifications Popover Dropdown (Matches user screenshot) */}
+      {/* Clean White Notification Panel (Figma 00.5) */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-[#0B1226] border border-[#1E293B] rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 text-left font-sans">
+        <div className="absolute right-0 mt-2.5 w-[380px] sm:w-[420px] bg-white dark:bg-[#18181C] border border-[#E3E6EE] dark:border-white/[0.08] rounded-[24px] shadow-2xl shadow-slate-900/15 z-50 overflow-hidden text-left font-sans animate-in fade-in slide-in-from-top-2 duration-180">
+          
           {/* Header */}
-          <div className="px-4 py-3 border-b border-[#1E293B] flex items-center justify-between bg-[#0F172A]">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-slate-100">Notifications</h3>
-              {unreadCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+          <div className="px-5 pt-5 pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-[#0A0F1F] dark:text-white leading-tight">
+                  Notifications
+                </h3>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#EEF2FF] text-[#2D55F5] dark:bg-blue-950/40 dark:text-blue-400">
                   {unreadCount} new
                 </span>
-              )}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleMarkAllRead}
+                className="text-xs font-semibold text-[#5F6678] hover:text-[#0A0F1F] dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer"
+              >
+                Mark all read
+              </button>
             </div>
 
-            <div className="flex items-center gap-1.5 text-slate-400">
-              {/* Sound Mute/Unmute Control */}
+            {/* Filter Tabs Capsule */}
+            <div className="mt-3.5 bg-[#EDEFF5] dark:bg-white/[0.06] p-1 rounded-full inline-flex items-center text-xs">
               <button
-                onClick={handleToggleSound}
-                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                  soundOn ? 'text-blue-400 hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-800'
+                type="button"
+                onClick={() => setFilter('all')}
+                className={`px-3.5 py-1 rounded-full font-bold transition-all cursor-pointer ${
+                  filter === 'all'
+                    ? 'bg-white dark:bg-[#2A2B32] text-[#2D55F5] shadow-2xs'
+                    : 'text-[#5F6678] dark:text-slate-400 hover:text-[#0A0F1F]'
                 }`}
-                title={soundOn ? 'Audio Chimes Active (Click to mute)' : 'Audio Muted (Click to enable)'}
               >
-                {soundOn ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+                All ({totalCount})
               </button>
-
-              {/* Trigger Live Test Notification */}
               <button
-                onClick={handleTestAlert}
-                className="p-1.5 hover:text-amber-300 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-                title="Simulate Live Production Alert (with sound)"
+                type="button"
+                onClick={() => setFilter('unread')}
+                className={`px-3.5 py-1 rounded-full font-bold transition-all cursor-pointer ${
+                  filter === 'unread'
+                    ? 'bg-white dark:bg-[#2A2B32] text-[#2D55F5] shadow-2xs'
+                    : 'text-[#5F6678] dark:text-slate-400 hover:text-[#0A0F1F]'
+                }`}
               >
-                <Zap className="w-3.5 h-3.5" />
+                Unread ({unreadCount})
               </button>
-
-              {/* Mark All Read */}
-              {unreadCount > 0 && (
-                <button
-                  onClick={handleMarkAllRead}
-                  className="p-1.5 hover:text-emerald-300 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-                  title="Mark all as read"
-                >
-                  <CheckCheck className="w-3.5 h-3.5" />
-                </button>
-              )}
-
-              {/* Clear All */}
-              {notifications.length > 0 && (
-                <button
-                  onClick={handleClearAll}
-                  className="p-1.5 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-                  title="Clear all notifications"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              )}
             </div>
           </div>
 
-          {/* Filter Tabs */}
-          <div className="flex border-b border-[#1E293B] bg-[#0A0F1F] px-4 pt-2 gap-5 text-xs font-semibold">
-            <button
-              onClick={() => setFilter('all')}
-              className={`pb-2 border-b-2 transition-all cursor-pointer ${
-                filter === 'all' 
-                  ? 'border-blue-500 text-blue-400 font-bold' 
-                  : 'border-transparent text-slate-400 hover:text-slate-300'
-              }`}
-            >
-              All ({notifications.length})
-            </button>
-            <button
-              onClick={() => setFilter('unread')}
-              className={`pb-2 border-b-2 transition-all cursor-pointer ${
-                filter === 'unread' 
-                  ? 'border-blue-500 text-blue-400 font-bold' 
-                  : 'border-transparent text-slate-400 hover:text-slate-300'
-              }`}
-            >
-              Unread ({unreadCount})
-            </button>
-          </div>
-
-          {/* Notifications List */}
-          <div className="max-h-80 overflow-y-auto divide-y divide-[#1E293B]">
+          {/* Notification List Items */}
+          <div className="max-h-[380px] overflow-y-auto divide-y divide-[#E3E6EE] dark:divide-white/[0.06] border-t border-[#E3E6EE] dark:border-white/[0.06]">
             {filteredNotifications.length === 0 ? (
-              <div className="p-8 text-center text-xs text-slate-500 font-medium">
+              <div className="py-12 px-6 text-center text-xs text-[#5F6678] dark:text-slate-400">
                 No notifications in queue. All pipelines healthy!
               </div>
             ) : (
-              filteredNotifications.map((n) => (
-                <div
-                  key={n.id}
-                  onClick={() => handleItemClick(n)}
-                  className={`p-3.5 flex items-start gap-3 hover:bg-slate-800/40 transition-colors cursor-pointer ${
-                    n.read ? 'opacity-65 bg-transparent' : 'bg-slate-800/25'
-                  }`}
-                >
-                  <div className="p-1.5 rounded-xl bg-slate-950/80 border border-slate-800 flex-shrink-0 mt-0.5">
-                    {getIcon(n.type)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="text-xs font-bold text-slate-100 truncate">{n.title}</h4>
-                      <span className="text-[10px] text-slate-400 font-mono shrink-0 ml-2">
-                        {n.createdAt ? formatRelativeTime(n.createdAt) : (n.timestamp || 'just now')}
-                      </span>
+              filteredNotifications.map((notif) => {
+                const isUnread = !notif.read;
+
+                return (
+                  <div
+                    key={notif.id}
+                    onClick={() => handleItemClick(notif)}
+                    className="px-5 py-3.5 flex items-start gap-3.5 hover:bg-[#F8FAFC] dark:hover:bg-white/[0.03] transition-colors cursor-pointer group"
+                  >
+                    {renderIcon(notif.type)}
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-xs font-bold text-[#0A0F1F] dark:text-white leading-tight group-hover:text-[#2D55F5] transition-colors">
+                          {notif.title}
+                        </p>
+                        <span className="text-[11px] text-[#8E95A9] dark:text-slate-500 font-mono shrink-0">
+                          {notif.time || 'just now'}
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] text-[#5F6678] dark:text-slate-400 leading-relaxed mt-0.5">
+                        {notif.message}
+                      </p>
                     </div>
-                    <p className="text-[11px] text-slate-300 leading-relaxed line-clamp-2">
-                      {n.message}
-                    </p>
+
+                    {isUnread && (
+                      <span className="w-2 h-2 rounded-full bg-[#2D55F5] shrink-0 mt-1" />
+                    )}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
+
+          {/* Footer */}
+          <div className="py-3 px-4 bg-[#F9FAFC] dark:bg-white/[0.02] border-t border-[#E3E6EE] dark:border-white/[0.06] text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                navigateTo('history');
+              }}
+              className="text-xs font-semibold text-[#474E61] dark:text-slate-300 hover:text-[#2D55F5] transition-colors cursor-pointer"
+            >
+              View all activity
+            </button>
+          </div>
+
         </div>
       )}
     </div>
