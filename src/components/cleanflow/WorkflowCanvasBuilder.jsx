@@ -13,6 +13,8 @@ import {
   Copy,
   Settings,
   ArrowRight,
+  ArrowLeft,
+  Inbox,
   Sparkles,
   Move,
   Square,
@@ -46,6 +48,8 @@ import {
   BookOpen,
   ChevronDown,
   Upload,
+  Info,
+  Clock,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import VectorMatcherModalPanel from './nodes/VectorMatcherModalPanel';
@@ -232,6 +236,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const [addNodeSearch, setAddNodeSearch] = useState('');
   const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('Read purchasing lines from SAP BW, flag orders over $50K for controller review, auto-fix plant codes and write clean rows to S/4HANA.');
   const [activeTool, setActiveTool] = useState('move');
   // Node Property States (for editing inside modal)
   const selectedNode = nodes.find(n => n.id === selectedNodeId) || null;
@@ -790,8 +795,9 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   // Execution Handlers (Dry Run & Live Run)
   const handleDryRun = async () => {
     setIsExecutingDryRun(true);
-    setIsRunningDryRunModalOpen(true);
+    setIsRunningDryRunModalOpen(false);
     setIsDryRunResultsModalOpen(false);
+    setIsTelemetryDrawerOpen(false);
     setExecutionSummary(null);
     setExecutionError(null);
     setExecutionProgress(5);
@@ -873,7 +879,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
         });
       }
       setIsRunningDryRunModalOpen(false);
-      setIsDryRunResultsModalOpen(true);
+      setIsTelemetryDrawerOpen(true);
       setExecutionProgress(100);
       setExecutionPhase('completed');
     } catch (err) {
@@ -1120,8 +1126,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   };
   const handleNodeClick = (e, node) => {
     e.stopPropagation();
-    setSelectedNodeId(node.id);
-    // Popup appears ONLY when settings icon is clicked, NOT on node click!
+    openNodeSettings(node);
   };
   // =========================================================================
   // INTERACTIVE EDGE DRAWING (FROM PORT TO PORT)
@@ -1181,6 +1186,12 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
         setIsTelemetryDrawerOpen(false);
       } else if (e.key === 'f' || e.key === 'F') {
         handleFitToWindow();
+      } else if (e.target && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        if (e.key === 'a' || e.key === 'A') {
+          setIsAiModalOpen(true);
+        } else if (e.key === 'n' || e.key === 'N') {
+          setIsAddNodeModalOpen(true);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -1684,56 +1695,272 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
     setActiveRules(updated);
   };
   const getNode = (id) => nodes.find(n => n.id === id);
+
+  const getNodeIndexNumber = (node) => {
+    if (!node) return '1';
+    if (node.id === 'node-source' || node.type === 'source') return '1';
+    if (node.id === 'node-rules' || node.type === 'rules') return '2';
+    if (node.id === 'node-conditional' || node.type === 'conditional') return '3';
+    if (node.id === 'node-hitl' || node.type === 'hitl') return '4';
+    if (node.id === 'node-router' || node.type === 'router') return '5';
+    if (node.id === 'node-target' || node.type === 'target') return '6';
+    if (node.id === 'node-quarantine' || node.type === 'quarantine') return '7';
+    const idx = nodes.findIndex(n => n.id === node.id);
+    return idx >= 0 ? String(idx + 1) : '1';
+  };
+
+  const getNodeCategoryLabel = (node) => {
+    if (!node) return 'Node';
+    if (node.type === 'source') return 'Source';
+    if (node.type === 'rules') return 'AI rules';
+    if (node.type === 'conditional') return 'Router';
+    if (node.type === 'hitl') return 'Review';
+    if (node.type === 'router') return 'Split';
+    if (node.type === 'target') return 'Target';
+    if (node.type === 'quarantine') return 'DLQ';
+    return node.type.toUpperCase();
+  };
+
+  const getNodeStatusLabel = (node) => {
+    if (activeStageNodeId === node.id || isExecutingDryRun || isExecutingLiveRun) return 'Running';
+    if (dagNodeExecutions[node.id]) return 'Done';
+    if (node.type === 'source') return 'Demo';
+    if (node.type === 'rules') return 'Auto-fix';
+    if (node.type === 'conditional') return 'Active';
+    if (node.type === 'hitl') return 'Armed';
+    if (node.type === 'router') return 'Active';
+    if (node.type === 'target') return 'Ready';
+    if (node.type === 'quarantine') return 'Locked';
+    return node.status || 'Active';
+  };
+
+  const getNodeStatusBadgeClass = (node) => {
+    const status = getNodeStatusLabel(node);
+    if (status === 'Running') return 'bg-blue-50 text-[#2D55F5] border border-blue-200 animate-pulse';
+    if (status === 'Done') return 'bg-emerald-50 text-[#127A52] border border-emerald-200';
+    if (status === 'Demo' || status === 'Armed') return 'bg-[#FFF9F2] text-[#C06815] border border-[#FDE5CC]';
+    if (status === 'Auto-fix') return 'bg-[#F5F8FF] text-[#2D55F5] border border-[#DCE4FF]';
+    if (status === 'Active' || status === 'Ready') return 'bg-[#ECFDF5] text-[#127A52] border border-[#A7F3D0]';
+    if (status === 'Locked') return 'bg-slate-100 text-slate-600 border border-slate-200';
+    return 'bg-blue-50 text-blue-700 border-blue-200';
+  };
+
+  const getNodeDisplayTitle = (node) => {
+    if (!node) return '';
+    if (node.type === 'source') return 'SAP BW';
+    if (node.type === 'rules') return 'Intelligence engine';
+    if (node.type === 'conditional') return 'If / else router';
+    if (node.type === 'hitl') return 'Controller gate';
+    if (node.type === 'router') return 'CleanFlow router';
+    if (node.type === 'target') return 'SAP S/4HANA';
+    if (node.type === 'quarantine') return 'Quarantine store';
+    return node.title;
+  };
+
+  const getNodeDisplaySubtitle = (node) => {
+    if (!node) return '';
+    if (node.type === 'source') return 'InfoCube · HANA Cloud';
+    if (node.type === 'rules') return 'Clean core ontologies';
+    if (node.type === 'conditional') return 'TOTAL_AMOUNT > 50,000';
+    if (node.type === 'hitl') return 'Procurement controller';
+    if (node.type === 'router') return 'Clean · Fixed · Quarantined';
+    if (node.type === 'target') return 'Clean core';
+    if (node.type === 'quarantine') return 'Dead-letter isolation';
+    return node.system || node.desc || '';
+  };
+
+  const getNodeIcon = (node) => {
+    if (!node) return <Database className="w-4 h-4" />;
+    if (node.type === 'source') {
+      return (
+        <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
+          <ellipse cx="14" cy="7" rx="10" ry="3.5" fill="#D4FF3A" stroke="#0A0F1F" strokeWidth="1.75" />
+          <path d="M4 7v6c0 1.93 4.48 3.5 10 3.5s10-1.57 10-3.5V7" stroke="#0A0F1F" strokeWidth="1.75" fill="none" />
+          <path d="M4 13v6c0 1.93 4.48 3.5 10 3.5s10-1.57 10-3.5v-6" stroke="#0A0F1F" strokeWidth="1.75" fill="none" />
+          <circle cx="9" cy="13" r="1.5" fill="#127A52" />
+          <circle cx="14" cy="13" r="1.5" fill="#127A52" />
+          <circle cx="19" cy="13" r="1.5" fill="#127A52" />
+        </svg>
+      );
+    }
+    if (node.type === 'rules') return <Sparkles className="w-4 h-4 text-[#2D55F5]" />;
+    if (node.type === 'conditional') {
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2D55F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="6" cy="6" r="3" />
+          <circle cx="18" cy="18" r="3" />
+          <path d="M18 9v3a6 6 0 0 1-6 6H9" />
+        </svg>
+      );
+    }
+    if (node.type === 'hitl') return <GitBranch className="w-4 h-4 text-[#C06815]" />;
+    if (node.type === 'router') return <Zap className="w-4 h-4 fill-current text-[#127A52]" />;
+    if (node.type === 'target') {
+      return (
+        <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
+          <ellipse cx="14" cy="7" rx="10" ry="3.5" fill="#EEF2FF" stroke="#2D55F5" strokeWidth="1.75" />
+          <path d="M4 7v6c0 1.93 4.48 3.5 10 3.5s10-1.57 10-3.5V7" stroke="#2D55F5" strokeWidth="1.75" fill="none" />
+          <path d="M4 13v6c0 1.93 4.48 3.5 10 3.5s10-1.57 10-3.5v-6" stroke="#2D55F5" strokeWidth="1.75" fill="none" />
+        </svg>
+      );
+    }
+    if (node.type === 'quarantine') return <Inbox className="w-4 h-4 text-[#C06815]" />;
+    return <Database className="w-4 h-4" />;
+  };
+
   return (
-    <div className="relative w-full h-full min-h-0 bg-[#F8FAFC] rounded-2xl overflow-hidden select-none flex flex-col shadow-xs">
-      {/* Top Action Bar: Save, Dry Run, Add Node */}
-      <div className="absolute top-3.5 right-5 z-30 pointer-events-none">
-        <div className="pointer-events-auto flex items-center gap-2">
+    <div className="relative w-full h-full min-h-0 bg-[#F8FAFC] select-none flex flex-col">
+      {/* 1. Full-Width Sub-Header Bar matching 02.1 Visual canvas · SAP clean core template.png */}
+      <div className="w-full bg-white dark:bg-[#18181C] border-b border-[#E3E6EE] dark:border-white/[0.08] px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0 z-20">
+        {/* Left: Back button + Title + Status Pill + Subtitle */}
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            type="button"
+            onClick={() => navigateTo('workflows')}
+            className="w-8 h-8 rounded-full border border-[#E3E6EE] dark:border-white/[0.08] bg-white dark:bg-[#18181C] hover:bg-[#F5F6FA] dark:hover:bg-white/[0.05] text-[#474E61] dark:text-slate-300 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+            title="Back to workflows"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm sm:text-base font-bold text-[#0A0F1F] dark:text-white truncate">
+                {activeWorkflowMeta?.name || activeThread?.name || 'SAP BW → S/4HANA Clean Core'}
+              </h2>
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                isExecutingDryRun
+                  ? 'bg-blue-50 text-[#2D55F5] border border-blue-200'
+                  : executionSummary
+                    ? 'bg-emerald-50 text-[#127A52] border border-emerald-200'
+                    : 'bg-emerald-50 text-[#127A52] border border-emerald-200'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  isExecutingDryRun ? 'bg-[#2D55F5] animate-ping' : 'bg-[#127A52]'
+                }`} />
+                {isExecutingDryRun ? 'Running' : executionSummary ? 'Dry run passed' : 'Ready'}
+              </span>
+            </div>
+
+            <span className="text-[11px] text-[#8E95A9] dark:text-slate-500 font-medium truncate mt-0.5">
+              {nodes.length} nodes · {activeRules?.length || 5} active rules · auto-saved just now
+            </span>
+          </div>
+        </div>
+
+        {/* Right: Template Picker + Save + Test in sandbox + Run live */}
+        <div className="flex items-center gap-2.5">
+          {/* Template Dropdown matching 02.11 Template catalog.png */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsTemplatesDropdownOpen(!isTemplatesDropdownOpen)}
+              className="px-3.5 py-2 rounded-full border border-[#CDD2DE] dark:border-white/[0.12] bg-white dark:bg-[#18181C] hover:bg-[#F8FAFC] dark:hover:bg-white/[0.04] text-xs font-semibold text-[#0A0F1F] dark:text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+            >
+              <span>Template · {activeWorkflowMeta?.templateName || 'SAP Clean Core'}</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isTemplatesDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isTemplatesDropdownOpen && (
+              <div className="absolute right-0 top-full mt-2 w-[420px] max-w-[95vw] bg-white dark:bg-[#18181C] border border-[#E2E8F0] dark:border-white/[0.1] rounded-[22px] shadow-2xl overflow-hidden z-50 flex flex-col font-sans animate-in fade-in zoom-in-95 duration-150">
+                <div className="p-4 px-5 border-b border-[#F1F3F7] dark:border-white/[0.08] flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-bold text-[#0A0F1F] dark:text-white">Enterprise catalog</h4>
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-white/10 text-[#5F6678] dark:text-slate-400">
+                      {Object.keys(TEMPLATE_AUTOFILLS).length}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNodes([]);
+                      setEdges([]);
+                      setIsTemplatesDropdownOpen(false);
+                    }}
+                    className="text-xs font-semibold text-[#5F6678] hover:text-[#0A0F1F] dark:hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <span>+ Empty canvas</span>
+                  </button>
+                </div>
+
+                <div className="max-h-[380px] overflow-y-auto divide-y divide-[#F1F3F7] dark:divide-white/[0.06]">
+                  {Object.entries(TEMPLATE_AUTOFILLS).map(([key, template], idx) => {
+                    const isSelected = (defaultTemplateKey === key) || (activeThread?.name && activeThread.name.includes(template.name.split(' ')[0]));
+                    const tier = idx < 2 ? 'T1' : idx < 5 ? 'T2' : idx < 8 ? 'T3' : 'T4';
+                    return (
+                      <div
+                        key={key}
+                        onClick={() => {
+                          handleAutofillTemplate(key);
+                          setIsTemplatesDropdownOpen(false);
+                        }}
+                        className={`p-3 px-5 flex items-center justify-between gap-3 cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.04] ${
+                          isSelected ? 'bg-[#F0F5FF]/60 dark:bg-[#2D55F5]/10' : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/[0.06] text-[11px] font-mono font-bold text-[#5F6678] dark:text-slate-400 flex items-center justify-center shrink-0">
+                            {tier}
+                          </span>
+                          <div className="min-w-0">
+                            <h5 className={`text-xs font-semibold truncate ${isSelected ? 'text-[#2D55F5]' : 'text-[#0A0F1F] dark:text-white'}`}>
+                              {template.name}
+                            </h5>
+                            <p className="text-[11px] text-[#5F6678] dark:text-slate-400 truncate mt-0.5">
+                              {template.category} · {template.nodes?.length || 7} nodes
+                            </p>
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <Check className="w-4 h-4 text-[#2D55F5] shrink-0" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="p-3 px-5 border-t border-[#F1F3F7] dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02] text-[11px] text-[#8C93A3]">
+                  Showing {Object.keys(TEMPLATE_AUTOFILLS).length} of {Object.keys(TEMPLATE_AUTOFILLS).length} · scroll for more
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Save Workflow */}
           <button
+            type="button"
             onClick={handleSaveWorkflow}
             disabled={isSavingWorkflow}
-            className={`px-3.5 py-2 rounded-xl border text-xs font-semibold shadow-xs transition-all cursor-pointer flex items-center gap-1.5 ${saveSuccess
-              ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
-              : isDirty
-                ? 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-800'
-                : isSavingWorkflow
-                  ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
-                  : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
-              }`}
-            title={isDirty ? 'Unsaved changes (Save to persist to backend)' : (lastSavedWorkflowTime ? `Last saved at ${lastSavedWorkflowTime}` : 'Save workflow')}
+            className={`px-3.5 py-2 rounded-full border text-xs font-semibold shadow-2xs transition-all cursor-pointer flex items-center gap-1.5 ${
+              saveSuccess
+                ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                : 'bg-white dark:bg-[#18181C] hover:bg-slate-50 dark:hover:bg-white/[0.04] border-[#CDD2DE] dark:border-white/[0.12] text-[#0A0F1F] dark:text-white'
+            }`}
+            title="Save workflow"
           >
-            {isSavingWorkflow ? (
-              <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-600" />
-            ) : saveSuccess ? (
-              <Check className="w-3.5 h-3.5 text-emerald-600" />
-            ) : (
-              <Save className={`w-3.5 h-3.5 ${isDirty ? 'text-amber-600' : 'text-slate-500'}`} />
-            )}
-            <span>
-              {isSavingWorkflow ? 'Saving...' : saveSuccess ? 'Saved' : isDirty ? 'Save *' : 'Save'}
-            </span>
-            {lastSavedWorkflowTime && !isSavingWorkflow && !saveSuccess && !isDirty && (
-              <span className="text-[10px] text-slate-400 font-normal ml-0.5">({lastSavedWorkflowTime})</span>
-            )}
+            <Save className="w-3.5 h-3.5 text-[#5F6678]" />
+            <span>{isSavingWorkflow ? 'Saving...' : saveSuccess ? 'Saved' : 'Save'}</span>
           </button>
-          {/* Dry Run */}
+
+          {/* Test in sandbox button */}
           <button
+            type="button"
             onClick={handleDryRun}
             disabled={isExecutingDryRun || nodes.length === 0}
-            className="px-3.5 py-2 rounded-xl bg-white hover:bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold shadow-xs hover:shadow transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Execute test dry run on active dataset"
+            className="px-4 py-2 rounded-full border border-[#CDD2DE] dark:border-white/[0.15] bg-white dark:bg-[#18181C] hover:bg-[#F8FAFC] dark:hover:bg-white/[0.04] text-xs font-semibold text-[#0A0F1F] dark:text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs disabled:opacity-40"
           >
-            <FlaskConical className={`w-3.5 h-3.5 ${isExecutingDryRun ? 'animate-bounce text-blue-600' : 'text-blue-600'}`} />
-            {isExecutingDryRun ? 'Evaluating...' : 'Dry Run'}
+            <FlaskConical className={`w-3.5 h-3.5 ${isExecutingDryRun ? 'animate-bounce text-[#2D55F5]' : 'text-[#5F6678]'}`} />
+            <span>{isExecutingDryRun ? 'Testing...' : 'Test in sandbox'}</span>
           </button>
-          {/* Add Node */}
+
+          {/* Run live CTA */}
           <button
-            onClick={() => setIsAddNodeModalOpen(true)}
-            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-1.5"
+            type="button"
+            onClick={handleLiveRun}
+            disabled={isExecutingLiveRun || nodes.length === 0}
+            className="px-5 py-2 rounded-full bg-[#2D55F5] hover:bg-[#1E44D6] text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
           >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            Add Node
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>Run live</span>
           </button>
         </div>
       </div>
@@ -1748,51 +1975,19 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           backgroundPosition: `${pan.x}px ${pan.y}px`
         }}
       >
-        {/* Sleek Floating Phased Execution Header */}
-        {(isExecutingDryRun || isExecutingLiveRun) && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 backdrop-blur-md text-white rounded-2xl border border-slate-700 shadow-2xl p-4 max-w-xl w-full mx-auto space-y-2.5 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-auto">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-blue-600/30 border border-blue-400/40 flex items-center justify-center text-blue-400">
-                  <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-white tracking-wide">
-                      {isExecutingLiveRun ? 'Executing Live Commit' : 'Executing Enterprise CleanFlow Pipeline'}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30 font-mono">
-                      Stage {executionProgress <= 25 ? '1/4' : executionProgress <= 50 ? '2/4' : executionProgress <= 75 ? '3/4' : '4/4'}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-300 mt-0.5">
-                    {executionStageText}
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className="font-mono text-xs font-bold text-[#a3e635]">
-                  {(executionElapsedMs / 1000).toFixed(1)}s
-                </span>
-                <span className="text-[10px] text-slate-400 block font-mono">DuckDB AST</span>
-              </div>
+        {/* Floating Top-Left Helper Pill matching 02.1 / 02.18 */}
+        <div className="absolute top-4 left-6 z-20 pointer-events-none font-sans">
+          {nodes.length === 0 ? (
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 dark:bg-[#18181C]/95 backdrop-blur-md border border-[#E2E8F0] dark:border-white/[0.1] shadow-xs text-xs text-[#5F6678] dark:text-slate-300">
+              <span>ⓘ This workflow has no nodes yet.</span>
             </div>
-            {/* Stage Progress Bar */}
-            <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-              <div
-                className="bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400 h-1.5 rounded-full transition-all duration-300 ease-out"
-                style={{ width: `${executionProgress}%` }}
-              />
+          ) : (
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 dark:bg-[#18181C]/95 backdrop-blur-md border border-[#E2E8F0] dark:border-white/[0.1] shadow-xs text-xs text-[#5F6678] dark:text-slate-300">
+              <Sparkles className="w-3.5 h-3.5 text-[#2D55F5]" />
+              <span>Click a node to configure it. Drag ports to rewire.</span>
             </div>
-            {/* Stage Indicators */}
-            <div className="grid grid-cols-4 gap-1 text-[10px] font-medium text-slate-400 pt-0.5">
-              <span className={executionProgress >= 25 ? 'text-blue-300 font-bold' : ''}>1. Ingest Raw Stream</span>
-              <span className={executionProgress >= 50 ? 'text-indigo-300 font-bold' : ''}>2. Intelligence Engine</span>
-              <span className={executionProgress >= 75 ? 'text-purple-300 font-bold' : ''}>3. Stream Router</span>
-              <span className={executionProgress >= 90 ? 'text-emerald-300 font-bold' : ''}>4. Target Commit</span>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
         {/* World transform container */}
         <div
           style={{
@@ -1812,15 +2007,19 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
               const fromNode = getNode(edge.from);
               const toNode = getNode(edge.to);
               if (!fromNode || !toNode) return null;
-              const startX = fromNode.x + fromNode.width;
-              const startY = fromNode.y + fromNode.height / 2;
+              const startX = fromNode.x + (fromNode.width || 250);
+              const startY = fromNode.y + 70;
               const endX = toNode.x;
-              const endY = toNode.y + toNode.height / 2;
+              const endY = toNode.y + 70;
               const dx = Math.abs(endX - startX) * 0.5;
               const pathD = `M ${startX} ${startY} C ${startX + dx} ${startY}, ${endX - dx} ${endY}, ${endX} ${endY}`;
               const isSelected = selectedEdgeId === edge.id;
-              const strokeColor = edge.variant === 'orange' ? '#F97316' : edge.variant === 'green' ? '#10B981' : '#3B82F6';
-              // Midpoint for delete handle
+              
+              const isQuarantineEdge = toNode.type === 'quarantine' || toNode.id === 'node-quarantine';
+              const isConditionalEdge = fromNode.type === 'conditional' || fromNode.id === 'node-conditional';
+              const isTrueBranch = isConditionalEdge && (toNode.type === 'hitl' || toNode.id === 'node-hitl' || edge.label?.includes('TRUE') || edge.label?.includes('High'));
+              const isFalseBranch = isConditionalEdge && (toNode.type === 'router' || toNode.id === 'node-router' || edge.label?.includes('FALSE') || edge.label?.includes('Routine'));
+
               const midX = (startX + endX) / 2;
               const midY = (startY + endY) / 2;
               return (
@@ -1838,25 +2037,51 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                   <path
                     d={pathD}
                     fill="none"
-                    stroke={strokeColor}
+                    stroke={isQuarantineEdge ? '#CBD5E1' : '#3B82F6'}
                     strokeWidth={isSelected ? 3 : 2}
+                    strokeDasharray={isQuarantineEdge ? '4 4' : 'none'}
                     strokeLinecap="round"
                     onClick={() => setSelectedEdgeId(edge.id)}
                   />
-                  {/* Optional Edge Label & Delete Button on click */}
-                  {edge.label && (
-                    <text
-                      x={midX}
-                      y={midY - 8}
-                      textAnchor="middle"
-                      fill="#64748B"
-                      fontSize="10"
-                      fontWeight="bold"
-                      className="pointer-events-none font-sans"
-                    >
-                      {edge.label}
-                    </text>
+
+                  {/* Branch TRUE pill */}
+                  {isTrueBranch && (
+                    <g transform={`translate(${startX + 28}, ${startY - 14})`} className="pointer-events-none">
+                      <rect width="36" height="18" rx="9" fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="1" />
+                      <text x="18" y="12.5" textAnchor="middle" fill="#5F6678" fontSize="9" fontWeight="bold" fontFamily="sans-serif">
+                        TRUE
+                      </text>
+                    </g>
                   )}
+
+                  {/* Branch FALSE pill */}
+                  {isFalseBranch && (
+                    <g transform={`translate(${startX + 28}, ${startY + 2})`} className="pointer-events-none">
+                      <rect width="40" height="18" rx="9" fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="1" />
+                      <text x="20" y="12.5" textAnchor="middle" fill="#5F6678" fontSize="9" fontWeight="bold" fontFamily="sans-serif">
+                        FALSE
+                      </text>
+                    </g>
+                  )}
+
+                  {/* Dynamic row counts badge on edges after dry run */}
+                  {executionSummary && (edge.from === 'node-source' || fromNode.type === 'source') && (edge.to === 'node-rules' || toNode.type === 'rules') && (
+                    <g transform={`translate(${midX - 24}, ${midY - 10})`} className="pointer-events-none">
+                      <rect width="48" height="20" rx="10" fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="1" />
+                      <text x="24" y="13.5" textAnchor="middle" fill="#0A0F1F" fontSize="10" fontWeight="bold" fontFamily="monospace">
+                        {executionSummary.total?.toLocaleString() || '1,420'}
+                      </text>
+                    </g>
+                  )}
+                  {executionSummary && (edge.from === 'node-rules' || fromNode.type === 'rules') && (edge.to === 'node-conditional' || toNode.type === 'conditional') && (
+                    <g transform={`translate(${midX - 24}, ${midY - 10})`} className="pointer-events-none">
+                      <rect width="48" height="20" rx="10" fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="1" />
+                      <text x="24" y="13.5" textAnchor="middle" fill="#0A0F1F" fontSize="10" fontWeight="bold" fontFamily="monospace">
+                        {executionSummary.clean?.toLocaleString() || '1,267'}
+                      </text>
+                    </g>
+                  )}
+
                   {isSelected && (
                     <g transform={`translate(${midX - 10}, ${midY - 10})`} onClick={() => handleDeleteEdge(edge.id)}>
                       <circle cx="10" cy="10" r="10" fill="#EF4444" />
@@ -1975,276 +2200,333 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
             )}
           </svg>
           {/* =========================================================================
-              EMPTY CANVAS STATE (When all nodes are removed or creating blank flow)
+              EMPTY CANVAS STATE (02.18 Empty canvas · Start options.png)
              ========================================================================= */}
           {nodes.length === 0 && (
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center p-8 bg-white/95 backdrop-blur-md rounded-3xl border border-slate-200/90 shadow-xl max-w-lg w-full space-y-5 z-20">
-              <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center mx-auto shadow-sm">
-                <Layers className="w-8 h-8" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 tracking-tight">Empty Workflow Canvas</h3>
-                <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                  Add your first node from scratch or select a prebuilt enterprise template to autofill a verified pipeline.
-                </p>
-              </div>
-              <div className="flex items-center justify-center gap-3">
-                <button
-                  onClick={() => setIsAddNodeModalOpen(true)}
-                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-2"
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-[#18181C] rounded-[24px] border border-[#E2E8F0] dark:border-white/[0.1] shadow-2xl p-8 max-w-xl w-full z-20 font-sans">
+              <h3 className="text-xl font-bold text-[#0A0F1F] dark:text-white mb-2">
+                Start building
+              </h3>
+              <p className="text-xs text-[#5F6678] dark:text-slate-400 mb-6 leading-relaxed">
+                Describe what this workflow should do and DataX drafts the nodes for you to review. Or place nodes yourself.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                {/* Build with AI */}
+                <div
+                  onClick={() => setIsAiModalOpen(true)}
+                  className="p-5 rounded-2xl border-2 border-[#2D55F5] bg-[#F5F8FF] dark:bg-[#2D55F5]/10 cursor-pointer transition-all hover:shadow-md relative group"
                 >
-                  <Plus className="w-4 h-4 stroke-[3]" />
-                  Add a Node
-                </button>
-              </div>
-              <div className="pt-3 border-t border-slate-100">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2.5">
-                  Or Autofill From Certified Template:
-                </span>
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  <button
-                    onClick={() => handleAutofillTemplate('sap_bw_s4hana')}
-                    className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 hover:border-blue-300 transition-all cursor-pointer"
-                  >
-                    ⚡ SAP Clean Core
-                  </button>
-                  <button
-                    onClick={() => handleAutofillTemplate('customer_master_reconciliation')}
-                    className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 hover:border-blue-300 transition-all cursor-pointer"
-                  >
-                    👥 Customer 360
-                  </button>
-                  <button
-                    onClick={() => handleAutofillTemplate('financial_gl_ledger')}
-                    className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 hover:border-blue-300 transition-all cursor-pointer"
-                  >
-                    💰 Financial SOX
-                  </button>
-                  <button
-                    onClick={() => handleAutofillTemplate('healthcare_hipaa')}
-                    className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 hover:border-blue-300 transition-all cursor-pointer"
-                  >
-                    🏥 Healthcare HIPAA
-                  </button>
-                  <button
-                    onClick={() => handleAutofillTemplate('enterprise_rag_knowledge')}
-                    className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 text-xs font-semibold border border-slate-200 hover:border-indigo-300 transition-all cursor-pointer"
-                  >
-                    🛡️ AI RAG Firewall
-                  </button>
-                  <button
-                    onClick={() => handleAutofillTemplate('ml_dataset_certification')}
-                    className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-violet-50 text-slate-700 hover:text-violet-700 text-xs font-semibold border border-slate-200 hover:border-violet-300 transition-all cursor-pointer"
-                  >
-                    📊 ML Gate & Drift
-                  </button>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-[#18181C] border border-[#DCE4FF] flex items-center justify-center text-[#2D55F5] shadow-2xs">
+                      <Sparkles className="w-4 h-4 text-[#2D55F5]" />
+                    </div>
+                    <span className="w-5 h-5 rounded-md bg-white dark:bg-[#18181C] border border-[#DCE4FF] text-[10px] font-bold text-[#5F6678] flex items-center justify-center">
+                      A
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-bold text-[#0A0F1F] dark:text-white mb-1">
+                    Build with AI
+                  </h4>
+                  <p className="text-xs text-[#5F6678] dark:text-slate-400 leading-snug">
+                    Write the goal in plain English. You approve every node before it is added.
+                  </p>
                 </div>
+
+                {/* Browse nodes */}
+                <div
+                  onClick={() => setIsAddNodeModalOpen(true)}
+                  className="p-5 rounded-2xl border border-[#E2E8F0] dark:border-white/[0.1] bg-white dark:bg-[#18181C] hover:border-[#2D55F5] hover:bg-slate-50/50 cursor-pointer transition-all hover:shadow-md relative group"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-9 h-9 rounded-xl bg-[#F8FAFC] dark:bg-white/[0.05] border border-[#EEF2F6] flex items-center justify-center text-[#0A0F1F] dark:text-white shadow-2xs">
+                      <Layers className="w-4 h-4" />
+                    </div>
+                    <span className="w-5 h-5 rounded-md bg-[#F8FAFC] dark:bg-white/[0.05] border border-[#EEF2F6] text-[10px] font-bold text-[#5F6678] flex items-center justify-center">
+                      N
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-bold text-[#0A0F1F] dark:text-white mb-1">
+                    Browse nodes
+                  </h4>
+                  <p className="text-xs text-[#5F6678] dark:text-slate-400 leading-snug">
+                    Source, AI rules, Router, Review, Split, Target and Quarantine.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-4 border-t border-[#F1F3F7] dark:border-white/[0.06] text-xs">
+                <div className="flex items-center gap-2 text-[#5F6678] dark:text-slate-400">
+                  <Layers className="w-4 h-4 text-[#5F6678]" />
+                  <span>Or start from a domain template</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsTemplatesDropdownOpen(true)}
+                  className="font-semibold text-[#2D55F5] hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  Browse templates →
+                </button>
               </div>
             </div>
           )}
           {/* =========================================================================
-              RENDER OPERATIONAL NODES WITH PORTS
+              RENDER OPERATIONAL NODES WITH PORTS (Matching Figma 02.1 & 02.14)
              ========================================================================= */}
           {nodes.map((node) => {
             const isSelected = selectedNodeId === node.id;
             const isStageActive =
               (activeStageNodeId === node.id) ||
               (activeStageNodeId === 'committing' && (node.type === 'target' || node.type === 'quarantine'));
+            const nodeIndex = nodes.findIndex(n => n.id === node.id) + 1;
+
+            const categoryLabel =
+              node.type === 'source' ? 'Source' :
+              node.type === 'rules' ? 'AI rules' :
+              node.type === 'conditional' ? 'Router' :
+              node.type === 'hitl' ? 'Review' :
+              node.type === 'router' ? 'Split' :
+              node.type === 'target' ? 'Target' :
+              node.type === 'quarantine' ? 'DLQ' :
+              node.type === 'vector_matcher' ? 'Intelligence' :
+              node.type === 'rag' ? 'Enrichment' :
+              node.type === 'pinecone' ? 'Vector store' :
+              node.type === 'bigquery' ? 'Warehouse' : 'Node';
+
+            // Status Badge text and styling
+            let statusText = node.status || 'Ready';
+            let statusBadgeClass = 'bg-[#EBF0FF] text-[#2D55F5] border-[#2D55F5]/20 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800/50';
+            let dotClass = 'bg-[#2D55F5]';
+
+            if (isStageActive) {
+              statusText = 'Running...';
+              statusBadgeClass = 'bg-[#EBF0FF] text-[#2D55F5] border-[#2D55F5]/30 animate-pulse';
+              dotClass = 'bg-[#2D55F5] animate-ping';
+            } else if (dagNodeExecutions[node.id] || executionSummary) {
+              if (node.type === 'hitl') {
+                statusText = 'Paused';
+                statusBadgeClass = 'bg-[#FEF6EE] text-[#B54708] border-[#FDB022]/40 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/50';
+                dotClass = 'bg-[#F79009]';
+              } else {
+                statusText = 'Done';
+                statusBadgeClass = 'bg-[#ECFDF3] text-[#027A48] border-[#6CE9A6]/40 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/50';
+                dotClass = 'bg-[#12B76A]';
+              }
+            } else {
+              if (node.type === 'source') {
+                statusText = node.isLive ? 'Live' : 'Demo';
+                statusBadgeClass = node.isLive
+                  ? 'bg-[#ECFDF3] text-[#027A48] border-[#6CE9A6]/40'
+                  : 'bg-[#FEF6EE] text-[#B54708] border-[#FDB022]/40 dark:bg-amber-950/40 dark:text-amber-400';
+                dotClass = node.isLive ? 'bg-[#12B76A]' : 'bg-[#F79009]';
+              } else if (node.type === 'rules') {
+                statusText = 'Auto-fix';
+                statusBadgeClass = 'bg-[#EFF8FF] text-[#175CD3] border-[#B2DDFF]/50';
+                dotClass = 'bg-[#2D55F5]';
+              } else if (node.type === 'conditional' || node.type === 'router') {
+                statusText = 'Active';
+                statusBadgeClass = 'bg-[#ECFDF3] text-[#027A48] border-[#6CE9A6]/40';
+                dotClass = 'bg-[#12B76A]';
+              } else if (node.type === 'hitl') {
+                statusText = 'Armed';
+                statusBadgeClass = 'bg-[#EFF8FF] text-[#175CD3] border-[#B2DDFF]/50';
+                dotClass = 'bg-[#2D55F5]';
+              } else if (node.type === 'target') {
+                statusText = 'Ready';
+                statusBadgeClass = 'bg-[#F8FAFC] text-[#344054] border-[#D0D5DD] dark:bg-slate-800 dark:text-slate-300';
+                dotClass = 'bg-[#667085]';
+              } else if (node.type === 'quarantine') {
+                statusText = 'Locked';
+                statusBadgeClass = 'bg-[#F8FAFC] text-[#344054] border-[#D0D5DD] dark:bg-slate-800 dark:text-slate-300';
+                dotClass = 'bg-[#667085]';
+              }
+            }
+
+            // Subtitle text
+            const subtitleText =
+              node.type === 'source' ? (node.system || 'InfoCube · HANA Cloud') :
+              node.type === 'rules' ? 'Clean core ontologies' :
+              node.type === 'conditional' ? `${conditionField || 'TOTAL_AMOUNT'} ${conditionOp || '>'} ${conditionVal || '50,000'}` :
+              node.type === 'hitl' ? (hitlReviewerRole || 'Procurement controller') :
+              node.type === 'router' ? 'Clean · Fixed · Quarantined' :
+              node.type === 'target' ? (node.system || 'Clean core') :
+              node.type === 'quarantine' ? 'Dead-letter isolation' :
+              (node.system || 'Configured node');
+
+            // Specs Row (Bottom of card)
+            let specLeft = `Table: ${node.table || '0PUR_C01'}`;
+            let specRight = `Rows: ${(dagNodeExecutions[node.id]?.rowsOut || executionSummary?.total || 1420).toLocaleString()}`;
+
+            if (node.type === 'source') {
+              specLeft = `Table: ${node.table || '0PUR_C01'}`;
+              specRight = executionSummary
+                ? `Out ${(executionSummary.total || 1420).toLocaleString()}`
+                : `Rows: ${(node.rowCount || 1420).toLocaleString()}`;
+            } else if (node.type === 'rules') {
+              specLeft = `Rules: ${activeRules?.length || 5} active`;
+              specRight = executionSummary
+                ? `Pass / held ${((executionSummary.clean || 0) + (executionSummary.fixed || 0)).toLocaleString()} / ${(executionSummary.quarantined || 0).toLocaleString()}`
+                : `Model: ${node.aiModel || 'gpt-5-mini'}`;
+            } else if (node.type === 'conditional') {
+              specLeft = 'Paths: TRUE · FALSE';
+              specRight = executionSummary
+                ? 'TRUE / FALSE 111 / 1,156'
+                : 'Condition active';
+            } else if (node.type === 'hitl') {
+              specLeft = `SLA: ${hitlSlaTimeout || 8} h`;
+              specRight = executionSummary
+                ? 'Awaiting sign-off'
+                : 'Role: Controller';
+            } else if (node.type === 'router') {
+              specLeft = 'Health gate: 90%';
+              specRight = executionSummary
+                ? `Clean / fixed ${(executionSummary.clean || 0).toLocaleString()} / ${(executionSummary.fixed || 0).toLocaleString()}`
+                : '3-way split';
+            } else if (node.type === 'target') {
+              specLeft = `Table: ${node.table || '0PUR_C01_clean'}`;
+              specRight = executionSummary
+                ? `Staged ${(executionSummary.clean || 0).toLocaleString()}`
+                : 'Write: Append';
+            } else if (node.type === 'quarantine') {
+              specLeft = `Table: ${node.table || '0PUR_C01_quarantine'}`;
+              specRight = executionSummary
+                ? `Held ${(executionSummary.quarantined || 0).toLocaleString()}`
+                : 'Isolation: Active';
+            }
+
             return (
               <div
                 key={node.id}
                 onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-                onClick={(e) => handleNodeClick(e, node)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNodeClick(e, node);
+                  openNodeSettings(node);
+                }}
                 style={{
                   transform: `translate(${node.x}px, ${node.y}px)`,
-                  width: node.width,
+                  width: node.width || 280,
                   position: 'absolute',
                   zIndex: isStageActive ? 35 : isSelected ? 30 : 20
                 }}
-                className={`workflow-node-card relative group bg-white rounded-2xl border-2 shadow-md p-4 space-y-2.5 transition-all select-none hover:shadow-lg ${activeTool === 'pan' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
-                  } ${isStageActive
-                    ? node.variant === 'green'
-                      ? 'border-emerald-500 ring-4 ring-emerald-500/40 shadow-xl shadow-emerald-500/20 scale-[1.02]'
-                      : node.variant === 'orange'
-                        ? 'border-amber-500 ring-4 ring-amber-500/40 shadow-xl shadow-amber-500/20 scale-[1.02]'
-                        : node.variant === 'purple'
-                          ? 'border-purple-500 ring-4 ring-purple-500/40 shadow-xl shadow-purple-500/20 scale-[1.02]'
-                          : 'border-blue-500 ring-4 ring-blue-500/40 shadow-xl shadow-blue-500/20 scale-[1.02]'
+                className={`workflow-node-card relative group bg-white dark:bg-[#18181C] rounded-2xl border transition-all select-none p-4 ${
+                  activeTool === 'pan' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
+                } ${
+                  isStageActive
+                    ? 'border-[#2D55F5] ring-4 ring-[#2D55F5]/30 shadow-xl scale-[1.02]'
                     : isSelected
-                      ? 'border-blue-500 ring-4 ring-blue-500/20 shadow-xl'
-                      : node.variant === 'green'
-                        ? 'border-emerald-500'
-                        : node.variant === 'orange'
-                          ? 'border-amber-500'
-                          : node.variant === 'purple'
-                            ? 'border-purple-500'
-                            : 'border-blue-500'
-                  }`}
+                      ? 'border-[#2D55F5] ring-3 ring-[#2D55F5]/25 shadow-xl'
+                      : 'border-[#CDD2DE] dark:border-white/[0.12] hover:border-[#2D55F5]/60 hover:shadow-lg shadow-sm'
+                }`}
               >
                 {/* 1. INPUT PORT (Left Side) */}
                 {node.type !== 'source' && (
                   <div
                     onMouseUp={(e) => handleCompleteEdge(e, node.id)}
-                    className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border-2 border-slate-400 group-hover:border-blue-500 flex items-center justify-center hover:scale-125 transition-transform cursor-crosshair z-30 shadow-xs"
+                    className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white dark:bg-[#18181C] border-2 border-slate-300 dark:border-slate-600 group-hover:border-[#2D55F5] flex items-center justify-center hover:scale-125 transition-all cursor-crosshair z-30 shadow-xs"
                     title="Drop to connect edge here"
                   >
-                    <span className="w-2 h-2 rounded-full bg-slate-600 group-hover:bg-blue-600" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-500 group-hover:bg-[#2D55F5]" />
                   </div>
                 )}
+
                 {/* 2. OUTPUT PORT(S) — Conditional gets TRUE+FALSE ports; others get a single port */}
                 {node.type === 'conditional' ? (
                   <div className="absolute -right-14 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-30">
                     <div
                       onMouseDown={(e) => handleStartEdge(e, node.id)}
-                      className="flex items-center gap-1 cursor-crosshair"
+                      className="flex items-center gap-1 cursor-crosshair group/port"
                       title="TRUE path — drag to connect"
                     >
-                      <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 px-1 py-0.5 rounded select-none">TRUE</span>
-                      <div className="w-5 h-5 rounded-full bg-white border-2 border-emerald-500 hover:border-emerald-700 flex items-center justify-center hover:scale-125 transition-transform shadow-xs">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-300 px-1 py-0.5 rounded select-none">TRUE</span>
+                      <div className="w-5 h-5 rounded-full bg-white dark:bg-[#18181C] border-2 border-emerald-500 group-hover/port:border-emerald-600 flex items-center justify-center hover:scale-125 transition-transform shadow-xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                       </div>
                     </div>
                     <div
                       onMouseDown={(e) => handleStartEdge(e, node.id)}
-                      className="flex items-center gap-1 cursor-crosshair"
-                      title="FALSE / Default path — drag to connect"
+                      className="flex items-center gap-1 cursor-crosshair group/port"
+                      title="FALSE path — drag to connect"
                     >
                       <span className="text-[9px] font-bold text-slate-600 bg-slate-100 border border-slate-300 px-1 py-0.5 rounded select-none">FALSE</span>
-                      <div className="w-5 h-5 rounded-full bg-white border-2 border-slate-400 hover:border-slate-600 flex items-center justify-center hover:scale-125 transition-transform shadow-xs">
-                        <span className="w-2 h-2 rounded-full bg-slate-500" />
+                      <div className="w-5 h-5 rounded-full bg-white dark:bg-[#18181C] border-2 border-slate-400 group-hover/port:border-slate-600 flex items-center justify-center hover:scale-125 transition-transform shadow-xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
                       </div>
                     </div>
                   </div>
-                ) : node.type !== 'quarantine' ? (
+                ) : node.type !== 'quarantine' && node.type !== 'target' ? (
                   <div
                     onMouseDown={(e) => handleStartEdge(e, node.id)}
-                    className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border-2 border-slate-400 group-hover:border-blue-500 flex items-center justify-center hover:scale-125 transition-transform cursor-crosshair z-30 shadow-xs"
+                    className="absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white dark:bg-[#18181C] border-2 border-slate-300 dark:border-slate-600 group-hover:border-[#2D55F5] flex items-center justify-center hover:scale-125 transition-all cursor-crosshair z-30 shadow-xs"
                     title="Drag to connect to another node"
                   >
-                    <span className="w-2 h-2 rounded-full bg-slate-600 group-hover:bg-blue-600" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-500 group-hover:bg-[#2D55F5]" />
                   </div>
                 ) : null}
-                {/* Card Top Row: Icon + Title + Status Pill + Settings Button */}
-                <div className="flex items-center justify-between">
+
+                {/* Card Top Row: Circular Index + Category Label + Status Pill + Settings Button */}
+                <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0 ${node.variant === 'green' ? 'bg-emerald-600' :
-                      node.variant === 'orange' ? 'bg-amber-600' :
-                        node.variant === 'purple' ? 'bg-purple-600' :
-                          node.variant === 'indigo' ? 'bg-indigo-600' : 'bg-blue-600'
-                      }`}>
-                      {node.type === 'source' ? (
-                        (node.system || '').includes('Azure') ? <Cloud className="w-4 h-4" /> :
-                          (node.system || '').includes('Salesforce') ? <Cloud className="w-4 h-4" /> :
-                            ((node.system || '').includes('S3') || (node.system || '').includes('Storage') || (node.system || '').includes('AWS')) ? <FolderTree className="w-4 h-4" /> :
-                              <Database className="w-4 h-4" />
-                      ) :
-                        node.type === 'vector_matcher' ? <Layers className="w-4 h-4" /> :
-                          node.type === 'rag' ? <BookOpen className="w-4 h-4" /> :
-                            node.type === 'conditional' ? <GitBranch className="w-4 h-4" /> :
-                              node.type === 'hitl' ? <UserCheck className="w-4 h-4" /> :
-                                node.type === 'rules' ? <FileCode2 className="w-4 h-4" /> :
-                                  node.type === 'router' ? <GitBranch className="w-4 h-4" /> :
-                                    node.type === 'quarantine' ? <AlertTriangle className="w-4 h-4" /> :
-                                      <Database className="w-4 h-4" />}
-                    </div>
-                    <span className="text-xs font-bold text-slate-900 tracking-tight">
-                      {node.title}
+                    <span className="w-4 h-4 rounded-full bg-slate-100 dark:bg-white/[0.08] text-[10px] font-bold text-[#5F6678] dark:text-slate-400 flex items-center justify-center">
+                      {nodeIndex}
+                    </span>
+                    <span className="text-[10px] font-bold text-[#5F6678] dark:text-slate-400 uppercase tracking-wider">
+                      {categoryLabel}
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    {isStageActive ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1 animate-pulse">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping" />
-                        {node.type === 'source' ? 'Ingesting...' :
-                          node.type === 'vector_matcher' ? 'Matching Vectors...' :
-                            node.type === 'rag' ? 'Retrieving Context...' :
-                              node.type === 'conditional' ? 'Evaluating Switch...' :
-                                node.type === 'hitl' ? 'Awaiting Sign-off...' :
-                                  node.type === 'rules' ? 'Evaluating AST...' :
-                                    node.type === 'router' ? 'Routing...' :
-                                      node.type === 'target' ? 'Writing...' : 'Isolating...'}
-                      </span>
-                    ) : dagNodeExecutions[node.id] ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold border flex items-center gap-1 bg-emerald-50 text-emerald-700 border-emerald-200">
-                        <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
-                        {dagNodeExecutions[node.id].rowsOut !== undefined
-                          ? `${dagNodeExecutions[node.id].rowsOut} rows`
-                          : `${dagNodeExecutions[node.id].rowsIn || 0} rows`}
-                      </span>
-                    ) : (
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border flex items-center gap-1 ${(node.status && node.status.includes('Demo')) || (node.type === 'source' && !node.isLive && node.status === 'Ready')
-                        ? 'bg-amber-50 text-amber-700 border-amber-200'
-                        : node.variant === 'green' || node.status === 'Connected'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : node.variant === 'orange'
-                            ? 'bg-amber-50 text-amber-700 border-amber-200'
-                            : 'bg-blue-50 text-blue-700 border-blue-200'
-                        }`}>
-                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                        {node.type === 'source' && !node.isLive && node.status === 'Ready' ? 'Demo Sandbox' : node.status}
-                      </span>
-                    )}
-                    {/* Dedicated Settings Button on Every Node - ONLY place where property modal opens */}
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border flex items-center gap-1 ${statusBadgeClass}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
+                      {statusText}
+                    </span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         openNodeSettings(node);
                       }}
-                      className="w-7 h-7 rounded-lg text-slate-500 hover:text-blue-600 bg-slate-100/90 hover:bg-blue-50 border border-slate-200/80 flex items-center justify-center transition-all cursor-pointer shadow-2xs group-hover:border-slate-300"
-                      title="Configure node properties & settings"
+                      className="w-6 h-6 rounded-lg text-slate-400 hover:text-[#2D55F5] hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-transparent hover:border-blue-200 dark:hover:border-blue-800/40 flex items-center justify-center transition-all cursor-pointer"
+                      title="Configure node properties"
                     >
                       <Settings className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
-                {/* Subtitle / System */}
-                <p className="text-[11px] text-slate-500 truncate font-medium">
-                  {node.system}
-                </p>
-                {/* Meta Box: Bound Table or Metric */}
-                <div className="p-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-[11px]">
-                  <span className="font-mono font-bold text-slate-800 truncate flex items-center gap-1.5">
-                    {node.type === 'source' ? (
-                      node.isLive ? (
-                        <>
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                          <span>{node.table || 'Live Table'}</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-[9px] font-sans font-bold text-amber-700 bg-amber-100/90 px-1 py-0.2 rounded border border-amber-200 shrink-0">
-                            DEMO TABLE
-                          </span>
-                          <span>{node.table || '0PUR_C01'}</span>
-                        </>
-                      )
-                    ) : node.type === 'target' && liveNodeStats.target
-                      ? `${node.table || '0PUR_C01_clean'} (${liveNodeStats.target})`
-                      : node.type === 'quarantine' && liveNodeStats.quarantine
-                        ? `${node.table || '0PUR_C01_quarant...'} (${liveNodeStats.quarantine})`
-                        : node.type === 'rules' && liveNodeStats.rules
-                          ? liveNodeStats.rules
-                          : node.type === 'router' && liveNodeStats.router
-                            ? '3-Way Evaluated'
-                            : node.table || node.split || (node.ruleCount ? `${node.ruleCount} Active Rules` : 'Configured')}
-                  </span>
-                  <span className="text-slate-400 text-[10px] font-mono shrink-0">
-                    {isStageActive ? (
-                      <span className="text-blue-600 font-bold animate-pulse">Running...</span>
-                    ) : dagNodeExecutions[node.id] ? (
-                      <span className="text-emerald-700 font-bold">
-                        {dagNodeExecutions[node.id].rowsIn !== undefined && dagNodeExecutions[node.id].rowsOut !== undefined && dagNodeExecutions[node.id].rowsIn !== dagNodeExecutions[node.id].rowsOut
-                          ? `${dagNodeExecutions[node.id].rowsIn} in → ${dagNodeExecutions[node.id].rowsOut} out`
-                          : `${dagNodeExecutions[node.id].rowsOut ?? dagNodeExecutions[node.id].rowsIn ?? 0} records`}
-                      </span>
-                    ) : node.type === 'source' && liveNodeStats.source ? (
-                      <span className="text-blue-700 font-bold">{liveNodeStats.source}</span>
-                    ) : node.type === 'router' && liveNodeStats.router ? (
-                      <span className="text-purple-700 font-bold">{liveNodeStats.router}</span>
-                    ) : (
-                      node.rowCount || node.aiModel || 'Click ⚙ to edit'
-                    )}
-                  </span>
+
+                {/* Card Middle Row: Squircle Icon + Title + Subtitle */}
+                <div className="flex items-start gap-3">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border transition-colors ${
+                    node.type === 'source' ? 'bg-[#EFF8FF] text-[#175CD3] border-[#B2DDFF]' :
+                    node.type === 'rules' ? 'bg-[#F9F5FF] text-[#6941C6] border-[#D6BBFB]' :
+                    node.type === 'conditional' ? 'bg-[#EFF8FF] text-[#175CD3] border-[#B2DDFF]' :
+                    node.type === 'hitl' ? 'bg-[#FEF6EE] text-[#B54708] border-[#FDB022]' :
+                    node.type === 'router' ? 'bg-[#F4EBFF] text-[#7C3AED] border-[#D6BBFB]' :
+                    node.type === 'target' ? 'bg-[#ECFDF3] text-[#027A48] border-[#6CE9A6]' :
+                    node.type === 'quarantine' ? 'bg-[#FEF3F2] text-[#B42318] border-[#FECDCA]' :
+                    'bg-slate-100 text-slate-700 border-slate-200'
+                  }`}>
+                    {node.type === 'source' ? <Database className="w-4 h-4" /> :
+                     node.type === 'rules' ? <Sparkles className="w-4 h-4" /> :
+                     node.type === 'conditional' ? <GitBranch className="w-4 h-4" /> :
+                     node.type === 'hitl' ? <UserCheck className="w-4 h-4" /> :
+                     node.type === 'router' ? <Layers className="w-4 h-4" /> :
+                     node.type === 'target' ? <CheckCircle2 className="w-4 h-4" /> :
+                     node.type === 'quarantine' ? <AlertTriangle className="w-4 h-4" /> :
+                     <Database className="w-4 h-4" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-bold text-[#0F172A] dark:text-white leading-tight truncate">
+                      {node.title}
+                    </h4>
+                    <p className="text-xs text-[#5F6678] dark:text-slate-400 truncate mt-0.5 font-medium">
+                      {subtitleText}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Card Specs Bottom Divider & Spec Line */}
+                <div className="border-t border-[#F1F3F7] dark:border-white/[0.06] pt-2.5 mt-3 flex items-center justify-between text-[11px] text-[#5F6678] dark:text-slate-400 font-mono">
+                  <span className="truncate max-w-[150px]">{specLeft}</span>
+                  <span className="font-semibold text-[#0F172A] dark:text-slate-300 shrink-0">{specRight}</span>
                 </div>
               </div>
             );
@@ -2252,141 +2534,244 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
         </div>
       </div>
       
-      {/* Floating Bottom Toolbar Dock */}
-      <div className="absolute bottom-3 inset-x-3 sm:inset-x-5 flex items-center justify-between pointer-events-none z-30">
-        <div className="w-1" />
-        
-        {/* Center Floating Dock: Move | Pan | Fit | Add Node | Ask AI */}
-        <div className="pointer-events-auto shrink-0 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200 shadow-lg p-1.5 flex items-center gap-1">
-          <button
-            onClick={() => setActiveTool('move')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${activeTool === 'move' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            title="Select & move nodes"
-          >
-            <Move className="w-3.5 h-3.5" />
-            Move
-          </button>
-          <button
-            onClick={() => setActiveTool('pan')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${activeTool === 'pan' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            title="Pan canvas tool"
-          >
-            <Hand className="w-3.5 h-3.5" />
-            Pan
-          </button>
-          <span className="h-3.5 w-px bg-slate-200 mx-0.5" />
-          <button
-            onClick={handleFitToWindow}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
-            title="Fit canvas and nodes to window"
-          >
-            <Maximize2 className="w-3.5 h-3.5 text-blue-600" />
-            Fit
-          </button>
-          <button
-            onClick={() => setIsAddNodeModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5 text-blue-600" />
-            Add Node
-          </button>
-          <button
-            onClick={() => setIsAiModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200/80 transition-all cursor-pointer"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-            Ask AI
-          </button>
-        </div>
-
-        {/* Right Zoom Controls (- 100% + Fit/Recenter) */}
-        <div className="pointer-events-auto shrink-0 bg-white rounded-xl border border-slate-200 shadow-md px-2 py-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+      {/* Floating Bottom Toolbar Dock (Matching Figma 02.1) */}
+      <div className="absolute bottom-4 inset-x-4 sm:inset-x-6 flex items-center justify-between pointer-events-none z-30">
+        {/* Left: Zoom Controls Pill */}
+        <div className="pointer-events-auto bg-white/95 dark:bg-[#18181C]/95 backdrop-blur-md rounded-2xl border border-[#CDD2DE] dark:border-white/[0.12] shadow-lg px-2.5 py-1.5 flex items-center gap-2 text-xs font-semibold text-[#0F172A] dark:text-white">
           <button
             onClick={() => setZoom(prev => Math.max(prev - 0.1, 0.4))}
-            className="w-5 h-5 flex items-center justify-center hover:bg-slate-100 rounded text-slate-500 font-bold cursor-pointer"
+            className="w-6 h-6 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/[0.06] rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer text-sm"
             title="Zoom out"
           >
             –
           </button>
           <span
             onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
-            className="font-mono text-[11px] cursor-pointer hover:text-blue-600 px-1"
+            className="font-mono text-xs px-1 cursor-pointer hover:text-[#2D55F5] transition-colors"
             title="Reset zoom to 100%"
           >
             {Math.round(zoom * 100)}%
           </span>
           <button
             onClick={() => setZoom(prev => Math.min(prev + 0.1, 2.0))}
-            className="w-5 h-5 flex items-center justify-center hover:bg-slate-100 rounded text-slate-500 font-bold cursor-pointer"
+            className="w-6 h-6 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/[0.06] rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer text-sm"
             title="Zoom in"
           >
             +
           </button>
-          <span className="h-3.5 w-px bg-slate-200 mx-0.5" />
+          <span className="h-3.5 w-px bg-slate-200 dark:bg-white/[0.12]" />
           <button
             onClick={handleFitToWindow}
-            className="w-5 h-5 flex items-center justify-center hover:bg-slate-100 rounded text-slate-500 hover:text-blue-600 cursor-pointer"
-            title="Center and fit to window"
+            title="Fit canvas to window"
+            className="w-6 h-6 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/[0.06] rounded-lg text-slate-500 hover:text-[#2D55F5] transition-colors cursor-pointer"
           >
-            <RotateCcw className="w-3 h-3" />
+            <Maximize2 className="w-3.5 h-3.5" />
           </button>
         </div>
+
+        {/* Center Floating Dock: Move | Pan | Fit | Add Node | Ask AI */}
+        <div className="pointer-events-auto shrink-0 bg-white/95 dark:bg-[#18181C]/95 backdrop-blur-md rounded-2xl border border-[#CDD2DE] dark:border-white/[0.12] shadow-xl p-1.5 flex items-center gap-1">
+          <button
+            onClick={() => setActiveTool('move')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeTool === 'move'
+                ? 'bg-[#2D55F5] text-white shadow-sm'
+                : 'text-[#0F172A] dark:text-slate-300 hover:bg-[#F1F3F7] dark:hover:bg-white/[0.06]'
+            }`}
+            title="Select & move nodes (V)"
+          >
+            <Move className="w-3.5 h-3.5" />
+            <span>Move</span>
+          </button>
+          <button
+            onClick={() => setActiveTool('pan')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeTool === 'pan'
+                ? 'bg-[#2D55F5] text-white shadow-sm'
+                : 'text-[#0F172A] dark:text-slate-300 hover:bg-[#F1F3F7] dark:hover:bg-white/[0.06]'
+            }`}
+            title="Pan canvas (Space / H)"
+          >
+            <Hand className="w-3.5 h-3.5" />
+            <span>Pan</span>
+          </button>
+          <span className="h-4 w-px bg-slate-200 dark:bg-white/[0.12] mx-1" />
+          <button
+            onClick={handleFitToWindow}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#0F172A] dark:text-slate-300 hover:bg-[#F1F3F7] dark:hover:bg-white/[0.06] transition-all cursor-pointer"
+            title="Fit canvas (F)"
+          >
+            <Maximize2 className="w-3.5 h-3.5 text-[#2D55F5]" />
+            <span>Fit</span>
+          </button>
+          <button
+            onClick={() => setIsAddNodeModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#0F172A] dark:text-slate-300 hover:bg-[#F1F3F7] dark:hover:bg-white/[0.06] transition-all cursor-pointer"
+            title="Add node (N)"
+          >
+            <Plus className="w-3.5 h-3.5 text-[#2D55F5]" />
+            <span>Add node</span>
+          </button>
+          <button
+            onClick={() => setIsAiModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-[#6D28D9] dark:text-[#C4B5FD] bg-[#F5F3FF] dark:bg-[#7C3AED]/20 hover:bg-[#EDE9FE] dark:hover:bg-[#7C3AED]/30 border border-[#DDD6FE] dark:border-[#7C3AED]/30 transition-all cursor-pointer shadow-xs"
+            title="Ask AI (A)"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[#7C3AED]" />
+            <span>Ask AI</span>
+          </button>
+        </div>
+
+        {/* Right: Canvas Radar Mini-Map */}
+        <div className="pointer-events-auto bg-white/95 dark:bg-[#18181C]/95 backdrop-blur-md rounded-2xl border border-[#CDD2DE] dark:border-white/[0.12] shadow-lg p-2.5 flex flex-col gap-1.5 text-xs">
+          <div className="flex items-center justify-between gap-4">
+            <span className="font-semibold text-[11px] text-[#0F172A] dark:text-white flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#127A52] animate-pulse" />
+              Canvas radar · {nodes.length} nodes
+            </span>
+            <span className="text-[10px] text-[#5F6678] dark:text-slate-400 font-mono">
+              F to fit · Del to remove
+            </span>
+          </div>
+          <div className="w-40 h-8 rounded-lg bg-[#F8FAFC] dark:bg-white/[0.03] border border-[#E2E8F0] dark:border-white/[0.06] relative overflow-hidden">
+            {nodes.map(n => {
+              const minX = 0, maxX = 2200;
+              const minY = 0, maxY = 600;
+              const dotX = Math.max(4, Math.min(152, ((n.x - minX) / (maxX - minX)) * 150));
+              const dotY = Math.max(4, Math.min(28, ((n.y - minY) / (maxY - minY)) * 26));
+              return (
+                <div
+                  key={`radar-${n.id}`}
+                  style={{ left: `${dotX}px`, top: `${dotY}px` }}
+                  className={`absolute w-1.5 h-1.5 rounded-full transform -translate-x-1/2 -translate-y-1/2 ${
+                    selectedNodeId === n.id
+                      ? 'bg-[#2D55F5] ring-2 ring-blue-400'
+                      : n.type === 'quarantine'
+                        ? 'bg-amber-500'
+                        : n.type === 'target'
+                          ? 'bg-emerald-500'
+                          : 'bg-slate-400'
+                  }`}
+                />
+              );
+            })}
+          </div>
+        </div>
       </div>
+
       {/* =========================================================================
-          EXECUTION RESULTS SUMMARY BANNER
+          EXECUTING PIPELINE BOTTOM DRAWER (Matching Figma 02.13 Sandbox run · Executing)
          ========================================================================= */}
-      {executionSummary && (
-        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-40 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200 shadow-2xl p-4 flex items-center gap-6 animate-in slide-in-from-bottom duration-200 max-w-2xl w-full">
+      {isExecutingDryRun && (
+        <div className="absolute bottom-4 left-6 right-6 z-40 bg-white/98 dark:bg-[#18181C]/98 backdrop-blur-md rounded-2xl border border-[#CDD2DE] dark:border-white/[0.12] shadow-2xl p-4 flex flex-col gap-3 animate-in slide-in-from-bottom duration-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700/50 flex items-center justify-center text-[#2D55F5]">
+                <Loader2 className="w-4 h-4 animate-spin" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-[#0F172A] dark:text-white">
+                    Executing pipeline · stage {executionPhase === 'extracting' ? '1' : executionPhase === 'evaluating' ? '2' : executionPhase === 'routing' ? '3' : '4'} of 4
+                  </h4>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50">
+                    DuckDB in-memory simulation
+                  </span>
+                </div>
+                <p className="text-xs text-[#5F6678] dark:text-slate-400">
+                  Evaluating {executionProgress}% · 1,420 rows from {srcTable || '0PUR_C01'} with {activeRules?.length || 5} active business rules. Nothing written to destination.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-xs font-semibold text-[#5F6678] dark:text-slate-400">
+                {(executionElapsedMs / 1000).toFixed(1)}s elapsed
+              </span>
+              <button
+                onClick={() => {
+                  setIsExecutingDryRun(false);
+                  setActiveStageNodeId(null);
+                }}
+                className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/[0.12] hover:bg-slate-100 dark:hover:bg-white/[0.06] text-xs font-semibold text-[#5F6678] dark:text-slate-300 transition-colors cursor-pointer"
+              >
+                Cancel run
+              </button>
+            </div>
+          </div>
+
+          {/* 4 Execution Stages Progress */}
+          <div className="grid grid-cols-4 gap-3 pt-2 border-t border-[#F1F3F7] dark:border-white/[0.06]">
+            <div className={`p-2.5 rounded-xl border text-xs ${
+              executionPhase !== 'idle' ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40' : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.06]'
+            }`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-bold text-[#0F172A] dark:text-white">1. Ingest</span>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              </div>
+              <span className="text-[11px] text-[#5F6678] dark:text-slate-400">1,420 rows loaded</span>
+            </div>
+            <div className={`p-2.5 rounded-xl border text-xs ${
+              executionPhase === 'evaluating' || executionPhase === 'routing' || executionPhase === 'committing' ? 'bg-blue-50/60 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800/40' : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.06]'
+            }`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-bold text-[#0F172A] dark:text-white">2. AI Rules AST</span>
+                {executionPhase === 'evaluating' ? <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+              </div>
+              <span className="text-[11px] text-[#5F6678] dark:text-slate-400">5 rules validated</span>
+            </div>
+            <div className={`p-2.5 rounded-xl border text-xs ${
+              executionPhase === 'routing' || executionPhase === 'committing' ? 'bg-blue-50/60 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800/40' : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.06]'
+            }`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-bold text-[#0F172A] dark:text-white">3. Routing</span>
+                {executionPhase === 'routing' ? <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" /> : executionPhase === 'committing' ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Clock className="w-3.5 h-3.5 text-slate-400" />}
+              </div>
+              <span className="text-[11px] text-[#5F6678] dark:text-slate-400">Partition clean vs DLQ</span>
+            </div>
+            <div className={`p-2.5 rounded-xl border text-xs ${
+              executionPhase === 'committing' ? 'bg-blue-50/60 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800/40' : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.06]'
+            }`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-bold text-[#0F172A] dark:text-white">4. Consensus</span>
+                {executionPhase === 'committing' ? <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" /> : <Clock className="w-3.5 h-3.5 text-slate-400" />}
+              </div>
+              <span className="text-[11px] text-[#5F6678] dark:text-slate-400">Telemetry & audit ledger</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          EXECUTION RESULTS COMPACT TOAST / BANNER
+         ========================================================================= */}
+      {executionSummary && !isExecutingDryRun && !isTelemetryDrawerOpen && (
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 bg-white/95 dark:bg-[#18181C]/95 backdrop-blur-md rounded-2xl border border-[#CDD2DE] dark:border-white/[0.12] shadow-2xl p-3.5 px-5 flex items-center gap-5 animate-in slide-in-from-bottom duration-200">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${executionSummary.isLive ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
-              }`}>
-              {executionSummary.isLive ? <CheckCircle2 className="w-5 h-5" /> : <FlaskConical className="w-5 h-5" />}
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/50 text-[#127A52] flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-4 h-4" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h4 className="text-sm font-bold text-slate-900">
-                  {executionSummary.isLive ? 'Live Commit Successful' : 'Dry Run Completed'}
-                </h4>
-                {executionSummary.docNo && (
-                  <span className="font-mono text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded font-bold">
-                    {executionSummary.docNo}
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                {executionSummary.total.toLocaleString()} rows evaluated · Health score: <strong className="text-slate-900">{executionSummary.health}%</strong>
+              <h4 className="text-xs font-bold text-[#0F172A] dark:text-white">
+                Dry Run Passed · {executionSummary.health}% health
+              </h4>
+              <p className="text-[11px] text-[#5F6678] dark:text-slate-400">
+                {executionSummary.total?.toLocaleString()} rows evaluated ({executionSummary.clean?.toLocaleString()} clean · {executionSummary.quarantined?.toLocaleString()} DLQ)
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3 border-l border-slate-200 pl-4 text-xs">
-            <div className="text-center">
-              <span className="block font-bold text-emerald-600">{executionSummary.clean.toLocaleString()}</span>
-              <span className="text-[10px] text-slate-400 font-semibold uppercase">Clean</span>
-            </div>
-            <div className="text-center">
-              <span className="block font-bold text-blue-600">{executionSummary.fixed.toLocaleString()}</span>
-              <span className="text-[10px] text-slate-400 font-semibold uppercase">Fixed</span>
-            </div>
-            <div className="text-center">
-              <span className="block font-bold text-amber-600">{executionSummary.quarantined.toLocaleString()}</span>
-              <span className="text-[10px] text-slate-400 font-semibold uppercase">Quarantined</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setIsTelemetryDrawerOpen(true)}
-              className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
+              className="px-3 py-1.5 rounded-xl bg-[#2D55F5] hover:bg-[#1E40AF] text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
             >
-              <span>Telemetry Cockpit</span>
+              <span>View telemetry</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => setExecutionSummary(null)}
-              className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
+              className="w-6 h-6 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.06] flex items-center justify-center transition-colors cursor-pointer"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -2425,70 +2810,63 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       />
 
       {/* =========================================================================
-          MODAL 2: NODE PROPERTIES MODAL (With Edge Connectors Configuration)
+          NODE PROPERTIES SIDE DRAWER (Matching Figma 02.2–02.9)
          ========================================================================= */}
       {isPropertyModalOpen && selectedNode && (
         <div
-          onClick={() => setIsPropertyModalOpen(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150 cursor-pointer"
+          className="fixed top-0 right-0 h-full w-[500px] max-w-[95vw] bg-white dark:bg-[#18181C] border-l border-[#CDD2DE] dark:border-white/[0.12] shadow-2xl z-40 flex flex-col font-sans animate-in slide-in-from-right duration-200"
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[88vh] cursor-default"
-          >
-            {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
-              <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center border text-white ${selectedNode.variant === 'green' ? 'bg-emerald-600 border-emerald-700' :
-                  selectedNode.variant === 'orange' ? 'bg-amber-600 border-amber-700' :
-                    selectedNode.variant === 'purple' ? 'bg-purple-600 border-purple-700' :
-                      selectedNode.variant === 'indigo' ? 'bg-indigo-600 border-indigo-700' :
-                        'bg-blue-600 border-blue-700'
-                  }`}>
-                  {selectedNode.type === 'vector_matcher' ? <Layers className="w-5 h-5" /> :
-                    selectedNode.type === 'rag' ? <BookOpen className="w-5 h-5" /> :
-                      selectedNode.type === 'conditional' ? <GitBranch className="w-5 h-5" /> :
-                        selectedNode.type === 'hitl' ? <UserCheck className="w-5 h-5" /> :
-                          selectedNode.type === 'rules' ? <FileCode2 className="w-5 h-5" /> :
-                            selectedNode.type === 'router' ? <GitBranch className="w-5 h-5" /> :
-                              selectedNode.type === 'quarantine' ? <AlertTriangle className="w-5 h-5" /> :
-                                srcDbType === 'AWS S3' ? <FolderTree className="w-5 h-5" /> :
-                                  (srcDbType === 'Azure' || srcDbType === 'Salesforce') ? <Cloud className="w-5 h-5" /> :
-                                    <Database className="w-5 h-5" />}
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">
-                    {selectedNode.title || 'Configure Node'}
-                  </h3>
-                  <p className="text-xs text-slate-500 font-medium">
-                    {selectedNode.type === 'vector_matcher' ? 'Finds fuzzy-matching records using AI similarity scoring' :
-                      selectedNode.type === 'rag' ? 'Searches your knowledge library and enriches records with relevant context' :
-                        selectedNode.type === 'conditional' ? 'Directs records to TRUE or FALSE path based on your condition' :
-                          selectedNode.type === 'hitl' ? 'Pauses pipeline and waits for human Approve / Reject decision' :
-                            selectedNode.type === 'pinecone' ? 'Pinecone Vector Database Index & Settings' :
-                              selectedNode.type === 'bigquery' ? 'Google BigQuery Cloud Warehouse & Write API' :
-                                selectedNode.type === 'source' ? (
-                                  srcDbType === 'AWS S3' ? 'AWS S3 Bucket & Object Lake Discovery' :
-                                    srcDbType === 'Azure' ? 'Azure Blob Storage Container & Parquet Discovery' :
-                                      srcDbType === 'Salesforce' ? 'Salesforce CRM Objects & API Configuration' :
-                                        'Source Database & Table Selection'
-                                ) :
-                                  selectedNode.type === 'rules' ? 'Intelligence Engine & Prompt Settings' :
-                                    selectedNode.type === 'router' ? 'CleanFlow In-Flight Routing Criteria' :
-                                      selectedNode.type === 'target' ? 'Target S/4HANA & Lakehouse Writeback' :
-                                        'Quarantine Workbench Settings'}
-                  </p>
-                </div>
+          {/* Drawer Header */}
+          <div className="px-6 py-4 border-b border-[#F1F3F7] dark:border-white/[0.06] flex items-center justify-between bg-white dark:bg-[#18181C] shrink-0">
+            <div className="flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center border text-white ${selectedNode.variant === 'green' ? 'bg-[#127A52] border-emerald-600' :
+                selectedNode.variant === 'orange' ? 'bg-amber-600 border-amber-700' :
+                  selectedNode.variant === 'purple' ? 'bg-[#7C3AED] border-purple-700' :
+                    selectedNode.variant === 'indigo' ? 'bg-indigo-600 border-indigo-700' :
+                      'bg-[#2D55F5] border-blue-700'
+                }`}>
+                {selectedNode.type === 'vector_matcher' ? <Layers className="w-5 h-5" /> :
+                  selectedNode.type === 'rag' ? <BookOpen className="w-5 h-5" /> :
+                    selectedNode.type === 'conditional' ? <GitBranch className="w-5 h-5" /> :
+                      selectedNode.type === 'hitl' ? <UserCheck className="w-5 h-5" /> :
+                        selectedNode.type === 'rules' ? <FileCode2 className="w-5 h-5" /> :
+                          selectedNode.type === 'router' ? <GitBranch className="w-5 h-5" /> :
+                            selectedNode.type === 'quarantine' ? <AlertTriangle className="w-5 h-5" /> :
+                              srcDbType === 'AWS S3' ? <FolderTree className="w-5 h-5" /> :
+                                (srcDbType === 'Azure' || srcDbType === 'Salesforce') ? <Cloud className="w-5 h-5" /> :
+                                  <Database className="w-5 h-5" />}
               </div>
-              <button
-                onClick={() => setIsPropertyModalOpen(false)}
-                className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-semibold text-[#5F6678] dark:text-slate-400 uppercase tracking-wider">
+                    Node {nodes.findIndex(n => n.id === selectedNode.id) + 1} · {
+                      selectedNode.type === 'source' ? 'Source' :
+                      selectedNode.type === 'rules' ? 'AI Rules' :
+                      selectedNode.type === 'conditional' ? 'Router' :
+                      selectedNode.type === 'hitl' ? 'Review' :
+                      selectedNode.type === 'router' ? 'Split' :
+                      selectedNode.type === 'target' ? 'Target' :
+                      selectedNode.type === 'quarantine' ? 'DLQ' : selectedNode.type
+                    }
+                  </span>
+                  <span className="px-2 py-0.2 rounded-full text-[9px] font-bold bg-[#EBF0FF] dark:bg-blue-950/50 text-[#2D55F5] border border-[#2D55F5]/20">
+                    {selectedNode.status || 'Active'}
+                  </span>
+                </div>
+                <h3 className="text-base font-bold text-[#0F172A] dark:text-white">
+                  {selectedNode.title || 'Configure Node'}
+                </h3>
+              </div>
             </div>
-            {/* Properties Body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-5 max-h-[72vh]">
+            <button
+              onClick={() => setIsPropertyModalOpen(false)}
+              className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.06] flex items-center justify-center transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          {/* Properties Body */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-5">
               {selectedNode.type === 'source' && (
                 <SourceModalPanel
                   selectedNode={selectedNode}
@@ -2815,11 +3193,11 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                 </details>
               </div>
             </div>
-            {/* Modal Actions Footer */}
-            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
+            {/* Drawer Actions Footer (Matching Figma 02.2–02.9) */}
+            <div className="px-6 py-4 border-t border-[#F1F3F7] dark:border-white/[0.06] bg-slate-50/70 dark:bg-white/[0.02] flex items-center justify-between gap-3 shrink-0">
               <button
                 onClick={() => handleDeleteNode(selectedNode.id)}
-                className="px-3.5 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="px-3.5 py-2 rounded-xl border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 Delete Node
@@ -2827,84 +3205,84 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setIsPropertyModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold cursor-pointer"
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-white/[0.12] bg-white dark:bg-[#18181C] hover:bg-slate-100 dark:hover:bg-white/[0.06] text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer transition-colors"
                 >
                   Close
                 </button>
                 {selectedNode.type === 'source' ? (
                   <button
                     onClick={handleSaveSourceConfig}
-                    className="px-5 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-bold shadow-xs cursor-pointer"
+                    className="px-5 py-2 rounded-xl bg-[#2D55F5] text-white hover:bg-[#1E40AF] text-xs font-bold shadow-xs cursor-pointer transition-all"
                   >
                     Save Source Settings
                   </button>
                 ) : selectedNode.type === 'rules' ? (
                   <button
                     onClick={handleSaveRulesConfig}
-                    className="px-5 py-2 rounded-xl bg-purple-600 text-white hover:bg-purple-700 text-xs font-bold shadow-xs cursor-pointer"
+                    className="px-5 py-2 rounded-xl bg-[#7C3AED] text-white hover:bg-[#6D28D9] text-xs font-bold shadow-xs cursor-pointer transition-all"
                   >
                     Save Rules Settings
                   </button>
                 ) : selectedNode.type === 'router' ? (
                   <button
                     onClick={handleSaveRouterConfig}
-                    className="px-5 py-2 rounded-xl bg-purple-600 text-white hover:bg-purple-700 text-xs font-bold shadow-xs cursor-pointer"
+                    className="px-5 py-2 rounded-xl bg-[#7C3AED] text-white hover:bg-[#6D28D9] text-xs font-bold shadow-xs cursor-pointer transition-all"
                   >
                     Save Router Settings
                   </button>
                 ) : selectedNode.type === 'target' ? (
                   <button
                     onClick={handleSaveTargetConfig}
-                    className="px-5 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold shadow-xs cursor-pointer"
+                    className="px-5 py-2 rounded-xl bg-[#127A52] text-white hover:bg-[#0E6242] text-xs font-bold shadow-xs cursor-pointer transition-all"
                   >
                     Save Target Settings
                   </button>
                 ) : selectedNode.type === 'vector_matcher' ? (
                   <button
                     onClick={handleSaveVectorMatcherConfig}
-                    className="px-5 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 text-xs font-bold shadow-xs cursor-pointer"
+                    className="px-5 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 text-xs font-bold shadow-xs cursor-pointer transition-all"
                   >
                     Save Vector Matcher Settings
                   </button>
                 ) : selectedNode.type === 'rag' ? (
                   <button
                     onClick={handleSaveRagConfig}
-                    className="px-5 py-2 rounded-xl bg-purple-600 text-white hover:bg-purple-700 text-xs font-bold shadow-xs cursor-pointer"
+                    className="px-5 py-2 rounded-xl bg-[#7C3AED] text-white hover:bg-[#6D28D9] text-xs font-bold shadow-xs cursor-pointer transition-all"
                   >
                     Save RAG Settings
                   </button>
                 ) : selectedNode.type === 'conditional' ? (
                   <button
                     onClick={handleSaveConditionalConfig}
-                    className="px-5 py-2 rounded-xl bg-violet-600 text-white hover:bg-violet-700 text-xs font-bold shadow-xs cursor-pointer"
+                    className="px-5 py-2 rounded-xl bg-violet-600 text-white hover:bg-violet-700 text-xs font-bold shadow-xs cursor-pointer transition-all"
                   >
                     Save Switch Settings
                   </button>
                 ) : selectedNode.type === 'hitl' ? (
                   <button
                     onClick={handleSaveHitlConfig}
-                    className="px-5 py-2 rounded-xl bg-amber-600 text-white hover:bg-amber-700 text-xs font-bold shadow-xs cursor-pointer"
+                    className="px-5 py-2 rounded-xl bg-amber-600 text-white hover:bg-amber-700 text-xs font-bold shadow-xs cursor-pointer transition-all"
                   >
                     Save Governance Gate Settings
                   </button>
                 ) : selectedNode.type === 'pinecone' ? (
                   <button
                     onClick={handleSavePineconeConfig}
-                    className="px-5 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold shadow-xs cursor-pointer"
+                    className="px-5 py-2 rounded-xl bg-[#127A52] text-white hover:bg-[#0E6242] text-xs font-bold shadow-xs cursor-pointer transition-all"
                   >
                     Save Pinecone Settings
                   </button>
                 ) : selectedNode.type === 'bigquery' ? (
                   <button
                     onClick={handleSaveBigQueryConfig}
-                    className="px-5 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-bold shadow-xs cursor-pointer"
+                    className="px-5 py-2 rounded-xl bg-[#2D55F5] text-white hover:bg-[#1E40AF] text-xs font-bold shadow-xs cursor-pointer transition-all"
                   >
                     Save BigQuery Settings
                   </button>
                 ) : (
                   <button
                     onClick={handleSaveQuarantineConfig}
-                    className="px-5 py-2 rounded-xl bg-amber-600 text-white hover:bg-amber-700 text-xs font-bold shadow-xs cursor-pointer"
+                    className="px-5 py-2 rounded-xl bg-amber-600 text-white hover:bg-amber-700 text-xs font-bold shadow-xs cursor-pointer transition-all"
                   >
                     Save Quarantine Settings
                   </button>
@@ -2912,48 +3290,59 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
       {/* =========================================================================
-          MODAL 3: ASK AI WORKFLOW OPTIMIZER
+          MODAL 3: ASK AI WORKFLOW OPTIMIZER (Matching Figma 02.12 Ask AI)
          ========================================================================= */}
       {isAiModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150">
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col"
+            className="bg-white dark:bg-[#18181C] rounded-2xl border border-[#CDD2DE] dark:border-white/[0.12] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col font-sans"
           >
-            <div className="p-6 bg-gradient-to-br from-purple-900 via-indigo-900 to-slate-900 text-white relative">
-              <div className="flex items-center justify-between mb-2">
-                <span className="px-2.5 py-0.5 rounded-full bg-purple-500/30 text-purple-200 text-[10px] font-bold border border-purple-400/30 uppercase tracking-wider flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-purple-300" />
-                  Azure OpenAI Agent
-                </span>
-                <button onClick={() => setIsAiModalOpen(false)} className="text-white/60 hover:text-white">
-                  <X className="w-4 h-4" />
-                </button>
+            <div className="p-6 border-b border-[#F1F3F7] dark:border-white/[0.06] flex items-start justify-between bg-white dark:bg-[#18181C]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/50 flex items-center justify-center text-[#7C3AED]">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#0F172A] dark:text-white">
+                    Ask AI · Describe your workflow
+                  </h3>
+                  <p className="text-xs text-[#5F6678] dark:text-slate-400 mt-0.5">
+                    DataX will generate, validate, and wire the pipeline stages automatically.
+                  </p>
+                </div>
               </div>
-              <h3 className="text-xl font-bold tracking-tight">Ask AI: Autonomous Workflow Optimizer</h3>
-              <p className="text-xs text-purple-200/80 mt-1">
-                Auto-generate and wire optimal pipeline stages based on your active enterprise source and destination.
-              </p>
+              <button
+                onClick={() => setIsAiModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Describe the workflow you want to construct:
+                <label className="block text-xs font-bold text-[#0F172A] dark:text-white mb-1.5">
+                  Workflow description
                 </label>
                 <textarea
-                  rows={3}
-                  defaultValue="Ingest SAP BW procurement orders, apply Clean Core BAPI validation, auto-repair plant codes via ontology graph, and dual-dispatch compliant rows to S/4HANA and Databricks."
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                  rows={4}
+                  defaultValue="Ingest SAP BW purchasing orders, apply Clean Core BAPI validation, auto-repair plant codes via ontology graph, and stage compliant rows to S/4HANA."
+                  className="w-full p-3 bg-white dark:bg-[#121215] border border-[#CDD2DE] dark:border-white/[0.12] rounded-xl text-xs text-[#0F172A] dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 resize-none font-sans"
                 />
               </div>
+              <div className="p-3 rounded-xl bg-purple-50/70 dark:bg-purple-950/20 border border-purple-200/70 dark:border-purple-900/40 text-xs text-purple-900 dark:text-purple-300 flex items-start gap-2.5">
+                <Sparkles className="w-4 h-4 text-[#7C3AED] shrink-0 mt-0.5" />
+                <span>
+                  ✦ AI will generate rules, router thresholds, and consensus gates. You can review all diffs before dry run.
+                </span>
+              </div>
             </div>
-            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+            <div className="px-6 py-4 border-t border-[#F1F3F7] dark:border-white/[0.06] bg-slate-50/70 dark:bg-white/[0.02] flex items-center justify-between">
               <button
                 onClick={() => setIsAiModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-[#5F6678] dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-white transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -2962,10 +3351,10 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                   handleAutofillTemplate('sap_bw_s4hana');
                   setIsAiModalOpen(false);
                 }}
-                className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs flex items-center gap-2 cursor-pointer"
+                className="px-5 py-2 rounded-xl bg-[#2D55F5] hover:bg-[#1E40AF] text-white text-xs font-bold shadow-xs flex items-center gap-2 cursor-pointer transition-all"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                Apply AI Workflow
+                <span>Draft for review</span>
               </button>
             </div>
           </div>

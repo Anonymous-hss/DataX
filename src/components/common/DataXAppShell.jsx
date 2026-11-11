@@ -170,8 +170,8 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
     if (currentScreen === 'new-workflow' || currentScreen === 'start-workflow' || currentScreen === 'new-thread' || currentScreen === 'start-thread') {
       return 'New workflow';
     }
-    if (currentScreen === 'canvas' && activeThread?.name) {
-      return activeThread.name;
+    if (currentScreen === 'canvas' || currentScreen === 'workflow-builder') {
+      return 'Visual Canvas';
     }
     return activeNavObj.label;
   };
@@ -261,14 +261,14 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
 
             {/* Active Pipeline Quick Selector */}
             {shouldShowPipelinePicker && (
-              <div className="hidden md:flex items-center gap-2 pl-3 ml-1 border-l border-[#E3E6EE] min-w-0" ref={threadPickerRef}>
-                <span className="text-[11px] font-semibold text-[#8E95A9] shrink-0">Pipeline:</span>
+              <div className="hidden md:flex items-center pl-2 ml-1 min-w-0" ref={threadPickerRef}>
                 <div className="relative">
                   <button
                     type="button"
                     onClick={() => setThreadPickerOpen(!threadPickerOpen)}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F5F6FA] dark:bg-[#222226] border border-[#E3E6EE] dark:border-white/[0.08] font-semibold text-xs text-[#0A0F1F] dark:text-slate-200 hover:border-[#2D55F5] transition-colors cursor-pointer max-w-[240px] truncate"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-[#222226] border border-[#CDD2DE] dark:border-white/[0.12] font-semibold text-xs text-[#0A0F1F] dark:text-slate-200 hover:border-[#2D55F5] transition-colors cursor-pointer max-w-[260px] truncate shadow-2xs"
                   >
+                    <GitBranch className="w-3.5 h-3.5 text-[#2D55F5] shrink-0" />
                     <span className="truncate">{currentThreadName}</span>
                     <ChevronDown className={`w-3 h-3 text-slate-400 shrink-0 transition-transform ${threadPickerOpen ? 'rotate-180' : ''}`} />
                   </button>

@@ -86,3 +86,4 @@ export default function WorkflowsEmptyState({ onShowReady, onNewWorkflow }) {
     </motion.div>
   );
 }
+

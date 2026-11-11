@@ -51,8 +51,8 @@ describe('themeService', () => {
     classListSet.clear();
   });
 
-  it('defaults to dark mode when no preference stored', () => {
-    expect(getStoredTheme()).toBe('dark');
+  it('defaults to light mode when no preference stored', () => {
+    expect(getStoredTheme()).toBe('light');
   });
 
   it('switches to light mode and updates root element classList', () => {
