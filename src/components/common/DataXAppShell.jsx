@@ -21,7 +21,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
-  Workflow
+  Workflow,
+  GitBranch
 } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
 import { useRuleEngine } from '../../context/RuleEngineContext';
