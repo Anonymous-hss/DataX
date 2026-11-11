@@ -69,7 +69,7 @@ export default function PlatformDirectoryColumn({
             {sec.group}
           </h3>
 
-          <div className="space-y-0.5">
+          <div className="grid grid-cols-2 gap-x-2 gap-y-1">
             {sec.items.map(item => {
               const Icon = item.icon;
               const isSelected = activeModuleId === item.id;

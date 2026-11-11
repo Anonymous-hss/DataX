@@ -322,18 +322,23 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
 
           {/* Right: Navigate, Help, Notifications (Single instance), New Workflow, Profile */}
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            {/* Enhancement 6.1 & 6.7: Navigate & filter trigger button with 4 distinct states */}
             <button
               type="button"
-              onClick={() => setNavigateModalOpen(true)}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#F5F6FA] dark:bg-white/[0.05] border border-[#E3E6EE] dark:border-white/[0.08] text-xs text-[#0A0F1F] dark:text-white hover:border-[#2D55F5]/40 transition-all cursor-pointer shadow-2xs"
+              onClick={() => setNavigateModalOpen(prev => !prev)}
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-2xs ${
+                navigateModalOpen
+                  ? 'bg-[#EFF4FF] border border-[#2D55F5] text-[#2D55F5]'
+                  : 'bg-white dark:bg-[#18181C] border border-[#E3E6EE] dark:border-white/[0.08] text-[#0A0F1F] dark:text-white hover:bg-[#F8FAFC] hover:border-[#CDD2DE]'
+              }`}
               title="Navigate & filter (⌘/)"
             >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-[#5F6678] dark:text-slate-400">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className={navigateModalOpen ? 'text-[#2D55F5]' : 'text-[#5F6678] dark:text-slate-400'}>
                 <path d="M2 4h12M2 8h9M2 12h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
               </svg>
-              <span className="font-semibold text-xs text-[#0A0F1F] dark:text-white">Navigate</span>
+              <span className="font-semibold text-xs">Navigate</span>
               <span className="w-4 h-4 rounded-full bg-[#2D55F5] text-white text-[10px] font-bold flex items-center justify-center">2</span>
-              <ChevronDown className="w-3 h-3 text-[#8E95A9]" />
+              <ChevronDown className={`w-3 h-3 transition-transform ${navigateModalOpen ? 'rotate-180 text-[#2D55F5]' : 'text-[#8E95A9]'}`} />
             </button>
 
             <button

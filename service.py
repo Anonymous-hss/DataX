@@ -2627,5 +2627,112 @@ def api_rotate_tenant_api_key(request: Request):
     return {"status": "success", "apiKey": new_key, "settings": saved}
 
 
+# -----------------------------------------------------------------------------
+# Enhancements 6.0 – 6.7 & N1 – N6 API Endpoints
+# -----------------------------------------------------------------------------
+import enhancements_service
+
+
+class AiDraftRequest(BaseModel):
+    prompt: str
+    source: Optional[str] = None
+    target: Optional[str] = None
+    domainPack: Optional[str] = None
+    existingNodes: Optional[List[Dict[str, Any]]] = None
+    refinement: Optional[str] = None
+
+
+class PreflightCheckRequest(BaseModel):
+    nodes: Optional[List[Dict[str, Any]]] = None
+    edges: Optional[List[Dict[str, Any]]] = None
+    sourceConfig: Optional[Dict[str, Any]] = None
+    targetConfig: Optional[Dict[str, Any]] = None
+    rules: Optional[List[Dict[str, Any]]] = None
+    lastRunAt: Optional[str] = None
+
+
+class EdgeSuggestionsRequest(BaseModel):
+    fromType: str = "source"
+    toType: str = "rules"
+    rowCount: int = 1420
+
+
+class RuleImpactPreviewRequest(BaseModel):
+    ruleId: str = "rule_total_amount"
+    field: str = "TOTAL_AMOUNT"
+    oldExpression: Optional[str] = None
+    newExpression: Optional[str] = None
+    severity: str = "Critical"
+    sampleSize: int = 1420
+
+
+@app.get("/navigation/summary")
+@app.get("/api/navigation/summary")
+def api_navigation_summary(request: Request):
+    """Enhancement 6.1: Live summary counts and active badge metrics for the top header."""
+    tid = get_request_tenant_id(request)
+    return enhancements_service.get_navigation_summary(tid)
+
+
+@app.post("/workflow/ai-draft")
+@app.post("/api/workflow/ai-draft")
+def api_ai_draft_workflow(req: AiDraftRequest):
+    """Enhancement 6.2 (N1-N6): Multi-step AI workflow draft generator with reasoning & node graph."""
+    return enhancements_service.draft_workflow_with_ai(
+        prompt=req.prompt,
+        source=req.source,
+        target=req.target,
+        domain_pack=req.domainPack,
+        existing_nodes=req.existingNodes,
+        refinement=req.refinement
+    )
+
+
+@app.post("/workflow/preflight-check")
+@app.post("/api/workflow/preflight-check")
+def api_preflight_check(req: PreflightCheckRequest):
+    """Enhancement 6.3: Validates 7 deterministic pre-flight checks before a sandbox or live run."""
+    return enhancements_service.run_preflight_check(
+        nodes=req.nodes,
+        edges=req.edges,
+        source_config=req.sourceConfig,
+        target_config=req.targetConfig,
+        rules=req.rules,
+        last_run_at=req.lastRunAt
+    )
+
+
+@app.post("/workflow/edge-suggestions")
+@app.post("/api/workflow/edge-suggestions")
+def api_edge_suggestions(req: EdgeSuggestionsRequest):
+    """Enhancement 6.4: Edge hover '+' menu ranking compatible nodes to insert between two nodes."""
+    return enhancements_service.get_edge_suggestions(
+        from_type=req.fromType,
+        to_type=req.toType,
+        row_count=req.rowCount
+    )
+
+
+@app.post("/rules/impact-preview")
+@app.post("/api/rules/impact-preview")
+def api_rule_impact_preview(req: RuleImpactPreviewRequest):
+    """Enhancement 6.5: Rule impact simulation and sample record delta calculation."""
+    return enhancements_service.preview_rule_impact(
+        rule_id=req.ruleId,
+        field=req.field,
+        old_expression=req.oldExpression or "",
+        new_expression=req.newExpression or "",
+        severity=req.severity,
+        sample_size=req.sampleSize
+    )
+
+
+@app.get("/quarantine/trace/{record_id}")
+@app.get("/api/quarantine/trace/{record_id}")
+def api_get_quarantine_trace(record_id: str):
+    """Enhancement 6.6: End-to-end 5-step execution path & trace values for isolated records."""
+    return enhancements_service.get_quarantine_trace(record_id)
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8003)

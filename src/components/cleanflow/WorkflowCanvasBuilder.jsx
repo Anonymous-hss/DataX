@@ -7,6 +7,7 @@ import {
   FileCode2,
   GitBranch,
   AlertTriangle,
+  ShieldAlert,
   ShieldCheck,
   RefreshCw,
   Trash2,
@@ -64,6 +65,10 @@ import RouterModalPanel from './nodes/RouterModalPanel';
 import TargetModalPanel from './nodes/TargetModalPanel';
 import QuarantineModalPanel from './nodes/QuarantineModalPanel';
 import AddNodeCatalogModal from './modals/AddNodeCatalogModal';
+import BuildWithAiDrawer from './modals/BuildWithAiDrawer';
+import PreflightCheckPopover from './modals/PreflightCheckPopover';
+import EdgeInsertMenuPopover from './modals/EdgeInsertMenuPopover';
+import RuleImpactPreviewModal from './modals/RuleImpactPreviewModal';
 import CanvasTelemetryDrawer from './CanvasTelemetryDrawer';
 import { OPERATIONAL_CATALOG, sanitizeNode, resolveEngineKey } from './constants/nodeCatalog';
 import { RunningDryRunModal, DryRunResultsModal } from '../workflows/dryrun';
@@ -257,6 +262,18 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const [addNodeSearch, setAddNodeSearch] = useState('');
   const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  // Enhancement 6.2 - 6.6 Modals & Popovers State
+  const [isBuildWithAiOpen, setIsBuildWithAiOpen] = useState(false);
+  const [isPreflightOpen, setIsPreflightOpen] = useState(false);
+  const [isEdgeInsertMenuOpen, setIsEdgeInsertMenuOpen] = useState(false);
+  const [activeEdgeForInsert, setActiveEdgeForInsert] = useState(null);
+  const [isRuleImpactModalOpen, setIsRuleImpactModalOpen] = useState(false);
+  const [activeRuleForImpact, setActiveRuleForImpact] = useState(null);
+  const [isAddNodeMenuOpen, setIsAddNodeMenuOpen] = useState(false);
+  const [aiAddedBanner, setAiAddedBanner] = useState(null);
+  const [showUndoBar, setShowUndoBar] = useState(false);
+  const [undoSnapshot, setUndoSnapshot] = useState(null);
+  const [preflightHasBlocking, setPreflightHasBlocking] = useState(true);
   const [aiPrompt, setAiPrompt] = useState('Read purchasing lines from SAP BW, flag orders over $50K for controller review, auto-fix plant codes and write clean rows to S/4HANA.');
   const [activeTool, setActiveTool] = useState('move');
   // Node Property States (for editing inside modal)
@@ -922,6 +939,16 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
     }
   };
   const handleRunLive = async () => {
+    if (preflightHasBlocking) {
+      setIsPreflightOpen(true);
+      addNotification({
+        title: 'Pre-flight Check Required',
+        description: '1 blocking issue detected. Fix permissions on PostgreSQL target before running live.',
+        type: 'error',
+        link: '#canvas'
+      });
+      return;
+    }
     setIsExecutingLiveRun(true);
     setExecutionSummary(null);
     setExecutionError(null);
@@ -1223,6 +1250,151 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const handleDeleteEdge = (edgeId) => {
     setEdges(prev => prev.filter(e => e.id !== edgeId));
     setSelectedEdgeId(null);
+  };
+
+  // Enhancement 6.2: Accept AI Drafted Workflow
+  const handleAcceptAiDraft = (draftResult) => {
+    setUndoSnapshot({ nodes: [...nodes], edges: [...edges] });
+    const generatedNodes = (draftResult?.nodes || []).map((n, idx) => ({
+      ...n,
+      id: n.id || `node-${n.type || 'gen'}-${Date.now()}-${idx}`,
+      x: n.x ?? (150 + idx * 300),
+      y: n.y ?? (240 + (idx % 2) * 40),
+      width: n.width || 280,
+      height: n.height || 140,
+      isSuggested: false,
+      needsSetup: n.needs_setup ?? (n.type === 'target' || (n.title || '').toLowerCase().includes('postgresql')),
+    }));
+    const generatedEdges = (draftResult?.edges || []).map((e, idx) => ({
+      ...e,
+      id: e.id || `edge-gen-${idx}`,
+    }));
+
+    setNodes(generatedNodes);
+    setEdges(generatedEdges);
+
+    const setupNode = generatedNodes.find(n => n.needsSetup);
+    if (setupNode) {
+      setAiAddedBanner({
+        show: true,
+        message: `${generatedNodes.length} nodes added. ${setupNode.title} needs write mode configuration before running.`,
+        targetNodeId: setupNode.id,
+      });
+    }
+    setShowUndoBar(true);
+
+    addNotification({
+      type: 'success',
+      title: 'Workflow Generated',
+      description: `Added ${generatedNodes.length} nodes and wired connections.`,
+    });
+  };
+
+  const handleUndoAiDraft = () => {
+    if (undoSnapshot) {
+      setNodes(undoSnapshot.nodes);
+      setEdges(undoSnapshot.edges);
+      setUndoSnapshot(null);
+      setAiAddedBanner(null);
+      setShowUndoBar(false);
+      addNotification({
+        type: 'info',
+        title: 'Action Undone',
+        description: 'Canvas restored to previous state.',
+      });
+    }
+  };
+
+  // Enhancement 6.4: Insert node between two connected nodes on an edge
+  const handleInsertNodeOnEdge = (nodeType) => {
+    if (!activeEdgeForInsert) return;
+    const fromNode = getNode(activeEdgeForInsert.from);
+    const toNode = getNode(activeEdgeForInsert.to);
+    if (!fromNode || !toNode) return;
+
+    const newId = `node-${nodeType}-${Date.now()}`;
+    const midX = Math.round((fromNode.x + toNode.x) / 2);
+    const midY = Math.round((fromNode.y + toNode.y) / 2);
+
+    let newNode;
+    if (nodeType === 'rules') {
+      newNode = {
+        id: newId,
+        type: 'rules',
+        title: 'AI Rules Engine',
+        subtitle: 'Plain-English validation policy',
+        category: 'TRANSFORMATION',
+        x: midX,
+        y: midY,
+        width: 280,
+        height: 140,
+        rules: [
+          { id: 'r1', name: 'GL Account Format', field: 'gl_account', severity: 'High', action: 'Quarantine', expression: "regex_match(gl_account, '^[0-9]{4}-[0-9]{4}$')" }
+        ]
+      };
+    } else if (nodeType === 'router') {
+      newNode = {
+        id: newId,
+        type: 'router',
+        title: 'Conditional Router',
+        subtitle: 'Split stream by confidence or condition',
+        category: 'FLOW CONTROL',
+        x: midX,
+        y: midY,
+        width: 280,
+        height: 140,
+      };
+    } else if (nodeType === 'hitl') {
+      newNode = {
+        id: newId,
+        type: 'hitl',
+        title: 'Review · Controller Gate',
+        subtitle: 'Hold ambiguous rows for sign-off',
+        category: 'HUMAN IN THE LOOP',
+        x: midX,
+        y: midY,
+        width: 280,
+        height: 140,
+      };
+    } else {
+      newNode = {
+        id: newId,
+        type: nodeType,
+        title: `${nodeType.toUpperCase()} Step`,
+        subtitle: 'Pipeline stage',
+        category: 'PROCESSING',
+        x: midX,
+        y: midY,
+        width: 280,
+        height: 140,
+      };
+    }
+
+    setNodes(prev => [...prev, newNode]);
+    setEdges(prev => [
+      ...prev.filter(e => e.id !== activeEdgeForInsert.id),
+      { id: `edge-${fromNode.id}-${newId}`, from: fromNode.id, to: newId },
+      { id: `edge-${newId}-${toNode.id}`, from: newId, to: toNode.id },
+    ]);
+
+    addNotification({
+      type: 'success',
+      title: `Inserted ${newNode.title}`,
+      description: `Added node between ${fromNode.title || fromNode.id} and ${toNode.title || toNode.id}.`,
+    });
+
+    setActiveEdgeForInsert(null);
+    setIsEdgeInsertMenuOpen(false);
+  };
+
+  // Enhancement 6.5: Rule Impact Preview Save
+  const handleSaveRuleFromImpact = (updatedRule) => {
+    setActiveRules(prev => (prev || []).map(r => r.name === updatedRule.name || r.id === updatedRule.id ? { ...r, ...updatedRule } : r));
+    addNotification({
+      type: 'success',
+      title: `Rule Updated: ${updatedRule.name}`,
+      description: 'Impact simulation applied. Quarantine and Sandbox metrics updated.',
+    });
   };
   // =========================================================================
   // ADD NODE FROM CATALOG
@@ -1963,6 +2135,26 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
             <span>{isSavingWorkflow ? 'Saving...' : saveSuccess ? 'Saved' : 'Save'}</span>
           </button>
 
+          {/* Enhancement 6.3: Pre-flight check trigger button */}
+          <button
+            type="button"
+            onClick={() => setIsPreflightOpen(true)}
+            className={`px-3.5 py-2 rounded-full border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
+              preflightHasBlocking
+                ? 'border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-800'
+                : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+            }`}
+            title="Pre-flight validation check"
+          >
+            <ShieldAlert className={`w-3.5 h-3.5 ${preflightHasBlocking ? 'text-rose-600' : 'text-slate-500'}`} />
+            <span>Pre-flight</span>
+            {preflightHasBlocking && (
+              <span className="w-4 h-4 rounded-full bg-rose-600 text-white text-[10px] flex items-center justify-center font-bold">
+                1
+              </span>
+            )}
+          </button>
+
           {/* Test in sandbox button */}
           <button
             type="button"
@@ -2022,6 +2214,134 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                 <span>Click a node to configure it. Drag ports to rewire.</span>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Enhancement N6: Top Alert Banner (Needs setup) */}
+        {aiAddedBanner?.show && (
+          <div className="absolute top-4 inset-x-8 z-30 pointer-events-auto flex items-center justify-between px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-300 shadow-lg text-xs animate-in slide-in-from-top duration-200">
+            <div className="flex items-center gap-2.5 text-amber-900 font-medium">
+              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <span>{aiAddedBanner.message}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const targetNode = nodes.find(n => n.id === aiAddedBanner.targetNodeId) || nodes.find(n => n.type === 'target');
+                  if (targetNode) openNodeSettings(targetNode);
+                }}
+                className="px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs flex items-center gap-1 shadow-xs cursor-pointer"
+              >
+                Configure target →
+              </button>
+              <button
+                onClick={() => setAiAddedBanner(null)}
+                className="p-1 text-amber-700 hover:text-amber-950 rounded hover:bg-amber-100 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Enhancement N1: Empty Canvas Start Options Card */}
+        {nodes.length === 0 && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center p-6 pointer-events-none">
+            <div className="w-full max-w-xl bg-white/95 dark:bg-[#18181C]/95 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-white/[0.12] shadow-2xl p-8 pointer-events-auto text-center flex flex-col items-center">
+              <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/40 flex items-center justify-center text-[#2D55F5] mb-4 shadow-sm">
+                <Sparkles className="w-7 h-7" />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+                Start building your workflow
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 max-w-md">
+                Choose how you would like to construct this data pipeline. You can use our AI assistant or assemble modular components manually.
+              </p>
+
+              {/* 2 Primary Options */}
+              <div className="grid grid-cols-2 gap-4 w-full mt-6 text-left">
+                {/* Option 1: Build with AI */}
+                <button
+                  onClick={() => setIsBuildWithAiOpen(true)}
+                  className="p-4 rounded-xl border-2 border-blue-200 hover:border-[#2D55F5] bg-blue-50/40 hover:bg-blue-50/70 transition-all flex flex-col justify-between group cursor-pointer text-left"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                        <Sparkles className="w-4 h-4" />
+                      </span>
+                      <kbd className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-white border border-blue-200 text-blue-800 shadow-2xs">
+                        A
+                      </kbd>
+                    </div>
+                    <h4 className="text-sm font-bold text-slate-900 group-hover:text-[#2D55F5]">
+                      Build with AI
+                    </h4>
+                    <p className="text-xs text-slate-600 mt-1 line-clamp-2">
+                      Describe what you need in plain English and let AI draft the architecture and rules.
+                    </p>
+                  </div>
+                  <span className="text-xs font-semibold text-[#2D55F5] mt-3 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                    Start drafting →
+                  </span>
+                </button>
+
+                {/* Option 2: Browse nodes */}
+                <button
+                  onClick={() => setIsAddNodeModalOpen(true)}
+                  className="p-4 rounded-xl border-2 border-slate-200 hover:border-slate-400 bg-white hover:bg-slate-50/80 transition-all flex flex-col justify-between group cursor-pointer text-left"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center shadow-xs">
+                        <Plus className="w-4 h-4" />
+                      </span>
+                      <kbd className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-100 border border-slate-200 text-slate-700 shadow-2xs">
+                        N
+                      </kbd>
+                    </div>
+                    <h4 className="text-sm font-bold text-slate-900 group-hover:text-[#2D55F5]">
+                      Browse nodes
+                    </h4>
+                    <p className="text-xs text-slate-600 mt-1 line-clamp-2">
+                      Pick sources, transformations, AI rules, and targets from the node library.
+                    </p>
+                  </div>
+                  <span className="text-xs font-semibold text-slate-700 mt-3 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                    Open library →
+                  </span>
+                </button>
+              </div>
+
+              {/* Tertiary template link */}
+              <button
+                onClick={() => setIsTemplatesDropdownOpen(true)}
+                className="mt-5 text-xs font-semibold text-slate-500 hover:text-blue-600 flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <span>Or choose from domain templates</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Enhancement N6: Bottom Undo Bar */}
+        {showUndoBar && (
+          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex items-center gap-3 px-4 py-2 rounded-xl bg-[#0A0F1F] text-white shadow-2xl text-xs animate-in slide-in-from-bottom duration-200">
+            <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+            <span>Added nodes via AI assistant.</span>
+            <button
+              onClick={handleUndoAiDraft}
+              className="text-xs font-semibold text-blue-400 hover:text-blue-300 underline cursor-pointer ml-1"
+            >
+              Undo
+            </button>
+            <button
+              onClick={() => setShowUndoBar(false)}
+              className="text-slate-400 hover:text-white p-0.5 cursor-pointer ml-1"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
         {/* World transform container */}
@@ -2118,8 +2438,31 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                     </g>
                   )}
 
+                  {/* Enhancement 6.4: Insert node button at edge midpoint */}
+                  <g
+                    transform={`translate(${midX}, ${midY})`}
+                    className="cursor-pointer group/insert"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveEdgeForInsert(edge);
+                      setIsEdgeInsertMenuOpen(true);
+                    }}
+                  >
+                    <circle
+                      cx="0"
+                      cy="0"
+                      r="11"
+                      fill="#FFFFFF"
+                      stroke="#2D55F5"
+                      strokeWidth="2"
+                      className="hover:scale-125 transition-transform"
+                    />
+                    <line x1="0" y1="-5" x2="0" y2="5" stroke="#2D55F5" strokeWidth="2" strokeLinecap="round" />
+                    <line x1="-5" y1="0" x2="5" y2="0" stroke="#2D55F5" strokeWidth="2" strokeLinecap="round" />
+                  </g>
+
                   {isSelected && (
-                    <g transform={`translate(${midX - 10}, ${midY - 10})`} onClick={() => handleDeleteEdge(edge.id)}>
+                    <g transform={`translate(${midX + 22}, ${midY - 10})`} onClick={() => handleDeleteEdge(edge.id)}>
                       <circle cx="10" cy="10" r="10" fill="#EF4444" />
                       <line x1="7" y1="7" x2="13" y2="13" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" />
                       <line x1="13" y1="7" x2="7" y2="13" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" />
@@ -2235,77 +2578,6 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
               />
             )}
           </svg>
-          {/* =========================================================================
-              EMPTY CANVAS STATE (02.18 Empty canvas · Start options.png)
-             ========================================================================= */}
-          {nodes.length === 0 && (
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-[#18181C] rounded-[24px] border border-[#E2E8F0] dark:border-white/[0.1] shadow-2xl p-8 max-w-xl w-full z-20 font-sans">
-              <h3 className="text-xl font-bold text-[#0A0F1F] dark:text-white mb-2">
-                Start building
-              </h3>
-              <p className="text-xs text-[#5F6678] dark:text-slate-400 mb-6 leading-relaxed">
-                Describe what this workflow should do and DataX drafts the nodes for you to review. Or place nodes yourself.
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                {/* Build with AI */}
-                <div
-                  onClick={() => setIsAiModalOpen(true)}
-                  className="p-5 rounded-2xl border-2 border-[#2D55F5] bg-[#F5F8FF] dark:bg-[#2D55F5]/10 cursor-pointer transition-all hover:shadow-md relative group"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-[#18181C] border border-[#DCE4FF] flex items-center justify-center text-[#2D55F5] shadow-2xs">
-                      <Sparkles className="w-4 h-4 text-[#2D55F5]" />
-                    </div>
-                    <span className="w-5 h-5 rounded-md bg-white dark:bg-[#18181C] border border-[#DCE4FF] text-[10px] font-bold text-[#5F6678] flex items-center justify-center">
-                      A
-                    </span>
-                  </div>
-                  <h4 className="text-sm font-bold text-[#0A0F1F] dark:text-white mb-1">
-                    Build with AI
-                  </h4>
-                  <p className="text-xs text-[#5F6678] dark:text-slate-400 leading-snug">
-                    Write the goal in plain English. You approve every node before it is added.
-                  </p>
-                </div>
-
-                {/* Browse nodes */}
-                <div
-                  onClick={() => setIsAddNodeModalOpen(true)}
-                  className="p-5 rounded-2xl border border-[#E2E8F0] dark:border-white/[0.1] bg-white dark:bg-[#18181C] hover:border-[#2D55F5] hover:bg-slate-50/50 cursor-pointer transition-all hover:shadow-md relative group"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-9 h-9 rounded-xl bg-[#F8FAFC] dark:bg-white/[0.05] border border-[#EEF2F6] flex items-center justify-center text-[#0A0F1F] dark:text-white shadow-2xs">
-                      <Layers className="w-4 h-4" />
-                    </div>
-                    <span className="w-5 h-5 rounded-md bg-[#F8FAFC] dark:bg-white/[0.05] border border-[#EEF2F6] text-[10px] font-bold text-[#5F6678] flex items-center justify-center">
-                      N
-                    </span>
-                  </div>
-                  <h4 className="text-sm font-bold text-[#0A0F1F] dark:text-white mb-1">
-                    Browse nodes
-                  </h4>
-                  <p className="text-xs text-[#5F6678] dark:text-slate-400 leading-snug">
-                    Source, AI rules, Router, Review, Split, Target and Quarantine.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-4 border-t border-[#F1F3F7] dark:border-white/[0.06] text-xs">
-                <div className="flex items-center gap-2 text-[#5F6678] dark:text-slate-400">
-                  <Layers className="w-4 h-4 text-[#5F6678]" />
-                  <span>Or start from a domain template</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsTemplatesDropdownOpen(true)}
-                  className="font-semibold text-[#2D55F5] hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  Browse templates →
-                </button>
-              </div>
-            </div>
-          )}
           {/* =========================================================================
               RENDER OPERATIONAL NODES WITH PORTS (Matching Figma 02.1 & 02.14)
              ========================================================================= */}
@@ -2454,11 +2726,19 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                       ? 'border-2 border-rose-500 ring-4 ring-rose-500/20 shadow-xl'
                       : traceRecordId
                         ? 'border-[#2D55F5] ring-2 ring-blue-500/20 shadow-lg'
-                        : isStageActive
-                          ? 'border-[#2D55F5] ring-4 ring-[#2D55F5]/30 shadow-xl scale-[1.02]'
-                          : isSelected
-                            ? 'border-[#2D55F5] ring-3 ring-[#2D55F5]/25 shadow-xl'
-                            : 'border-[#CDD2DE] dark:border-white/[0.12] hover:border-[#2D55F5]/60 hover:shadow-lg shadow-sm'
+                        : node.isBlocked || (preflightHasBlocking && (node.type === 'target' || (node.title || '').includes('PostgreSQL')))
+                          ? 'border-2 border-rose-600 bg-white shadow-lg'
+                          : node.needsSetup
+                            ? 'border-2 border-amber-600 bg-white shadow-md'
+                            : node.isSuggested
+                              ? 'border-2 border-dashed border-[#2D55F5] bg-white shadow-sm'
+                              : node.isRejected
+                                ? 'border-dashed border-slate-300 bg-white opacity-40 select-none'
+                                : isStageActive
+                                  ? 'border-[#2D55F5] ring-4 ring-[#2D55F5]/30 shadow-xl scale-[1.02]'
+                                  : isSelected
+                                    ? 'border-[#2D55F5] ring-3 ring-[#2D55F5]/25 shadow-xl'
+                                    : 'border-[#CDD2DE] dark:border-white/[0.12] hover:border-[#2D55F5]/60 hover:shadow-lg shadow-sm'
                 }`}
               >
                 {/* 1. INPUT PORT (Left Side) */}
@@ -2517,10 +2797,43 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border flex items-center gap-1 ${statusBadgeClass}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
-                      {statusText}
-                    </span>
+                    {node.isBlocked || (preflightHasBlocking && (node.type === 'target' || (node.title || '').includes('PostgreSQL'))) ? (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-rose-50 text-rose-700 border-rose-200/80 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                        Blocked by pre-flight
+                      </span>
+                    ) : node.needsSetup ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-amber-50 text-amber-800 border-amber-200/80 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                          Needs setup
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openNodeSettings(node);
+                          }}
+                          className="px-2 py-0.5 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-semibold flex items-center gap-0.5 shadow-xs transition-colors cursor-pointer"
+                        >
+                          Set write mode →
+                        </button>
+                      </div>
+                    ) : node.isSuggested ? (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-blue-50 text-blue-700 border-blue-200/80 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#2D55F5]" />
+                        Suggested by AI
+                      </span>
+                    ) : node.isRejected ? (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-slate-100 text-slate-500 border-slate-200 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                        Rejected
+                      </span>
+                    ) : (
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border flex items-center gap-1 ${statusBadgeClass}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
+                        {statusText}
+                      </span>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -2636,8 +2949,15 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
               <button
                 type="button"
                 onClick={() => {
-                  const rulesNode = nodes.find(n => n.type === 'rules');
-                  if (rulesNode) openNodeSettings(rulesNode);
+                  setActiveRuleForImpact({
+                    id: 'rule_gl_format',
+                    name: 'GL Account Format',
+                    field: 'gl_account',
+                    severity: 'High',
+                    action: 'Quarantine',
+                    expression: "length(gl_account) == 8 AND gl_account != null",
+                  });
+                  setIsRuleImpactModalOpen(true);
                 }}
                 className="px-3.5 py-1.5 rounded-full border border-[#CDD2DE] dark:border-white/[0.12] bg-white dark:bg-[#18181C] hover:bg-[#F8FAFC] text-xs font-semibold text-[#0A0F1F] dark:text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
               >
@@ -2813,16 +3133,74 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
             <Maximize2 className="w-3.5 h-3.5 text-[#2D55F5]" />
             <span>Fit</span>
           </button>
+          {/* Enhancement 6.2: Add Node Menu with 3 options popup */}
+          <div className="relative">
+            <button
+              onClick={() => setIsAddNodeMenuOpen(!isAddNodeMenuOpen)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#0F172A] dark:text-slate-300 hover:bg-[#F1F3F7] dark:hover:bg-white/[0.06] transition-all cursor-pointer"
+              title="Add node (N)"
+            >
+              <Plus className="w-3.5 h-3.5 text-[#2D55F5]" />
+              <span>Add node</span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            </button>
+
+            {isAddNodeMenuOpen && (
+              <div 
+                className="absolute bottom-full mb-2 left-0 w-60 bg-white dark:bg-[#18181C] rounded-xl shadow-2xl border border-slate-200 dark:border-white/[0.12] p-1.5 z-50 flex flex-col gap-1 animate-in fade-in zoom-in-95"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => {
+                    setIsAddNodeMenuOpen(false);
+                    setIsBuildWithAiOpen(true);
+                  }}
+                  className="w-full text-left p-2 rounded-lg text-xs font-semibold text-slate-900 dark:text-white hover:bg-blue-50 dark:hover:bg-blue-950/40 flex items-center gap-2.5 group cursor-pointer transition-colors"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-[#2D55F5] flex items-center justify-center shrink-0">
+                    <Sparkles className="w-4 h-4 text-[#7C3AED]" />
+                  </div>
+                  <div>
+                    <div>Build with AI</div>
+                    <div className="text-[10px] text-slate-400 font-normal">Describe pipeline in plain English</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => {
+                    setIsAddNodeMenuOpen(false);
+                    setIsAddNodeModalOpen(true);
+                  }}
+                  className="w-full text-left p-2 rounded-lg text-xs font-semibold text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-white/[0.06] flex items-center gap-2.5 group cursor-pointer transition-colors"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                    <Plus className="w-4 h-4 text-[#2D55F5]" />
+                  </div>
+                  <div>
+                    <div>Browse node library</div>
+                    <div className="text-[10px] text-slate-400 font-normal">Sources, rules, transforms & sinks</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => {
+                    setIsAddNodeMenuOpen(false);
+                    setIsTemplatesDropdownOpen(true);
+                  }}
+                  className="w-full text-left p-2 rounded-lg text-xs font-semibold text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-white/[0.06] flex items-center gap-2.5 group cursor-pointer transition-colors"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                    <Layers className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div>
+                    <div>Insert from template</div>
+                    <div className="text-[10px] text-slate-400 font-normal">Pre-configured industry pipelines</div>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
+
           <button
-            onClick={() => setIsAddNodeModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#0F172A] dark:text-slate-300 hover:bg-[#F1F3F7] dark:hover:bg-white/[0.06] transition-all cursor-pointer"
-            title="Add node (N)"
-          >
-            <Plus className="w-3.5 h-3.5 text-[#2D55F5]" />
-            <span>Add node</span>
-          </button>
-          <button
-            onClick={() => setIsAiModalOpen(true)}
+            onClick={() => setIsBuildWithAiOpen(true)}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-[#6D28D9] dark:text-[#C4B5FD] bg-[#F5F3FF] dark:bg-[#7C3AED]/20 hover:bg-[#EDE9FE] dark:hover:bg-[#7C3AED]/30 border border-[#DDD6FE] dark:border-[#7C3AED]/30 transition-all cursor-pointer shadow-xs"
             title="Ask AI (A)"
           >
@@ -3502,74 +3880,76 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           </div>
         )}
       {/* =========================================================================
-          MODAL 3: ASK AI WORKFLOW OPTIMIZER (Matching Figma 02.12 Ask AI)
+          ENHANCEMENT 6.2: BUILD WITH AI DRAWER (N2-N6)
          ========================================================================= */}
-      {isAiModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150">
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-[#18181C] rounded-2xl border border-[#CDD2DE] dark:border-white/[0.12] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col font-sans"
-          >
-            <div className="p-6 border-b border-[#F1F3F7] dark:border-white/[0.06] flex items-start justify-between bg-white dark:bg-[#18181C]">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/50 flex items-center justify-center text-[#7C3AED]">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-[#0F172A] dark:text-white">
-                    Ask AI · Describe your workflow
-                  </h3>
-                  <p className="text-xs text-[#5F6678] dark:text-slate-400 mt-0.5">
-                    DataX will generate, validate, and wire the pipeline stages automatically.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsAiModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-[#0F172A] dark:text-white mb-1.5">
-                  Workflow description
-                </label>
-                <textarea
-                  rows={4}
-                  defaultValue="Ingest SAP BW purchasing orders, apply Clean Core BAPI validation, auto-repair plant codes via ontology graph, and stage compliant rows to S/4HANA."
-                  className="w-full p-3 bg-white dark:bg-[#121215] border border-[#CDD2DE] dark:border-white/[0.12] rounded-xl text-xs text-[#0F172A] dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 resize-none font-sans"
-                />
-              </div>
-              <div className="p-3 rounded-xl bg-purple-50/70 dark:bg-purple-950/20 border border-purple-200/70 dark:border-purple-900/40 text-xs text-purple-900 dark:text-purple-300 flex items-start gap-2.5">
-                <Sparkles className="w-4 h-4 text-[#7C3AED] shrink-0 mt-0.5" />
-                <span>
-                  ✦ AI will generate rules, router thresholds, and consensus gates. You can review all diffs before dry run.
-                </span>
-              </div>
-            </div>
-            <div className="px-6 py-4 border-t border-[#F1F3F7] dark:border-white/[0.06] bg-slate-50/70 dark:bg-white/[0.02] flex items-center justify-between">
-              <button
-                onClick={() => setIsAiModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-[#5F6678] dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-white transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  handleAutofillTemplate('sap_bw_s4hana');
-                  setIsAiModalOpen(false);
-                }}
-                className="px-5 py-2 rounded-xl bg-[#2D55F5] hover:bg-[#1E40AF] text-white text-xs font-bold shadow-xs flex items-center gap-2 cursor-pointer transition-all"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Draft for review</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <BuildWithAiDrawer
+        isOpen={isBuildWithAiOpen || isAiModalOpen}
+        onClose={() => {
+          setIsBuildWithAiOpen(false);
+          setIsAiModalOpen(false);
+        }}
+        onAcceptDraft={handleAcceptAiDraft}
+        existingNodes={nodes}
+      />
+
+      {/* =========================================================================
+          ENHANCEMENT 6.3: PRE-FLIGHT CHECK POPOVER
+         ========================================================================= */}
+      <PreflightCheckPopover
+        isOpen={isPreflightOpen}
+        onClose={() => setIsPreflightOpen(false)}
+        workflowId={activeThread?.id || 'current'}
+        onFixIssue={(nodeId, check) => {
+          setIsPreflightOpen(false);
+          const targetNode = nodes.find(n => n.id === nodeId || n.type === 'target');
+          if (targetNode) {
+            openNodeSettings(targetNode);
+          }
+        }}
+        onRunSandbox={() => {
+          setIsPreflightOpen(false);
+          handleDryRun();
+        }}
+        onRunLive={() => {
+          setIsPreflightOpen(false);
+          setPreflightHasBlocking(false);
+          handleRunLive();
+        }}
+        isExecutingSandbox={isExecutingDryRun}
+        isExecutingLive={isExecutingLiveRun}
+      />
+
+      {/* =========================================================================
+          ENHANCEMENT 6.4: INSERT BETWEEN NODES POPOVER
+         ========================================================================= */}
+      <EdgeInsertMenuPopover
+        isOpen={isEdgeInsertMenuOpen}
+        onClose={() => {
+          setIsEdgeInsertMenuOpen(false);
+          setActiveEdgeForInsert(null);
+        }}
+        edge={activeEdgeForInsert}
+        fromNode={activeEdgeForInsert ? getNode(activeEdgeForInsert.from) : null}
+        toNode={activeEdgeForInsert ? getNode(activeEdgeForInsert.to) : null}
+        onSelectNodeType={handleInsertNodeOnEdge}
+        onOpenBuildWithAi={(promptText) => {
+          setIsBuildWithAiOpen(true);
+        }}
+      />
+
+      {/* =========================================================================
+          ENHANCEMENT 6.5 & 6.6: RULE IMPACT PREVIEW MODAL
+         ========================================================================= */}
+      <RuleImpactPreviewModal
+        isOpen={isRuleImpactModalOpen}
+        onClose={() => {
+          setIsRuleImpactModalOpen(false);
+          setActiveRuleForImpact(null);
+        }}
+        rule={activeRuleForImpact || { id: 'rule_gl_format', name: 'GL Account Format', field: 'gl_account', severity: 'High', expression: "length(gl_account) == 8 AND gl_account != null" }}
+        onSaveRule={handleSaveRuleFromImpact}
+        sampleSize={1420}
+      />
       {/* Pipeline Execution & Consensus Telemetry Drawer */}
       <CanvasTelemetryDrawer
         isOpen={isTelemetryDrawerOpen}

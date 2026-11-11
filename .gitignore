@@ -52,3 +52,5 @@ ENV/
 gcp-service-account.json
 *-key.json
 config.bat
+
+Designs/
