@@ -1,7 +1,7 @@
 /**
  * DataX Enterprise Dynamic Theme Service
- * Manages Dark Mode, Light Mode, and System Theme preferences with live reactivity,
- * system media query listeners, and cross-tab synchronization.
+ * Manages Dark Mode, Light Mode, and System Theme preferences with ultra-smooth
+ * CSS transitions, View Transition API integration, and cross-tab synchronization.
  */
 
 const THEME_STORAGE_KEY = 'datax_theme_mode';
@@ -14,19 +14,17 @@ export function getStoredTheme() {
     if (val === 'light' || val === 'dark' || val === 'system') {
       return val;
     }
-    // Default to dark mode for DataX cyber enterprise aesthetic
-    return 'dark';
+    return 'light'; // Default to pristine light mode matching new revamp
   } catch {
-    return 'dark';
+    return 'light';
   }
 }
 
 export function isDarkMode() {
-  if (typeof window === 'undefined') return true;
+  if (typeof window === 'undefined') return false;
   const pref = getStoredTheme();
   if (pref === 'dark') return true;
   if (pref === 'light') return false;
-  // System mode
   return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
@@ -37,21 +35,40 @@ export function applyTheme(mode = getStoredTheme()) {
   const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const shouldBeDark = mode === 'dark' || (mode === 'system' && systemPrefersDark);
 
-  if (shouldBeDark) {
-    root.classList.add('dark');
-    root.classList.remove('light');
-    root.setAttribute('data-theme', 'dark');
-    root.style.colorScheme = 'dark';
-  } else {
-    root.classList.remove('dark');
-    root.classList.add('light');
-    root.setAttribute('data-theme', 'light');
-    root.style.colorScheme = 'light';
-  }
+  const performDomUpdate = () => {
+    // Add smooth transition class to root
+    root.classList.add('theme-transitioning');
 
-  window.dispatchEvent(new CustomEvent(EVENT_NAME, {
-    detail: { mode, isDark: shouldBeDark }
-  }));
+    if (shouldBeDark) {
+      root.classList.add('dark');
+      root.classList.remove('light');
+      root.setAttribute('data-theme', 'dark');
+      root.style.colorScheme = 'dark';
+    } else {
+      root.classList.remove('dark');
+      root.classList.add('light');
+      root.setAttribute('data-theme', 'light');
+      root.style.colorScheme = 'light';
+    }
+
+    window.dispatchEvent(new CustomEvent(EVENT_NAME, {
+      detail: { mode, isDark: shouldBeDark }
+    }));
+
+    // Remove transition lock after animation completes smoothly
+    setTimeout(() => {
+      root.classList.remove('theme-transitioning');
+    }, 400);
+  };
+
+  // Modern browser View Transitions API for zero-flicker native blending
+  if (document.startViewTransition && typeof document.startViewTransition === 'function') {
+    document.startViewTransition(() => {
+      performDomUpdate();
+    });
+  } else {
+    performDomUpdate();
+  }
 }
 
 export function setThemePreference(mode) {
@@ -84,7 +101,6 @@ export function subscribeToThemeChanges(callback) {
   window.addEventListener(EVENT_NAME, handleCustom);
   window.addEventListener('storage', handleStorage);
 
-  // Listen to system OS theme changes
   let mediaQuery;
   const handleMedia = () => {
     if (getStoredTheme() === 'system') {
@@ -110,4 +126,3 @@ export function subscribeToThemeChanges(callback) {
 if (typeof window !== 'undefined') {
   applyTheme(getStoredTheme());
 }
-

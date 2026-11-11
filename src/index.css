@@ -310,6 +310,20 @@ html.dark .text-emerald-500 {
    GLOBAL SMOOTH TRANSITION & MICRO-INTERACTION PHYSICS
    ========================================================================= */
 
+/* Ultra-Smooth Theme Transition Across Entire DOM */
+html.theme-transitioning,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition: background-color 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              color 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              fill 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              stroke 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 350ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition-delay: 0s !important;
+}
+
 /* Smooth Interactive Elements */
 button,
 [role="button"],
