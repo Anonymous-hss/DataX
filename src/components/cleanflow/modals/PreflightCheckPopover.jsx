@@ -16,6 +16,7 @@ import {
   Layers,
   Sparkles
 } from 'lucide-react';
+import { API_BASE_URL } from '../../../services/apiClient';
 
 export default function PreflightCheckPopover({
   isOpen,
@@ -34,7 +35,7 @@ export default function PreflightCheckPopover({
   const fetchPreflightData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/workflow/preflight-check?workflow_id=${encodeURIComponent(workflowId)}`);
+      const res = await fetch(`${API_BASE_URL}/workflow/preflight-check?workflow_id=${encodeURIComponent(workflowId)}`);
       if (res.ok) {
         const json = await res.json();
         setData(json);

@@ -12,6 +12,7 @@ import {
   Check,
   RotateCcw
 } from 'lucide-react';
+import { API_BASE_URL } from '../../../services/apiClient';
 
 export default function RuleImpactPreviewModal({
   isOpen,
@@ -45,7 +46,7 @@ export default function RuleImpactPreviewModal({
   const runSimulation = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/rules/impact-preview', {
+      const res = await fetch(`${API_BASE_URL}/rules/impact-preview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -2688,6 +2688,12 @@ def api_ai_draft_workflow(req: AiDraftRequest):
     )
 
 
+@app.get("/workflow/preflight-check")
+@app.get("/api/workflow/preflight-check")
+def api_preflight_check_get(workflow_id: str = "current"):
+    return enhancements_service.run_preflight_check()
+
+
 @app.post("/workflow/preflight-check")
 @app.post("/api/workflow/preflight-check")
 def api_preflight_check(req: PreflightCheckRequest):
@@ -2699,6 +2705,15 @@ def api_preflight_check(req: PreflightCheckRequest):
         target_config=req.targetConfig,
         rules=req.rules,
         last_run_at=req.lastRunAt
+    )
+
+
+@app.get("/workflow/edge-suggestions")
+@app.get("/api/workflow/edge-suggestions")
+def api_edge_suggestions_get(from_node: str = "source", to_node: str = "target"):
+    return enhancements_service.get_edge_suggestions(
+        from_type=from_node,
+        to_type=to_node
     )
 
 

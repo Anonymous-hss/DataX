@@ -14,6 +14,7 @@ import {
   FileCheck2,
   Workflow
 } from 'lucide-react';
+import { API_BASE_URL } from '../../../services/apiClient';
 
 export default function EdgeInsertMenuPopover({
   isOpen,
@@ -32,7 +33,7 @@ export default function EdgeInsertMenuPopover({
   useEffect(() => {
     if (isOpen && edge) {
       setLoading(true);
-      fetch(`/api/workflow/edge-suggestions?from_node=${encodeURIComponent(edge.from || '')}&to_node=${encodeURIComponent(edge.to || '')}`)
+      fetch(`${API_BASE_URL}/workflow/edge-suggestions?from_node=${encodeURIComponent(edge.from || '')}&to_node=${encodeURIComponent(edge.to || '')}`)
         .then(res => res.json())
         .then(data => {
           setEdgeData(data);

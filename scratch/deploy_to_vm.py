@@ -21,6 +21,7 @@ if err:
 print("=== 3. Syncing backend service files & restarting datax-agent-harness ===")
 sync_cmd = """
 cp /home/azureuserSDH/Production/DataX/service.py /home/azureuserSDH/Production/datax-service/ 2>/dev/null || true
+cp /home/azureuserSDH/Production/DataX/enhancements_service.py /home/azureuserSDH/Production/datax-service/ 2>/dev/null || true
 cp /home/azureuserSDH/Production/DataX/db_config.py /home/azureuserSDH/Production/datax-service/ 2>/dev/null || true
 cp /home/azureuserSDH/Production/DataX/privacy_gateway_engine.py /home/azureuserSDH/Production/datax-service/ 2>/dev/null || true
 cp /home/azureuserSDH/Production/DataX/siem_engine.py /home/azureuserSDH/Production/datax-service/ 2>/dev/null || true
