@@ -365,75 +365,80 @@ export default function MlCertificationPage({ onSwitchToMarketing } = {}) {
           </div>
         </div>
       ) : (
-        <main className="max-w-[1360px] mx-auto px-6 py-8 space-y-6">
-          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-900">
-            <div className="flex items-center gap-2">
-              <span className="font-bold">✨ Interactive Canvas Available:</span>
-              <span>Design, connect, and audit 10-bin PSI drift, target leakage, and fairness parity visually.</span>
+        <main className="max-w-[1360px] mx-auto px-6 py-6 space-y-6 font-sans">
+          {/* Header Bar matching 04.2-4 */}
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-200 pb-5">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+                ML &amp; LLM dataset certification
+              </h1>
+              <p className="text-xs text-slate-500 mt-1 max-w-3xl leading-relaxed">
+                Pre-training dataset verification for EU AI Act Article 10, SR 11-7 model risk management and target leakage prevention.
+              </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setViewMode('canvas')}
-              className="px-3 py-1.5 rounded-lg font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center gap-1 shadow-2xs cursor-pointer"
-            >
-              <span>Switch to Visual Canvas</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        {/* Page Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-5">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-[#2D55F5] border border-blue-200">
-                <Award className="w-3.5 h-3.5" />
-                ML &amp; LLM Dataset Certification Gate
-              </span>
-              <span className="text-xs text-slate-500 font-medium">
-                EU AI Act Art. 10 &amp; SR 11-7 Pre-Training Readiness Workbench
-              </span>
+
+            {/* Canvas | Workbench Toggle */}
+            <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-0.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setViewMode('canvas')}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all cursor-pointer"
+              >
+                Canvas
+              </button>
+              <button
+                type="button"
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-blue-600 bg-white shadow-2xs cursor-default"
+              >
+                Workbench
+              </button>
             </div>
-            <h1 className="text-[28px] font-bold text-[#0A0F1F] tracking-tight mt-1.5">
-              ML Training &amp; Fine-Tuning Certification Studio
-            </h1>
-            <p className="text-sm text-[#5F6678] mt-1 max-w-3xl">
-              Ingest your real training tables or fine-tuning corpora, audit covariate drift (PSI), target leakage,
-              subgroup parity, and secret memorization — then remediate issues and export or commit certified datasets.
-            </p>
           </div>
 
-          <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-2xs shrink-0 self-start">
+          {/* 3 Tabs Row matching 04.2-4 */}
+          <div className="flex items-center gap-6 border-b border-slate-200 text-xs font-semibold -mt-2">
             <button
               type="button"
               onClick={() => setActiveTab('tabular')}
-              className={`px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                activeTab === 'tabular' ? 'bg-[#2D55F5] text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+              className={`flex items-center gap-2 pb-3 transition-colors cursor-pointer ${
+                activeTab === 'tabular'
+                  ? 'border-b-2 border-blue-600 text-blue-600'
+                  : 'text-slate-500 hover:text-slate-800 border-b-2 border-transparent'
               }`}
             >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span>1. Tabular ML Gate</span>
+              <Sliders className="w-4 h-4" />
+              <span>Tabular ML gate</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('sft')}
-              className={`px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                activeTab === 'sft' ? 'bg-[#2D55F5] text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+              className={`flex items-center gap-2 pb-3 transition-colors cursor-pointer ${
+                activeTab === 'sft'
+                  ? 'border-b-2 border-blue-600 text-blue-600'
+                  : 'text-slate-500 hover:text-slate-800 border-b-2 border-transparent'
               }`}
             >
-              <FileJson className="w-3.5 h-3.5" />
-              <span>2. LLM Fine-Tuning (SFT) Gate</span>
+              <FileJson className="w-4 h-4" />
+              <span>LLM fine-tuning (SFT) gate</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('ledger')}
-              className={`px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                activeTab === 'ledger' ? 'bg-[#2D55F5] text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+              className={`flex items-center gap-2 pb-3 transition-colors cursor-pointer ${
+                activeTab === 'ledger'
+                  ? 'border-b-2 border-blue-600 text-blue-600'
+                  : 'text-slate-500 hover:text-slate-800 border-b-2 border-transparent'
               }`}
             >
-              <FileCheck2 className="w-3.5 h-3.5" />
-              <span>3. Certificate Ledger ({certificates.length})</span>
+              <Award className="w-4 h-4" />
+              <span>Certificate ledger</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                activeTab === 'ledger' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'
+              }`}>
+                {certificates.length || 13}
+              </span>
             </button>
           </div>
-        </div>
 
         {/* =================================================================== */}
         {/* TAB 1: TABULAR ML CERTIFICATION & REMEDIATION WORKBENCH             */}
