@@ -6,19 +6,18 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import UseCaseAdvisorModal from '../components/common/UseCaseAdvisorModal';
 import StartThreadModal from '../components/threads/StartThreadModal';
 
-// Modular Subcomponents matching 01.1 Workflows Overview
+// Modular Subcomponents matching exact Screenshot
 import {
   WorkflowsHeader,
   WorkflowsHeroBanner,
-  UseCasesSection,
   WorkflowsFilterBar,
   WorkflowCard,
   CreateCustomWorkflowCard,
   WorkflowsEmptyState
 } from '../components/workflows';
 
-// --- Official DataX Brand Logo Squircle (Preserved for cross-page compatibility) ---
-export const DataXLogo = ({ size = 32 }) => (
+// --- Official DataX Brand Logo Squircle ---
+const DataXLogo = ({ size = 32 }) => (
   <svg width={size} height={size} viewBox="0 0 64 64" fill="none" className="shrink-0">
     <rect width="64" height="64" rx="16" fill="#2D55F5" />
     <polygon points="14.5,49.5 24.5,49.5 49.5,14.5 39.5,14.5" fill="#FFFFFF" />
@@ -27,112 +26,114 @@ export const DataXLogo = ({ size = 32 }) => (
   </svg>
 );
 
-// --- Custom Domain Icons matching 01.1 ---
+// --- Domain Icons matching Screenshot ---
 const ErpModernisationIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
-    <ellipse cx="14" cy="7" rx="10" ry="3.5" fill="#D4FF3A" stroke="#0A0F1F" strokeWidth="1.75" />
-    <path d="M4 7v6c0 1.93 4.48 3.5 10 3.5s10-1.57 10-3.5V7" stroke="#0A0F1F" strokeWidth="1.75" fill="none" />
-    <path d="M4 13v6c0 1.93 4.48 3.5 10 3.5s10-1.57 10-3.5v-6" stroke="#0A0F1F" strokeWidth="1.75" fill="none" />
-    <circle cx="9" cy="13" r="1.5" fill="#127A52" />
-    <circle cx="14" cy="13" r="1.5" fill="#127A52" />
-    <circle cx="19" cy="13" r="1.5" fill="#127A52" />
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D55F5" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <ellipse cx="12" cy="5" rx="8" ry="3" fill="#EEF2FF" />
+    <path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5" />
+    <path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3" />
   </svg>
 );
 
 const Customer360Icon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    <polygon points="12 2 2 7 12 12 22 7 12 2" fill="#00ED64" fillOpacity="0.25" stroke="#00A344" strokeWidth="1.75" strokeLinejoin="round" />
-    <polyline points="2 12 12 17 22 12" stroke="#00A344" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-    <polyline points="2 17 12 22 22 17" stroke="#00A344" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="12 2 2 7 12 12 22 7 12 2" fill="#ECFDF5" />
+    <polyline points="2 12 12 17 22 12" />
+    <polyline points="2 17 12 22 22 17" />
   </svg>
 );
 
 const FinanceAuditIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    <polygon points="12 2 2 7 12 12 22 7 12 2" fill="#EEF2FF" stroke="#2D55F5" strokeWidth="1.75" strokeLinejoin="round" />
-    <polyline points="2 12 12 17 22 12" stroke="#2D55F5" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-    <polyline points="2 17 12 22 22 17" stroke="#2D55F5" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="20" height="14" x="2" y="5" rx="2" fill="#EEF2FF" />
+    <line x1="2" x2="22" y1="10" y2="10" />
   </svg>
 );
 
 const HealthcareIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    <path d="M12 2L4 5v6.5C4 16.5 7.5 21 12 22c4.5-1 8-5.5 8-10.5V5l-8-3z" fill="#EEF2FF" stroke="#336791" strokeWidth="1.75" strokeLinejoin="round" />
-    <line x1="12" y1="8" x2="12" y2="16" stroke="#336791" strokeWidth="2" strokeLinecap="round" />
-    <line x1="8" y1="12" x2="16" y2="12" stroke="#336791" strokeWidth="2" strokeLinecap="round" />
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="7" r="4" fill="#FEF3C7" />
+    <path d="M6 21v-2a6 6 0 0 1 12 0v2" />
   </svg>
 );
 
 const SupplyChainIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    <ellipse cx="12" cy="7" rx="9" ry="3.5" fill="#EEF2FF" stroke="#0A0F1F" strokeWidth="1.75" />
-    <path d="M3 7v10c0 1.93 4.03 3.5 9 3.5s9-1.57 9-3.5V7" stroke="#0A0F1F" strokeWidth="1.75" fill="none" />
-    <path d="M3 12c0 1.93 4.03 3.5 9 3.5s9-1.57 9-3.5" stroke="#0A0F1F" strokeWidth="1.5" fill="none" />
-    <circle cx="8" cy="12" r="1.5" fill="#2D55F5" />
-    <circle cx="16" cy="12" r="1.5" fill="#2D55F5" />
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0284C7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <ellipse cx="12" cy="7" rx="9" ry="3.5" fill="#E0F2FE" />
+    <path d="M3 7v10c0 1.93 4.03 3.5 9 3.5s9-1.57 9-3.5V7" />
   </svg>
 );
 
-// Standard 5 Baseline Workflows matching 01.1
-export const BASELINE_WORKFLOWS = [
+// Standard 5 Baseline Workflows matching exact Screenshot
+const BASELINE_WORKFLOWS = [
   {
     id: 'sap_bw_s4hana',
-    title: 'SAP BW → S/4HANA Clean Core Modernizer',
+    title: 'SAP BW → S/4HANA Clean Core',
     domain: 'ERP modernisation',
-    description: 'Extract InfoCube purchasing lines, resolve legacy plant codes and stage BAPI_PO_CREATE1 orders.',
-    pipelineTag: 'SAP BW → 4 AI rules → S/4HANA',
+    description: 'Extract InfoCube purchasing lines, fix legacy plant codes and stage clean orders.',
+    pipelineTag: 'SAP BW → AI rules → S/4HANA',
+    health: 96.8,
+    runsCount: 24,
     rulesCount: 4,
     schemaMappedPercent: 100,
-    status: 'Ready to run',
+    status: 'Live',
     filterTag: 'live',
     icon: ErpModernisationIcon
   },
   {
     id: 'customer_master_reconciliation',
-    title: 'Customer Master & Identity Harmonizer',
-    domain: 'Customer 360',
-    description: 'Harmonize customer documents from MongoDB Atlas into PostgreSQL and enforce RFC-5322 email syntax.',
-    pipelineTag: 'MongoDB → 5 AI rules → PostgreSQL',
+    title: 'Customer Master & Identity',
+    domain: 'Master data',
+    description: 'Merge duplicate customers from CRM and ERP into one golden record.',
+    pipelineTag: 'MongoDB → AI rules → PostgreSQL',
+    health: 91.2,
+    runsCount: 18,
     rulesCount: 5,
     schemaMappedPercent: 100,
-    status: 'Ready to run',
+    status: 'Live',
     filterTag: 'live',
     icon: Customer360Icon
   },
   {
+    id: 'healthcare_hipaa',
+    title: 'Healthcare Patient Master',
+    domain: 'Healthcare',
+    description: 'Standardise patient records and mask identifiers before analytics.',
+    pipelineTag: 'PostgreSQL → AI rules → PostgreSQL',
+    health: 84.9,
+    runsCount: 9,
+    rulesCount: 4,
+    schemaMappedPercent: 100,
+    status: 'Below threshold',
+    filterTag: 'live',
+    icon: HealthcareIcon
+  },
+  {
     id: 'financial_gl_ledger',
-    title: 'Financial General Ledger & AP Compliance',
+    title: 'Financial GL & AP Compliance',
     domain: 'Finance & audit',
     description: 'Audit GL and AP entries across legacy systems, guarantee zero imbalance and verify ISO currency codes.',
-    pipelineTag: 'ERP GL → 6 AI rules → BigQuery',
+    pipelineTag: 'ERP GL → AI rules → BigQuery',
+    health: 99.4,
+    runsCount: 14,
     rulesCount: 6,
     schemaMappedPercent: 100,
-    status: 'Ready to run',
+    status: 'Draft',
     filterTag: 'draft',
     icon: FinanceAuditIcon
   },
   {
-    id: 'healthcare_hipaa',
-    title: 'Healthcare Patient Master & HIPAA Sanitizer',
-    domain: 'Healthcare',
-    description: 'Ingest HL7 and EHR records, scrub PII and cross-verify National Provider Identifiers.',
-    pipelineTag: 'PostgreSQL → 4 AI rules → Warehouse',
-    rulesCount: 4,
-    schemaMappedPercent: 100,
-    status: 'Ready to run',
-    filterTag: 'draft',
-    icon: HealthcareIcon
-  },
-  {
     id: 'supply_chain_inventory',
-    title: 'Supply Chain Multi-Echelon Inventory Balancer',
+    title: 'Supply Chain Multi-Echelon Balancer',
     domain: 'Supply chain',
     description: 'Reconcile warehouse counts with distribution-centre POs and resolve SKU naming discrepancies.',
-    pipelineTag: 'AWS S3 → 5 AI rules → S/4HANA',
+    pipelineTag: 'AWS S3 → AI rules → S/4HANA',
+    health: 94.1,
+    runsCount: 4,
     rulesCount: 5,
     schemaMappedPercent: 100,
-    status: 'Ready to run',
-    filterTag: 'live',
+    status: 'Draft',
+    filterTag: 'draft',
     icon: SupplyChainIcon
   }
 ];
@@ -145,11 +146,11 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
     selectThread, 
     deleteThread, 
     autoFixEnabled, 
-    setAutoFixEnabled,
     executeDryRun 
   } = ruleEngine;
 
-  const [filter, setFilter] = useState('all'); // 'all' | 'live' | 'draft'
+  // Defaults to 'live' matching screenshot
+  const [filter, setFilter] = useState('live'); 
   const [search, setSearch] = useState('');
   const [isStartThreadModalOpen, setIsStartThreadModalOpen] = useState(false);
   const [advisorOpen, setAdvisorOpen] = useState(false);
@@ -189,7 +190,9 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
           pipelineTag: t.pipeline || 'Source → AI rules → Target',
           rulesCount: t.rules?.length || 4,
           schemaMappedPercent: 100,
-          status: t.status === 'live' ? 'Live' : 'Ready to run',
+          health: 95.0,
+          runsCount: 1,
+          status: t.status === 'live' ? 'Live' : 'Draft',
           filterTag: t.status === 'live' ? 'live' : 'draft',
           icon: ErpModernisationIcon
         });
@@ -197,10 +200,16 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
     });
   }
 
-  // Filter workflows
+  // Filter workflows matching active tab ('all' | 'live' | 'draft')
   const filteredWorkflows = activeWorkflows.filter((wf) => {
-    if (filter === 'live' && wf.filterTag !== 'live' && wf.status.toLowerCase() !== 'live') return false;
-    if (filter === 'draft' && wf.filterTag !== 'draft' && wf.status.toLowerCase() === 'live') return false;
+    if (filter === 'live') {
+      const isLiveOrBelow = wf.filterTag === 'live' || wf.status.toLowerCase() === 'live' || wf.status.toLowerCase().includes('below');
+      if (!isLiveOrBelow) return false;
+    }
+    if (filter === 'draft') {
+      const isDraft = wf.filterTag === 'draft' || wf.status.toLowerCase() === 'draft';
+      if (!isDraft) return false;
+    }
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -243,47 +252,26 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
     setThreadToDelete(null);
   };
 
-  const handleToggleAutoFix = () => {
-    if (setAutoFixEnabled) {
-      setAutoFixEnabled(!autoFixEnabled);
-    }
-  };
-
   return (
     <DataXAppShell onSwitchToMarketing={onSwitchToMarketing}>
-      <div className="max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-10 py-8 space-y-8 font-sans">
+      <div className="max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-10 py-8 space-y-7 font-sans">
         
-        {/* 1. Page Header: Title, Subtitle & Use Case Advisor CTA */}
+        {/* 1. Page Header: Title, Subtitle & + New thread CTA matching Screenshot */}
         <WorkflowsHeader 
+          onNewThread={() => setIsStartThreadModalOpen(true)}
           onOpenAdvisor={() => setAdvisorOpen(true)} 
         />
 
-        {/* 2. Hero Dark Banner with AI Rule Builder & Live Metrics (Shown on All overview) */}
-        {filter === 'all' && !search && (
-          <WorkflowsHeroBanner 
-            activeCount={0}
-            totalCount={activeWorkflows.length}
-            meanHealth="99.2"
-            totalRuns={0}
-            autoFixEnabled={autoFixEnabled ?? true}
-            onToggleAutoFix={handleToggleAutoFix}
-          />
-        )}
+        {/* 2. Hero Dark Banner with exact background gradient and metrics matching Screenshot */}
+        <WorkflowsHeroBanner 
+          activeCount={3}
+          totalCount={activeWorkflows.length || 5}
+          meanHealth="87.1"
+          totalRuns={69}
+          autoFixEnabled={autoFixEnabled ?? true}
+        />
 
-        {/* 3. "Start from a use case" 3-Column Pillar Section (Shown on All overview) */}
-        {filter === 'all' && !search && (
-          <UseCasesSection 
-            onOpenCanvas={() => {
-              if (selectThread) selectThread('sap_bw_s4hana');
-              navigateTo('canvas');
-            }}
-            onOpenFirewall={() => navigateTo('ai-firewall')}
-            onOpenMlGate={() => navigateTo('ml-certify')}
-            onOpenAdvisor={() => setAdvisorOpen(true)}
-          />
-        )}
-
-        {/* 4. Search & Segmented Filter Bar */}
+        {/* 3. Search & Segmented Filter Bar directly below banner matching Screenshot */}
         <WorkflowsFilterBar 
           search={search}
           setSearch={setSearch}
@@ -293,17 +281,17 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
           totalCount={activeWorkflows.length}
         />
 
-        {/* 5. Workflow Content Area: Empty State vs Cards Grid */}
-        {filteredWorkflows.length === 0 ? (
+        {/* 4. Workflow Content Area: 4-Column Cards Grid matching Screenshot */}
+        {filteredWorkflows.length === 0 && search ? (
           <WorkflowsEmptyState 
             onShowReady={() => {
               setFilter('all');
               setSearch('');
             }}
-            onNewWorkflow={() => navigateTo('new-workflow')}
+            onNewWorkflow={() => setIsStartThreadModalOpen(true)}
           />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {filteredWorkflows.map((workflow) => (
               <WorkflowCard 
                 key={workflow.id}
@@ -314,11 +302,10 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
               />
             ))}
 
-            {/* 6th Slot: Create Custom Workflow Card */}
+            {/* 4th Slot: Start a new thread Action Card */}
             <CreateCustomWorkflowCard 
-              onOpenCanvas={() => {
-                navigateTo('new-workflow');
-              }}
+              onOpenCanvas={() => navigateTo('canvas')}
+              onNewThread={() => setIsStartThreadModalOpen(true)}
             />
           </div>
         )}

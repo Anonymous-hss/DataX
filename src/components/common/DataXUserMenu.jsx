@@ -2,15 +2,15 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../context/NavigationContext';
-import { 
-  getStoredTheme, 
-  setThemePreference, 
-  subscribeToThemeChanges 
+import {
+  getStoredTheme,
+  setThemePreference,
+  subscribeToThemeChanges
 } from '../../services/themeService';
-import { 
-  isSoundEnabled, 
-  setSoundEnabled, 
-  playNotificationSound 
+import {
+  isSoundEnabled,
+  setSoundEnabled,
+  playNotificationSound
 } from '../../services/soundEngine';
 
 // Modular Profile Subcomponents (00.6)
@@ -103,7 +103,7 @@ export default function DataXUserMenu({ compact = false }) {
     setAutoSave(next);
     try {
       localStorage.setItem('datax_autosave_pref', String(next));
-    } catch {}
+    } catch { }
     if (soundOn) playNotificationSound('pop');
   };
 
@@ -118,7 +118,7 @@ export default function DataXUserMenu({ compact = false }) {
   const handleNavigateSettings = (tabId = 'general') => {
     try {
       localStorage.setItem('datax_settings_active_tab', tabId);
-    } catch {}
+    } catch { }
     setDropdownOpen(false);
     if (navigateTo) {
       navigateTo('settings');
@@ -136,43 +136,32 @@ export default function DataXUserMenu({ compact = false }) {
     }
   };
 
+  const avatarUrl = user?.imageUrl;
+
   return (
     <div className="relative shrink-0 font-sans" ref={menuRef}>
-      {isSignedIn ? (
-        <div className="flex min-w-0 items-center gap-2">
-          {/* Avatar button trigger */}
-          <button
-            type="button"
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            aria-expanded={dropdownOpen}
-            className="flex items-center gap-2 p-0.5 rounded-full hover:ring-2 hover:ring-[#2D55F5]/30 transition-all cursor-pointer"
-            title="Profile & workspace preferences"
-          >
-            <div className="w-8 h-8 rounded-full overflow-hidden bg-[#0A0F1F] text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-sm border border-[#CDD2DE]/40">
-              {user?.imageUrl ? (
-                <img src={user.imageUrl} alt={fullName} className="w-full h-full object-cover" />
-              ) : (
-                <span>{initials}</span>
-              )}
-            </div>
-          </button>
-        </div>
-      ) : (
+      <div className="flex min-w-0 items-center gap-2">
+        {/* Avatar button trigger matching Screenshot */}
         <button
           type="button"
-          onClick={() => {
-            if (navigateTo) navigateTo('login');
-            else window.location.hash = '#login';
-          }}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#2D55F5] hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+          onClick={() => setDropdownOpen(!dropdownOpen)}
+          aria-expanded={dropdownOpen}
+          className="flex items-center gap-2 p-0.5 rounded-full hover:ring-2 hover:ring-[#2D55F5]/30 transition-all cursor-pointer"
+          title={fullName}
         >
-          <span>Sign In / Register</span>
+          <div className="w-8 h-8 rounded-full overflow-hidden bg-[#0A0F1F] text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-sm border border-[#CDD2DE]/40">
+            {user?.imageUrl ? (
+              <img src={user.imageUrl} alt={fullName} className="w-full h-full object-cover" />
+            ) : (
+              <span>{initials}</span>
+            )}
+          </div>
         </button>
-      )}
+      </div>
 
       {/* Official 00.6 Profile & Workspace Menu Dropdown Popover */}
       <AnimatePresence>
-        {isSignedIn && dropdownOpen && (
+        {dropdownOpen && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: -6 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -181,7 +170,7 @@ export default function DataXUserMenu({ compact = false }) {
             className="absolute right-0 top-full mt-2 w-[300px] sm:w-[320px] max-h-[calc(100vh-75px)] sm:max-h-[min(540px,84vh)] overflow-y-auto no-scrollbar bg-white dark:bg-[#18181C] rounded-2xl border border-[#E3E6EE] dark:border-white/[0.08] shadow-2xl shadow-slate-900/15 z-50 divide-y divide-[#E3E6EE]/80 dark:divide-white/[0.06] text-left font-sans"
           >
             {/* 1. Header / User Identity */}
-            <ProfileHeader 
+            <ProfileHeader
               fullName={fullName}
               email={email}
               tenantId={tenantId}
@@ -190,7 +179,7 @@ export default function DataXUserMenu({ compact = false }) {
             />
 
             {/* 2. Governance Persona */}
-            <GovernancePersonaSelector 
+            <GovernancePersonaSelector
               currentRoleObj={currentRoleObj}
               roleDropdownOpen={roleDropdownOpen}
               setRoleDropdownOpen={setRoleDropdownOpen}
@@ -198,13 +187,13 @@ export default function DataXUserMenu({ compact = false }) {
             />
 
             {/* 3. Appearance (Smooth Theme Switcher) */}
-            <AppearanceThemeSelector 
+            <AppearanceThemeSelector
               themeMode={themeMode}
               onThemeChange={handleThemeChange}
             />
 
             {/* 4. Workspace Preferences */}
-            <WorkspacePreferences 
+            <WorkspacePreferences
               soundOn={soundOn}
               onToggleSound={handleToggleSound}
               autoSave={autoSave}
@@ -212,7 +201,7 @@ export default function DataXUserMenu({ compact = false }) {
             />
 
             {/* 5. Platform Settings */}
-            <PlatformSettings 
+            <PlatformSettings
               onNavigateSettings={handleNavigateSettings}
               onNavigatePage={handleNavigatePage}
             />
@@ -221,7 +210,7 @@ export default function DataXUserMenu({ compact = false }) {
             <EnvironmentInfo />
 
             {/* 7. Sign Out */}
-            <SignOutButton 
+            <SignOutButton
               onSignOut={() => logout({ redirectUrl: '#login' })}
             />
           </motion.div>

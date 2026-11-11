@@ -232,32 +232,78 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
 
       {/* 2. Full-Width Main Content Viewport */}
       <div className="min-h-screen flex flex-col relative z-10 w-full">
-        {/* Top Studio Utility Header Bar */}
-        <header className="sticky top-0 z-30 w-full h-16 bg-white/90 dark:bg-[#18181C]/90 backdrop-blur-xl border-b border-[#E3E6EE] dark:border-white/[0.08] px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 transition-colors shrink-0">
-          {/* Left: Brand Logo & Section Breadcrumb */}
-          <div className="flex items-center gap-3 min-w-0">
+        {/* Top Navigation Header matching Screenshot */}
+        <header className="sticky top-0 z-30 w-full h-16 bg-white dark:bg-[#18181C] border-b border-[#E3E6EE] dark:border-white/[0.08] px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 transition-colors shrink-0">
+          {/* Left: Brand Logo & Segmented 4-Tab Navigation */}
+          <div className="flex items-center gap-4 min-w-0">
             <button
               type="button"
               onClick={() => navigateTo('workflows')}
               className="flex items-center gap-2 cursor-pointer pr-1 shrink-0"
-              title="DataX Home"
+              title="DataX"
             >
               <Logo size={28} />
               <span className="font-bold text-[#0A0F1F] dark:text-white text-base tracking-tight">DataX</span>
             </button>
 
-            {/* Current Section Breadcrumb */}
-            <div className="flex items-center gap-2 text-xs min-w-0">
-              <span className="text-[#8E95A9] font-medium">Studio</span>
-              <ChevronRight className="w-3.5 h-3.5 text-[#CDD2DE] shrink-0" />
-              <span className="font-bold text-[#0A0F1F] dark:text-white truncate text-sm">
-                {getBreadcrumbLabel()}
-              </span>
+            {/* Segmented Pill Navigation: Threads, Domain packs, Connections, Runs */}
+            <div className="hidden md:inline-flex items-center bg-[#F2F4F7] dark:bg-white/[0.06] p-1 rounded-full text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => navigateTo('workflows')}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all cursor-pointer ${
+                  (currentScreen === 'workflows' || currentScreen === 'threads' || currentScreen === 'home' || currentScreen === '')
+                    ? 'bg-white dark:bg-[#2A2B32] text-[#2D55F5] font-semibold shadow-xs'
+                    : 'text-[#5F6678] dark:text-slate-400 hover:text-[#0A0F1F] dark:hover:text-white'
+                }`}
+              >
+                <GitBranch className="w-3.5 h-3.5" />
+                <span>Threads</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigateTo('templates')}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all cursor-pointer ${
+                  (currentScreen === 'templates' || currentScreen === 'domain-packs')
+                    ? 'bg-white dark:bg-[#2A2B32] text-[#2D55F5] font-semibold shadow-xs'
+                    : 'text-[#5F6678] dark:text-slate-400 hover:text-[#0A0F1F] dark:hover:text-white'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Domain packs</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigateTo('connections')}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all cursor-pointer ${
+                  currentScreen === 'connections'
+                    ? 'bg-white dark:bg-[#2A2B32] text-[#2D55F5] font-semibold shadow-xs'
+                    : 'text-[#5F6678] dark:text-slate-400 hover:text-[#0A0F1F] dark:hover:text-white'
+                }`}
+              >
+                <Network className="w-3.5 h-3.5" />
+                <span>Connections</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigateTo('history')}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all cursor-pointer ${
+                  (currentScreen === 'history' || currentScreen === 'runs')
+                    ? 'bg-white dark:bg-[#2A2B32] text-[#2D55F5] font-semibold shadow-xs'
+                    : 'text-[#5F6678] dark:text-slate-400 hover:text-[#0A0F1F] dark:hover:text-white'
+                }`}
+              >
+                <Activity className="w-3.5 h-3.5" />
+                <span>Runs</span>
+              </button>
             </div>
 
-            {/* Active Pipeline Quick Selector */}
+            {/* Active Pipeline Quick Selector Dropdown */}
             {shouldShowPipelinePicker && (
-              <div className="hidden md:flex items-center pl-2 ml-1 min-w-0" ref={threadPickerRef}>
+              <div className="hidden lg:flex items-center pl-2 min-w-0" ref={threadPickerRef}>
                 <div className="relative">
                   <button
                     type="button"
@@ -299,18 +345,18 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
             )}
           </div>
 
-          {/* Center: In-Bar Search with Debounce & Recent Searches (Figma 01.1 exact layout) */}
-          <div className="hidden md:flex flex-1 max-w-sm mx-4">
-            <HeaderSearchBar />
-          </div>
+          {/* Right: Search Bar, Navigate Dropdown, Help, Notification Bell, User Avatar */}
+          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+            {/* Search Input Bar */}
+            <div className="w-56 sm:w-64 lg:w-72">
+              <HeaderSearchBar placeholder="Search threads, tables..." />
+            </div>
 
-          {/* Right: Navigate, Help, Notifications (Single instance), New Workflow, Profile */}
-          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-            {/* Enhancement 6.1 & 6.7: Navigate & filter trigger button with 4 distinct states */}
+            {/* Navigation & Filter Dropdown Trigger Button */}
             <button
               type="button"
               onClick={() => setNavigateModalOpen(prev => !prev)}
-              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-2xs ${
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-2xs ${
                 navigateModalOpen
                   ? 'bg-[#EFF4FF] border border-[#2D55F5] text-[#2D55F5]'
                   : 'bg-white dark:bg-[#18181C] border border-[#E3E6EE] dark:border-white/[0.08] text-[#0A0F1F] dark:text-white hover:bg-[#F8FAFC] hover:border-[#CDD2DE]'
@@ -325,6 +371,7 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
               <ChevronDown className={`w-3 h-3 transition-transform ${navigateModalOpen ? 'rotate-180 text-[#2D55F5]' : 'text-[#8E95A9]'}`} />
             </button>
 
+            {/* Help Button */}
             <button
               type="button"
               onClick={() => navigateTo('help')}
@@ -335,23 +382,11 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
               <HelpCircle className="w-4 h-4 text-[#8E95A9]" />
             </button>
 
-            {/* Exactly One Notification Center Instance */}
+            {/* Notification Center */}
             <NotificationCenter />
 
-            <button
-              type="button"
-              onClick={() => {
-                navigateTo('new-workflow');
-              }}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#2D55F5] hover:bg-[#2045DC] text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>New workflow</span>
-            </button>
-
-            <div className="pl-1 border-l border-[#E3E6EE] dark:border-white/[0.08]">
-              <DataXUserMenu onSwitchToMarketing={onSwitchToMarketing} />
-            </div>
+            {/* User Profile Avatar */}
+            <DataXUserMenu onSwitchToMarketing={onSwitchToMarketing} />
           </div>
         </header>
 

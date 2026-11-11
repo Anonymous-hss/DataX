@@ -1,54 +1,63 @@
 import React from 'react';
-import { LayoutGrid } from 'lucide-react';
 
 /**
- * Custom Workflow Vector Icon matching 01.1
+ * 4th Card in Threads Grid: "Start a new thread" matching Screenshot
  */
-const CustomWorkflowIcon = () => (
-  <div className="w-12 h-12 rounded-2xl bg-[#0B1536] text-white flex items-center justify-center relative shadow-sm">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-      <polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-      <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
-      <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
-    </svg>
-    <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#2D55F5] border-2 border-white dark:border-[#18181C] flex items-center justify-center text-white text-[11px] font-bold">
-      +
-    </div>
-  </div>
-);
-
-/**
- * CreateCustomWorkflowCard - 6th Card in Grid matching 01.1
- */
-export default function CreateCustomWorkflowCard({ onOpenCanvas }) {
+export default function CreateCustomWorkflowCard({ onNewThread }) {
   return (
     <div 
-      onClick={onOpenCanvas}
-      className="border-2 border-dashed border-[#CDD2DE] dark:border-white/[0.12] rounded-[22px] p-6 sm:p-7 flex flex-col items-center justify-center text-center bg-[#FBFBFC] dark:bg-white/[0.015] hover:border-[#2D55F5]/50 hover:bg-[#F8FAFF] dark:hover:bg-white/[0.03] transition-all cursor-pointer group min-h-[300px]"
+      onClick={onNewThread}
+      className="border-2 border-dashed border-[#D2D6E2] dark:border-white/[0.12] rounded-[22px] p-6 flex flex-col items-center justify-center text-center bg-white dark:bg-white/[0.015] hover:border-[#2D55F5]/40 transition-all cursor-pointer group min-h-[290px]"
     >
-      <CustomWorkflowIcon />
+      {/* Document Icon with folded corner and Blue Plus Badge */}
+      <div className="relative w-12 h-12 flex items-center justify-center">
+        <svg width="32" height="38" viewBox="0 0 32 38" fill="none" className="text-[#0A0F1F] dark:text-white">
+          <path 
+            d="M3 6C3 4.34315 4.34315 3 6 3H20L29 12V32C29 33.6569 27.6569 35 26 35H6C4.34315 35 3 33.6569 3 32V6Z" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            fill="none"
+          />
+          <path 
+            d="M20 3V12H29" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          />
+          <line x1="8" y1="20" x2="20" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="8" y1="26" x2="24" y2="26" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
 
-      <h3 className="font-bold text-sm sm:text-base text-[#0A0F1F] dark:text-white mt-4 group-hover:text-[#2D55F5] transition-colors">
-        Create a custom workflow
+        {/* Blue Plus Badge */}
+        <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#2D55F5] border-2 border-white dark:border-[#18181C] flex items-center justify-center text-white text-[11px] font-bold shadow-2xs">
+          +
+        </div>
+      </div>
+
+      {/* Heading */}
+      <h3 className="font-bold text-sm text-[#0A0F1F] dark:text-white mt-4 group-hover:text-[#2D55F5] transition-colors">
+        Start a new thread
       </h3>
 
-      <p className="text-xs text-[#5F6678] dark:text-slate-400 mt-2 max-w-[260px] leading-relaxed">
-        Connect any database, S3 bucket or LLM endpoint and draft rules with AI.
+      {/* Subtitle */}
+      <p className="text-xs text-[#5F6678] dark:text-slate-400 mt-1">
+        Empty canvas or a domain pack
       </p>
 
+      {/* Action Button */}
       <button
         type="button"
         onClick={(e) => {
           e.stopPropagation();
-          onOpenCanvas();
+          onNewThread();
         }}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-white/[0.06] border border-[#E3E6EE] dark:border-white/[0.1] text-xs font-semibold text-[#2D55F5] dark:text-blue-400 group-hover:border-[#2D55F5]/40 transition-all mt-6 shadow-2xs cursor-pointer"
+        className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[#EFF4FF] hover:bg-[#E0EAFF] text-[#2D55F5] text-xs font-semibold transition-all mt-4 cursor-pointer"
       >
-        <LayoutGrid className="w-3.5 h-3.5" />
-        <span>Open visual canvas</span>
+        <span>+ New thread</span>
       </button>
     </div>
   );
 }
-

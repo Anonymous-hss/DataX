@@ -36,10 +36,10 @@ export default function Logo({ size = 32, className = '' }) {
         fill="#A5C8FF"
       />
 
-      {/* Lower-Right Soft Periwinkle Facet */}
+      {/* Lower-Right Signature Lime Green Facet */}
       <polygon
         points="32.5,39.5 42.5,39.5 49.5,49.5 39.5,49.5"
-        fill="#A5C8FF"
+        fill="#D2F442"
       />
     </svg>
   );

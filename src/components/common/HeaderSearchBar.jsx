@@ -25,7 +25,7 @@ const SEARCHABLE_MODULES = [
   { id: 'wf_hc', title: 'Healthcare Patient Master', category: 'WORKFLOW', screen: 'canvas', threadId: 'healthcare_hipaa', icon: GitBranch },
 ];
 
-export default function HeaderSearchBar() {
+export default function HeaderSearchBar({ placeholder = "Search threads, tables..." }) {
   const { navigateTo } = useNavigation();
   const { selectThread } = useRuleEngine?.() || {};
 
@@ -171,7 +171,7 @@ export default function HeaderSearchBar() {
           }}
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Search workflows, rules..."
+          placeholder={placeholder}
           className="w-full bg-transparent text-xs text-[#0A0F1F] dark:text-white placeholder-[#8E95A9] focus:outline-none"
         />
 

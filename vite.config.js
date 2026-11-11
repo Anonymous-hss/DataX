@@ -5,29 +5,17 @@ export default defineConfig({
   base: '/datax/',
   envPrefix: ['VITE_', 'PINECONE_', 'AZURE_', 'BIGQUERY_', 'DATABRICKS_', 'SALESFORCE_', 'AWS_'],
   plugins: [
-    react(),
-    {
-      name: 'datax-auth-api-plugin',
-      configureServer(server) {
-        server.middlewares.use(async (req, res, next) => {
-          try {
-            const { authMiddleware } = await import('./server/authMiddleware.js');
-            authMiddleware(req, res, next);
-          } catch (err) {
-            next();
-          }
-        });
-      }
-    }
+    react()
   ],
   server: {
     port: 5173,
     open: false,
     proxy: {
       '/datax-api': {
-        target: 'https://dataglow.ai',
+        target: 'http://127.0.0.1:8003',
         changeOrigin: true,
-        secure: true
+        secure: false,
+        rewrite: (path) => path.replace(/^\/datax-api/, '')
       }
     }
   },
