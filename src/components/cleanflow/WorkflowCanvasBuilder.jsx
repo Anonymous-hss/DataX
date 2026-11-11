@@ -79,6 +79,18 @@ import { getTableCatalog, getTableData } from '../../data/sampleDatasets';
 import { callAiRuleEngine, getDefaultPromptForTable, synthesizeSemanticRules } from '../../utils/aiRuleSynthesizer';
 import { TEMPLATE_AUTOFILLS, getWorkflowTemplate } from '../../data/workflowTemplates';
 
+// Provided Figma Icons (02.1 & 02.14)
+import sourceIcon from '../../assets/icons/source.png';
+import targetIcon from '../../assets/icons/target.png';
+import quarantineIcon from '../../assets/icons/quarantine.png';
+import connectIcon from '../../assets/icons/connect.png';
+import sandboxIcon from '../../assets/icons/sandbox.png';
+import liveIcon from '../../assets/icons/live.png';
+import packIcon from '../../assets/icons/pack.png';
+import dryrunIcon from '../../assets/icons/dryrun.png';
+import spinnerIcon from '../../assets/icons/spinner.png';
+import uploadIcon from '../../assets/icons/upload.png';
+
 export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const { navigateTo } = useNavigation();
   const {
@@ -1964,41 +1976,20 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   };
 
   const getNodeIcon = (node) => {
-    if (!node) return <Database className="w-4 h-4" />;
+    if (!node) return <img src={sourceIcon} alt="Node" className="w-4 h-4 object-contain" />;
     if (node.type === 'source') {
-      return (
-        <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
-          <ellipse cx="14" cy="7" rx="10" ry="3.5" fill="#D4FF3A" stroke="#0A0F1F" strokeWidth="1.75" />
-          <path d="M4 7v6c0 1.93 4.48 3.5 10 3.5s10-1.57 10-3.5V7" stroke="#0A0F1F" strokeWidth="1.75" fill="none" />
-          <path d="M4 13v6c0 1.93 4.48 3.5 10 3.5s10-1.57 10-3.5v-6" stroke="#0A0F1F" strokeWidth="1.75" fill="none" />
-          <circle cx="9" cy="13" r="1.5" fill="#127A52" />
-          <circle cx="14" cy="13" r="1.5" fill="#127A52" />
-          <circle cx="19" cy="13" r="1.5" fill="#127A52" />
-        </svg>
-      );
+      return <img src={sourceIcon} alt="Source" className="w-5 h-5 object-contain" />;
     }
     if (node.type === 'rules') return <Sparkles className="w-4 h-4 text-[#2D55F5]" />;
     if (node.type === 'conditional') {
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2D55F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="6" cy="6" r="3" />
-          <circle cx="18" cy="18" r="3" />
-          <path d="M18 9v3a6 6 0 0 1-6 6H9" />
-        </svg>
-      );
+      return <img src={connectIcon} alt="Router" className="w-4 h-4 object-contain" />;
     }
     if (node.type === 'hitl') return <GitBranch className="w-4 h-4 text-[#C06815]" />;
     if (node.type === 'router') return <Zap className="w-4 h-4 fill-current text-[#127A52]" />;
     if (node.type === 'target') {
-      return (
-        <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
-          <ellipse cx="14" cy="7" rx="10" ry="3.5" fill="#EEF2FF" stroke="#2D55F5" strokeWidth="1.75" />
-          <path d="M4 7v6c0 1.93 4.48 3.5 10 3.5s10-1.57 10-3.5V7" stroke="#2D55F5" strokeWidth="1.75" fill="none" />
-          <path d="M4 13v6c0 1.93 4.48 3.5 10 3.5s10-1.57 10-3.5v-6" stroke="#2D55F5" strokeWidth="1.75" fill="none" />
-        </svg>
-      );
+      return <img src={targetIcon} alt="Target" className="w-5 h-5 object-contain" />;
     }
-    if (node.type === 'quarantine') return <Inbox className="w-4 h-4 text-[#C06815]" />;
+    if (node.type === 'quarantine') return <img src={quarantineIcon} alt="DLQ" className="w-5 h-5 object-contain" />;
     return <Database className="w-4 h-4" />;
   };
 
@@ -2027,17 +2018,21 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                   ? 'bg-blue-50 text-[#2D55F5] border border-blue-200'
                   : executionSummary
                     ? 'bg-emerald-50 text-[#127A52] border border-emerald-200'
-                    : 'bg-emerald-50 text-[#127A52] border border-emerald-200'
+                    : 'bg-slate-100 text-slate-600 border border-slate-200'
               }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${
-                  isExecutingDryRun ? 'bg-[#2D55F5] animate-ping' : 'bg-[#127A52]'
+                  isExecutingDryRun ? 'bg-[#2D55F5] animate-ping' : executionSummary ? 'bg-[#127A52]' : 'bg-slate-400'
                 }`} />
                 {isExecutingDryRun ? 'Running' : executionSummary ? 'Dry run passed' : 'Ready'}
               </span>
             </div>
 
             <span className="text-[11px] text-[#8E95A9] dark:text-slate-500 font-medium truncate mt-0.5">
-              {nodes.length} nodes · {activeRules?.length || 5} active rules · auto-saved just now
+              {isExecutingDryRun
+                ? 'Sandbox dry run · nothing is written'
+                : executionSummary
+                  ? `Sandbox dry run · ${(executionSummary.total || 1420).toLocaleString()} rows · ${executionSummary.elapsedMs || '196.9'} ms`
+                  : `${nodes.length} nodes · ${activeRules?.length || 5} active rules · auto-saved just now`}
             </span>
           </div>
         </div>
@@ -2051,6 +2046,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
               onClick={() => setIsTemplatesDropdownOpen(!isTemplatesDropdownOpen)}
               className="px-3.5 py-2 rounded-full border border-[#CDD2DE] dark:border-white/[0.12] bg-white dark:bg-[#18181C] hover:bg-[#F8FAFC] dark:hover:bg-white/[0.04] text-xs font-semibold text-[#0A0F1F] dark:text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
             >
+              <img src={packIcon} alt="Template" className="w-3.5 h-3.5 object-contain" />
               <span>Template · {activeWorkflowMeta?.templateName || 'SAP Clean Core'}</span>
               <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isTemplatesDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -2162,7 +2158,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
             disabled={isExecutingDryRun || nodes.length === 0}
             className="px-4 py-2 rounded-full border border-[#CDD2DE] dark:border-white/[0.15] bg-white dark:bg-[#18181C] hover:bg-[#F8FAFC] dark:hover:bg-white/[0.04] text-xs font-semibold text-[#0A0F1F] dark:text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs disabled:opacity-40"
           >
-            <FlaskConical className={`w-3.5 h-3.5 ${isExecutingDryRun ? 'animate-bounce text-[#2D55F5]' : 'text-[#5F6678]'}`} />
+            <img src={sandboxIcon} alt="Sandbox" className={`w-3.5 h-3.5 object-contain ${isExecutingDryRun ? 'animate-bounce' : ''}`} />
             <span>{isExecutingDryRun ? 'Testing...' : 'Test in sandbox'}</span>
           </button>
 
@@ -2173,8 +2169,8 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
             disabled={isExecutingLiveRun || nodes.length === 0}
             className="px-5 py-2 rounded-full bg-[#2D55F5] hover:bg-[#1E44D6] text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
           >
-            <Play className="w-3.5 h-3.5 fill-current" />
-            <span>Run live</span>
+            <img src={liveIcon} alt="Live" className="w-3.5 h-3.5 object-contain" />
+            <span>{isExecutingLiveRun ? 'Executing...' : 'Run live'}</span>
           </button>
         </div>
       </div>
@@ -2859,13 +2855,13 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                     node.type === 'quarantine' ? 'bg-[#FEF3F2] text-[#B42318] border-[#FECDCA]' :
                     'bg-slate-100 text-slate-700 border-slate-200'
                   }`}>
-                    {node.type === 'source' ? <Database className="w-4 h-4" /> :
-                     node.type === 'rules' ? <Sparkles className="w-4 h-4" /> :
-                     node.type === 'conditional' ? <GitBranch className="w-4 h-4" /> :
-                     node.type === 'hitl' ? <UserCheck className="w-4 h-4" /> :
-                     node.type === 'router' ? <Layers className="w-4 h-4" /> :
-                     node.type === 'target' ? <CheckCircle2 className="w-4 h-4" /> :
-                     node.type === 'quarantine' ? <AlertTriangle className="w-4 h-4" /> :
+                    {node.type === 'source' ? <img src={sourceIcon} alt="Source" className="w-5 h-5 object-contain" /> :
+                     node.type === 'rules' ? <Sparkles className="w-4 h-4 text-[#6941C6]" /> :
+                     node.type === 'conditional' ? <img src={connectIcon} alt="Router" className="w-4 h-4 object-contain" /> :
+                     node.type === 'hitl' ? <GitBranch className="w-4 h-4 text-[#B54708]" /> :
+                     node.type === 'router' ? <Zap className="w-4 h-4 fill-current text-[#7C3AED]" /> :
+                     node.type === 'target' ? <img src={targetIcon} alt="Target" className="w-5 h-5 object-contain" /> :
+                     node.type === 'quarantine' ? <img src={quarantineIcon} alt="DLQ" className="w-5 h-5 object-contain" /> :
                      <Database className="w-4 h-4" />}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -3254,76 +3250,86 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
         <div className="absolute bottom-4 left-6 right-6 z-40 bg-white/98 dark:bg-[#18181C]/98 backdrop-blur-md rounded-2xl border border-[#CDD2DE] dark:border-white/[0.12] shadow-2xl p-4 flex flex-col gap-3 animate-in slide-in-from-bottom duration-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700/50 flex items-center justify-center text-[#2D55F5]">
-                <Loader2 className="w-4 h-4 animate-spin" />
+              <div className="w-6 h-6 rounded-full border border-slate-300 dark:border-white/20 flex items-center justify-center text-slate-800 dark:text-white shrink-0">
+                <Play className="w-2.5 h-2.5 fill-current text-slate-800 dark:text-white ml-0.5" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-bold text-[#0F172A] dark:text-white">
-                    Executing pipeline · stage {executionPhase === 'extracting' ? '1' : executionPhase === 'evaluating' ? '2' : executionPhase === 'routing' ? '3' : '4'} of 4
-                  </h4>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50">
-                    DuckDB in-memory simulation
-                  </span>
-                </div>
-                <p className="text-xs text-[#5F6678] dark:text-slate-400">
-                  Evaluating {executionProgress}% · 1,420 rows from {srcTable || '0PUR_C01'} with {activeRules?.length || 5} active business rules. Nothing written to destination.
+                <h4 className="text-sm font-bold text-[#0F172A] dark:text-white leading-tight">
+                  Executing pipeline · stage 2 of 4
+                </h4>
+                <p className="text-xs text-[#5F6678] dark:text-slate-400 mt-0.5">
+                  Evaluating rules in-process with DuckDB. Nothing is written to the target.
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <span className="font-mono text-xs font-semibold text-[#5F6678] dark:text-slate-400">
-                {(executionElapsedMs / 1000).toFixed(1)}s elapsed
+                {(executionElapsedMs / 1000).toFixed(1)} s
               </span>
               <button
                 onClick={() => {
                   setIsExecutingDryRun(false);
                   setActiveStageNodeId(null);
                 }}
-                className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/[0.12] hover:bg-slate-100 dark:hover:bg-white/[0.06] text-xs font-semibold text-[#5F6678] dark:text-slate-300 transition-colors cursor-pointer"
+                className="px-3.5 py-1.5 rounded-full border border-slate-300 dark:border-white/20 hover:bg-slate-50 dark:hover:bg-white/[0.06] text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
               >
                 Cancel run
               </button>
             </div>
           </div>
 
-          {/* 4 Execution Stages Progress */}
+          {/* 4 Execution Stages Progress matching Figma 02.13 */}
           <div className="grid grid-cols-4 gap-3 pt-2 border-t border-[#F1F3F7] dark:border-white/[0.06]">
-            <div className={`p-2.5 rounded-xl border text-xs ${
-              executionPhase !== 'idle' ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40' : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.06]'
-            }`}>
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-bold text-[#0F172A] dark:text-white">1. Ingest</span>
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            {/* Card 1 */}
+            <div className="p-3 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#18181C] flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold text-slate-900 dark:text-white">1. Ingest raw stream</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Done
+                </span>
               </div>
-              <span className="text-[11px] text-[#5F6678] dark:text-slate-400">1,420 rows loaded</span>
+              <p className="text-[11px] text-[#5F6678] dark:text-slate-400 mb-2">1,420 rows in memory</p>
+              <div className="h-1 w-full rounded-full bg-emerald-500" />
             </div>
-            <div className={`p-2.5 rounded-xl border text-xs ${
-              executionPhase === 'evaluating' || executionPhase === 'routing' || executionPhase === 'committing' ? 'bg-blue-50/60 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800/40' : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.06]'
-            }`}>
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-bold text-[#0F172A] dark:text-white">2. AI Rules AST</span>
-                {executionPhase === 'evaluating' ? <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+
+            {/* Card 2 */}
+            <div className="p-3 rounded-xl border border-blue-200 dark:border-blue-800/40 bg-blue-50/30 dark:bg-blue-950/20 flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold text-slate-900 dark:text-white">2. Intelligence engine</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#2D55F5] animate-ping" />
+                  Running
+                </span>
               </div>
-              <span className="text-[11px] text-[#5F6678] dark:text-slate-400">5 rules validated</span>
+              <p className="text-[11px] text-[#5F6678] dark:text-slate-400 mb-2">Evaluating 7 rules</p>
+              <div className="h-1 w-full rounded-full bg-[#2D55F5] animate-pulse" />
             </div>
-            <div className={`p-2.5 rounded-xl border text-xs ${
-              executionPhase === 'routing' || executionPhase === 'committing' ? 'bg-blue-50/60 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800/40' : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.06]'
-            }`}>
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-bold text-[#0F172A] dark:text-white">3. Routing</span>
-                {executionPhase === 'routing' ? <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" /> : executionPhase === 'committing' ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Clock className="w-3.5 h-3.5 text-slate-400" />}
+
+            {/* Card 3 */}
+            <div className="p-3 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#18181C] flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">3. Stream router</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 border border-slate-200 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                  Queued
+                </span>
               </div>
-              <span className="text-[11px] text-[#5F6678] dark:text-slate-400">Partition clean vs DLQ</span>
+              <p className="text-[11px] text-[#5F6678] dark:text-slate-400 mb-2">3-way split</p>
+              <div className="h-1 w-full rounded-full bg-slate-200 dark:bg-white/10" />
             </div>
-            <div className={`p-2.5 rounded-xl border text-xs ${
-              executionPhase === 'committing' ? 'bg-blue-50/60 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800/40' : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.06]'
-            }`}>
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-bold text-[#0F172A] dark:text-white">4. Consensus</span>
-                {executionPhase === 'committing' ? <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" /> : <Clock className="w-3.5 h-3.5 text-slate-400" />}
+
+            {/* Card 4 */}
+            <div className="p-3 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#18181C] flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">4. Target commit</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 border border-slate-200 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                  Queued
+                </span>
               </div>
-              <span className="text-[11px] text-[#5F6678] dark:text-slate-400">Telemetry & audit ledger</span>
+              <p className="text-[11px] text-[#5F6678] dark:text-slate-400 mb-2">Sandbox staging</p>
+              <div className="h-1 w-full rounded-full bg-slate-200 dark:bg-white/10" />
             </div>
           </div>
         </div>

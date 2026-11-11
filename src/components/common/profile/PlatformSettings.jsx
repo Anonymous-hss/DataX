@@ -8,22 +8,22 @@ export default function PlatformSettings({
   onNavigatePage
 }) {
   return (
-    <div className="p-4 space-y-2">
-      <span className="block text-[11px] font-bold tracking-wider text-[#5F6678] dark:text-slate-400 uppercase mb-2">
+    <div className="px-3.5 py-2 space-y-1">
+      <span className="block text-[10px] font-bold tracking-wider text-[#737B92] dark:text-slate-400 uppercase mb-1">
         Platform Settings
       </span>
 
       <div 
         onClick={() => onNavigateSettings('general')}
-        className="flex items-center justify-between text-xs py-0.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/[0.04] -mx-1.5 px-1.5 rounded-lg transition-colors"
+        className="flex items-center justify-between text-[11px] py-0.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/[0.04] -mx-1 px-1 rounded-md transition-colors"
       >
-        <span className="text-[#5F6678] dark:text-slate-400">Account & organization</span>
+        <span className="text-[#5F6678] dark:text-slate-400">Account &amp; organization</span>
         <span className="font-mono text-[#0A0F1F] dark:text-white font-medium">⌘ ,</span>
       </div>
 
       <div 
         onClick={() => onNavigateSettings('schedules')}
-        className="flex items-center justify-between text-xs py-0.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/[0.04] -mx-1.5 px-1.5 rounded-lg transition-colors"
+        className="flex items-center justify-between text-[11px] py-0.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/[0.04] -mx-1 px-1 rounded-md transition-colors"
       >
         <span className="text-[#5F6678] dark:text-slate-400">Pipeline schedules</span>
         <span className="font-mono text-[#0A0F1F] dark:text-white font-medium">0 */6 * * *</span>
@@ -31,23 +31,23 @@ export default function PlatformSettings({
 
       <div 
         onClick={() => onNavigateSettings('webhooks')}
-        className="flex items-center justify-between text-xs py-0.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/[0.04] -mx-1.5 px-1.5 rounded-lg transition-colors"
+        className="flex items-center justify-between text-[11px] py-0.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/[0.04] -mx-1 px-1 rounded-md transition-colors"
       >
-        <span className="text-[#5F6678] dark:text-slate-400">Alerts & webhooks</span>
+        <span className="text-[#5F6678] dark:text-slate-400">Alerts &amp; webhooks</span>
         <span className="font-mono text-[#0A0F1F] dark:text-white font-medium">Active</span>
       </div>
 
       <div 
         onClick={() => onNavigateSettings('team')}
-        className="flex items-center justify-between text-xs py-0.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/[0.04] -mx-1.5 px-1.5 rounded-lg transition-colors"
+        className="flex items-center justify-between text-[11px] py-0.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/[0.04] -mx-1 px-1 rounded-md transition-colors"
       >
-        <span className="text-[#5F6678] dark:text-slate-400">Team & RBAC</span>
+        <span className="text-[#5F6678] dark:text-slate-400">Team &amp; RBAC</span>
         <span className="font-mono text-[#0A0F1F] dark:text-white font-medium">3 members</span>
       </div>
 
       <div 
         onClick={() => onNavigatePage('audit')}
-        className="flex items-center justify-between text-xs py-0.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/[0.04] -mx-1.5 px-1.5 rounded-lg transition-colors"
+        className="flex items-center justify-between text-[11px] py-0.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/[0.04] -mx-1 px-1 rounded-md transition-colors"
       >
         <span className="text-[#5F6678] dark:text-slate-400">Audit ledger</span>
         <span className="font-mono text-[#0A0F1F] dark:text-white font-medium">SHA-256</span>
@@ -55,7 +55,7 @@ export default function PlatformSettings({
 
       <div 
         onClick={() => onNavigatePage('roi')}
-        className="flex items-center justify-between text-xs py-0.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/[0.04] -mx-1.5 px-1.5 rounded-lg transition-colors"
+        className="flex items-center justify-between text-[11px] py-0.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/[0.04] -mx-1 px-1 rounded-md transition-colors"
       >
         <span className="text-[#5F6678] dark:text-slate-400">Executive ROI</span>
         <span className="font-mono text-[#0A0F1F] dark:text-white font-medium">$1.42M saved</span>
@@ -63,4 +63,3 @@ export default function PlatformSettings({
     </div>
   );
 }
-

@@ -30,7 +30,7 @@ import Logo from '../icons/Logo';
 import NotificationCenter from './NotificationCenter';
 import DataXUserMenu from './DataXUserMenu';
 import AmbientBackgroundFlow from './AmbientBackgroundFlow';
-import GlobalSearchModal from './GlobalSearchModal';
+import HeaderSearchBar from './HeaderSearchBar';
 import NavigateFilterModal from './NavigateFilterModal';
 import OnboardingWizard from './OnboardingWizard';
 import UseCaseAdvisorModal from './UseCaseAdvisorModal';
@@ -80,7 +80,6 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
     }
   });
 
-  const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [navigateModalOpen, setNavigateModalOpen] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [advisorModalOpen, setAdvisorModalOpen] = useState(false);
@@ -110,13 +109,9 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
-  // Global keyboard shortcuts: ⌘K (Search), ⌘/ (Navigate & Filter), ⌘B (Toggle Sidebar)
+  // Global keyboard shortcuts: ⌘/ (Navigate & Filter), ⌘B (Toggle Sidebar)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setSearchModalOpen(prev => !prev);
-      }
       if ((e.metaKey || e.ctrlKey) && e.key === '/') {
         e.preventDefault();
         setNavigateModalOpen(prev => !prev);
@@ -304,20 +299,9 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
             )}
           </div>
 
-          {/* Center: Quick Search Trigger (Matches Figma 01.1 exact layout) */}
+          {/* Center: In-Bar Search with Debounce & Recent Searches (Figma 01.1 exact layout) */}
           <div className="hidden md:flex flex-1 max-w-sm mx-4">
-            <button
-              type="button"
-              onClick={() => setSearchModalOpen(true)}
-              className="w-full flex items-center justify-between px-3.5 py-1.5 rounded-full bg-[#F5F6FA] dark:bg-white/[0.05] border border-[#E3E6EE] dark:border-white/[0.08] text-xs text-[#5F6678] hover:border-[#2D55F5]/40 hover:text-[#0A0F1F] transition-all cursor-pointer shadow-2xs"
-              title="Search workflows, rules (⌘K)"
-            >
-              <div className="flex items-center gap-2">
-                <Search className="w-3.5 h-3.5 text-[#8E95A9]" />
-                <span>Search workflows, rules...</span>
-              </div>
-              <kbd className="text-[10px] font-mono text-[#5F6678] bg-white dark:bg-white/[0.08] px-1.5 py-0.5 rounded border border-[#E3E6EE]">⌘K</kbd>
-            </button>
+            <HeaderSearchBar />
           </div>
 
           {/* Right: Navigate, Help, Notifications (Single instance), New Workflow, Profile */}
@@ -378,10 +362,6 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
       </div>
 
       {/* Global Command Palette & Onboarding Modal Instances */}
-      <GlobalSearchModal 
-        isOpen={searchModalOpen} 
-        onClose={() => setSearchModalOpen(false)} 
-      />
       <NavigateFilterModal 
         isOpen={navigateModalOpen} 
         onClose={() => setNavigateModalOpen(false)} 

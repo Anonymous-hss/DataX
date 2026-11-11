@@ -63,7 +63,7 @@ export default function WorkflowContextColumn({
   });
 
   return (
-    <div className="space-y-3.5 pl-5">
+    <div className="space-y-3 pl-2">
       {/* Header & Segmented Filter Pill */}
       <div>
         <h3 className="text-[10px] font-bold tracking-wider text-[#5F6678] dark:text-slate-400 uppercase mb-2">

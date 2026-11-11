@@ -62,7 +62,7 @@ export default function PlatformDirectoryColumn({
   }).filter(sec => sec.items.length > 0);
 
   return (
-    <div className="space-y-4 pr-5 max-h-[420px] overflow-y-auto">
+    <div className="space-y-3.5 pr-2">
       {filteredSections.map(sec => (
         <div key={sec.group} className="space-y-1">
           <h3 className="text-[10px] font-bold tracking-wider text-[#5F6678] dark:text-slate-400 uppercase px-2 mb-1">

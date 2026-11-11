@@ -2,14 +2,15 @@ import React from 'react';
 import { Sparkles } from 'lucide-react';
 
 /**
- * Hero Component Graphic matching exact Figma vector layout
+ * Hero Component Graphic matching exact Figma vector layout (01.1 Workflows Overview)
+ * Static layout with exact colors - NO motion graphics
  */
 export const HeroIllustration = () => (
   <svg width="450" height="200" viewBox="0 0 450 200" fill="none" className="w-full max-w-[450px] overflow-visible select-none">
     <defs>
       <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stopColor="#2D55F5" stopOpacity="0.45" />
-        <stop offset="60%" stopColor="#1E3A8A" stopOpacity="0.14" />
+        <stop offset="0%" stopColor="#2D55F5" stopOpacity="0.4" />
+        <stop offset="60%" stopColor="#1E3A8A" stopOpacity="0.12" />
         <stop offset="100%" stopColor="#0B1536" stopOpacity="0" />
       </radialGradient>
     </defs>
@@ -21,45 +22,29 @@ export const HeroIllustration = () => (
     <ellipse cx="225" cy="100" rx="135" ry="72" stroke="#1D2E60" strokeWidth="1.2" strokeDasharray="3 5" opacity="0.75" />
     <ellipse cx="225" cy="100" rx="95" ry="50" stroke="#253D80" strokeWidth="1.2" strokeDasharray="3 4" opacity="0.65" />
 
-    {/* Orbiting Satellite Squares & Dots */}
-    <rect x="195" y="27" width="6" height="6" rx="1" fill="#CBF841">
-      <animate attributeName="opacity" values="0.7;1;0.7" dur="2s" repeatCount="indefinite" />
-    </rect>
+    {/* Orbiting Satellite Squares & Dots (Static - No animation) */}
+    <rect x="195" y="27" width="6" height="6" rx="1.5" fill="#D4FF3A" opacity="0.9" />
     <rect x="335" y="60" width="5" height="5" rx="1" fill="#38BDF8" opacity="0.8" />
     <circle cx="328" cy="142" r="3" fill="#38BDF8" opacity="0.75" />
 
-    {/* Left Connection Stream Line */}
-    <line x1="82" y1="100" x2="190" y2="100" stroke="#1E336A" strokeWidth="1.5" strokeDasharray="4 4" />
-    {/* Left Stream Packets */}
-    <rect x="135" y="97.5" width="5.5" height="5.5" rx="1" fill="#CBF841">
-      <animate attributeName="x" values="90;185" dur="2.4s" repeatCount="indefinite" />
-    </rect>
-    <rect x="155" y="97.5" width="5" height="5" rx="1" fill="#38BDF8">
-      <animate attributeName="x" values="90;185" begin="0.8s" dur="2.4s" repeatCount="indefinite" />
-    </rect>
-    <rect x="175" y="97.5" width="5" height="5" rx="1" fill="#38BDF8">
-      <animate attributeName="x" values="90;185" begin="1.6s" dur="2.4s" repeatCount="indefinite" />
-    </rect>
+    {/* Horizontal Connection Stream Line */}
+    <line x1="82" y1="100" x2="368" y2="100" stroke="#1E336A" strokeWidth="1.5" strokeDasharray="4 4" />
 
-    {/* Right Connection Stream Line */}
-    <line x1="260" y1="100" x2="368" y2="100" stroke="#1E336A" strokeWidth="1.5" strokeDasharray="4 4" />
-    {/* Right Stream Packets */}
-    <rect x="275" y="97.5" width="5" height="5" rx="1" fill="#38BDF8">
-      <animate attributeName="x" values="265;360" dur="2.4s" repeatCount="indefinite" />
-    </rect>
-    <rect x="295" y="97.5" width="5" height="5" rx="1" fill="#38BDF8">
-      <animate attributeName="x" values="265;360" begin="0.8s" dur="2.4s" repeatCount="indefinite" />
-    </rect>
-    <rect x="315" y="97.5" width="5" height="5" rx="1" fill="#38BDF8">
-      <animate attributeName="x" values="265;360" begin="1.6s" dur="2.4s" repeatCount="indefinite" />
-    </rect>
+    {/* Static Stream Dots between Nodes */}
+    <rect x="135" y="97.5" width="5" height="5" rx="1" fill="#D4FF3A" />
+    <rect x="155" y="97.5" width="5" height="5" rx="1" fill="#38BDF8" opacity="0.9" />
+    <rect x="175" y="97.5" width="5" height="5" rx="1" fill="#D4FF3A" opacity="0.8" />
+    
+    <rect x="275" y="97.5" width="5" height="5" rx="1" fill="#38BDF8" opacity="0.9" />
+    <rect x="295" y="97.5" width="5" height="5" rx="1" fill="#D4FF3A" />
+    <rect x="315" y="97.5" width="5" height="5" rx="1" fill="#38BDF8" opacity="0.8" />
 
     {/* Left Database Cylinder (with Lime Green Top Rim) */}
     <g transform="translate(62, 100)">
       <path d="M-18 -20 V 16 C-18 24, 18 24, 18 16 V -20 Z" fill="#070E22" stroke="#334155" strokeWidth="1.75" />
       <path d="M-18 -8 C-18 -1, 18 -1, 18 -8" stroke="#475569" strokeWidth="1.25" fill="none" />
       <path d="M-18 4 C-18 11, 18 11, 18 4" stroke="#475569" strokeWidth="1.25" fill="none" />
-      <ellipse cx="0" cy="-20" rx="18" ry="7" fill="#CBF841" stroke="#A3E635" strokeWidth="1.5" />
+      <ellipse cx="0" cy="-20" rx="18" ry="7" fill="#D4FF3A" stroke="#B0E218" strokeWidth="1.5" />
     </g>
 
     {/* Center DataX Squircle Logo */}
@@ -78,7 +63,7 @@ export const HeroIllustration = () => (
       <path d="M-18 -20 V 16 C-18 24, 18 24, 18 16 V -20 Z" fill="#070E22" stroke="#334155" strokeWidth="1.75" />
       <path d="M-18 -8 C-18 -1, 18 -1, 18 -8" stroke="#475569" strokeWidth="1.25" fill="none" />
       <path d="M-18 4 C-18 11, 18 11, 18 4" stroke="#475569" strokeWidth="1.25" fill="none" />
-      <ellipse cx="0" cy="-20" rx="18" ry="7" fill="#1D4ED8" stroke="#38BDF8" strokeWidth="1.5" />
+      <ellipse cx="0" cy="-20" rx="18" ry="7" fill="#2D55F5" stroke="#60A5FA" strokeWidth="1.5" />
 
       {/* Checkmark Circle Badge at Bottom-Right */}
       <g transform="translate(13, 14)">
@@ -90,7 +75,7 @@ export const HeroIllustration = () => (
 );
 
 /**
- * WorkflowsHeroBanner - Dark Hero Banner with AI Rule Builder flow & live metrics (01.1)
+ * WorkflowsHeroBanner - Dark Hero Banner matching 01.1 Workflows Overview exactly
  */
 export default function WorkflowsHeroBanner({
   activeCount = 0,
@@ -107,7 +92,6 @@ export default function WorkflowsHeroBanner({
         <div className="max-w-xl space-y-4">
           {/* Lime Green AI rule builder Badge */}
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4FF3A] text-[#0A0F1F] font-bold text-xs tracking-tight shadow-sm">
-            <Sparkles className="w-3.5 h-3.5 fill-current" />
             <span>AI rule builder</span>
           </div>
 
@@ -183,7 +167,7 @@ export default function WorkflowsHeroBanner({
           </div>
         </div>
 
-        {/* Right Column: Hero Graphic */}
+        {/* Right Column: Hero Graphic (Static exact colors, no motion graphics) */}
         <div className="w-full lg:w-auto flex justify-center shrink-0">
           <HeroIllustration />
         </div>
@@ -191,4 +175,3 @@ export default function WorkflowsHeroBanner({
     </div>
   );
 }
-

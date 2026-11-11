@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigation } from '../../context/NavigationContext';
 import { useRuleEngine } from '../../context/RuleEngineContext';
 
-// Modular Subcomponents matching 00.12
+// Modular Subcomponents matching 00.12 & 6.1b
 import {
   NavigateFilterHeader,
   PlatformDirectoryColumn,
@@ -81,55 +81,59 @@ export default function NavigateFilterModal({ isOpen, onClose, onOpenAdvisor }) 
   return (
     <AnimatePresence>
       <div 
-        className="fixed inset-0 z-50 bg-slate-900/25 backdrop-blur-[2px] transition-opacity"
+        className="fixed inset-0 z-50 bg-slate-900/25 backdrop-blur-[2px] transition-opacity flex items-start justify-end p-2 sm:p-4 md:p-6"
         role="dialog"
         aria-modal="true"
         onClick={onClose}
       >
-        <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative h-full pointer-events-none">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.97, y: -8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: -8 }}
-            transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-            onClick={e => e.stopPropagation()}
-            className="pointer-events-auto absolute right-4 sm:right-6 lg:right-8 top-14 sm:top-16 bg-white dark:bg-[#18181C] border border-[#E3E6EE] dark:border-white/[0.08] rounded-[24px] w-[calc(100vw-32px)] sm:w-[700px] lg:w-[740px] shadow-2xl shadow-slate-900/20 p-6 sm:p-7 text-left font-sans overflow-hidden"
-          >
-            {/* Header & Search Bar */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97, y: -8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.97, y: -8 }}
+          transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+          onClick={e => e.stopPropagation()}
+          className="mt-12 sm:mt-14 w-full max-w-[calc(100vw-24px)] sm:w-[680px] lg:w-[720px] max-h-[calc(100vh-70px)] sm:max-h-[min(580px,86vh)] bg-white dark:bg-[#18181C] border border-[#E3E6EE] dark:border-white/[0.08] rounded-2xl shadow-2xl shadow-slate-900/20 p-4 sm:p-5 text-left font-sans flex flex-col overflow-hidden"
+        >
+          {/* Header & Search Bar */}
+          <div className="shrink-0">
             <NavigateFilterHeader 
               query={query}
               setQuery={setQuery}
               onClose={onClose}
               inputRef={inputRef}
             />
+          </div>
 
-            {/* Two-Column Directory & Workflow Context */}
-            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#E3E6EE] dark:divide-white/[0.08] py-4">
-              {/* Left Column: Platform Directory */}
+          {/* Two-Column Directory & Workflow Context */}
+          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#E3E6EE] dark:divide-white/[0.08] py-3 flex-1 min-h-0 overflow-hidden">
+            {/* Left Column: Platform Directory */}
+            <div className="pr-0 md:pr-4 overflow-y-auto max-h-[min(380px,46vh)]">
               <PlatformDirectoryColumn 
                 activeModuleId={activeModuleId}
                 onSelectModule={handleSelectModule}
                 query={query}
               />
+            </div>
 
-              {/* Right Column: Workflow Context */}
+            {/* Right Column: Workflow Context */}
+            <div className="pl-0 md:pl-4 pt-3 md:pt-0 overflow-y-auto max-h-[min(380px,46vh)]">
               <WorkflowContextColumn 
                 selectedWorkflowId={selectedWorkflowId}
                 onSelectWorkflow={handleSelectWorkflow}
                 query={query}
               />
             </div>
+          </div>
 
-            {/* Bottom Footer Controls */}
-            <NavigateFilterFooter 
-              onOpenAdvisor={() => {
-                onClose();
-                if (onOpenAdvisor) onOpenAdvisor();
-              }}
-              onClearFilters={handleClearFilters}
-            />
-          </motion.div>
-        </div>
+          {/* Bottom Footer Controls */}
+          <NavigateFilterFooter 
+            onOpenAdvisor={() => {
+              onClose();
+              if (onOpenAdvisor) onOpenAdvisor();
+            }}
+            onClearFilters={handleClearFilters}
+          />
+        </motion.div>
       </div>
     </AnimatePresence>
   );

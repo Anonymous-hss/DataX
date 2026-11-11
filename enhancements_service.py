@@ -495,3 +495,4 @@ def get_quarantine_trace(record_id: str) -> Dict[str, Any]:
             }
         ]
     }
+
