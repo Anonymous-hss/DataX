@@ -246,7 +246,7 @@ export default function NotificationCenter() {
           </div>
 
           {/* Notification List Items - Scrollable */}
-          <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-[#E3E6EE] dark:divide-white/[0.06] border-t border-[#E3E6EE] dark:border-white/[0.06]">
+          <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar divide-y divide-[#E3E6EE] dark:divide-white/[0.06] border-t border-[#E3E6EE] dark:border-white/[0.06]">
             {filteredNotifications.length === 0 ? (
               <div className="py-12 px-6 text-center text-xs text-[#5F6678] dark:text-slate-400">
                 No notifications in queue. All pipelines healthy!

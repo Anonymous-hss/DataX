@@ -178,7 +178,7 @@ export default function DataXUserMenu({ compact = false }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -6 }}
             transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute right-0 top-full mt-2 w-[300px] sm:w-[320px] max-h-[calc(100vh-75px)] sm:max-h-[min(540px,84vh)] overflow-y-auto bg-white dark:bg-[#18181C] rounded-2xl border border-[#E3E6EE] dark:border-white/[0.08] shadow-2xl shadow-slate-900/15 z-50 divide-y divide-[#E3E6EE]/80 dark:divide-white/[0.06] text-left font-sans"
+            className="absolute right-0 top-full mt-2 w-[300px] sm:w-[320px] max-h-[calc(100vh-75px)] sm:max-h-[min(540px,84vh)] overflow-y-auto no-scrollbar bg-white dark:bg-[#18181C] rounded-2xl border border-[#E3E6EE] dark:border-white/[0.08] shadow-2xl shadow-slate-900/15 z-50 divide-y divide-[#E3E6EE]/80 dark:divide-white/[0.06] text-left font-sans"
           >
             {/* 1. Header / User Identity */}
             <ProfileHeader 

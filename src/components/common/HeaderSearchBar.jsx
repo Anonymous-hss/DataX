@@ -197,11 +197,11 @@ export default function HeaderSearchBar() {
       {/* In-Bar Autocomplete Dropdown (Attached directly below input) */}
       {isOpen && (
         <div 
-          className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#18181C] border border-[#E3E6EE] dark:border-white/[0.08] rounded-xl shadow-2xl shadow-slate-900/15 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[380px] flex flex-col"
+          className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#18181C] border border-[#E3E6EE] dark:border-white/[0.08] rounded-xl shadow-2xl shadow-slate-900/15 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[380px] flex flex-col no-scrollbar"
         >
           {debouncedQuery === '' ? (
             /* Recent Searches Mode */
-            <div className="p-3">
+            <div className="p-3 overflow-y-auto no-scrollbar">
               <div className="flex items-center justify-between mb-2 px-1">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                   <Clock className="w-3 h-3" />
@@ -239,7 +239,7 @@ export default function HeaderSearchBar() {
             </div>
           ) : (
             /* Live Debounced Search Results */
-            <div className="p-2 overflow-y-auto divide-y divide-slate-100 dark:divide-white/[0.06]">
+            <div className="p-2 overflow-y-auto no-scrollbar divide-y divide-slate-100 dark:divide-white/[0.06]">
               {filteredResults.length > 0 ? (
                 filteredResults.map((item, idx) => {
                   const Icon = item.icon || Search;
@@ -281,3 +281,4 @@ export default function HeaderSearchBar() {
     </div>
   );
 }
+

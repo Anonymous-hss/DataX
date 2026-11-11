@@ -107,7 +107,7 @@ export default function NavigateFilterModal({ isOpen, onClose, onOpenAdvisor }) 
           {/* Two-Column Directory & Workflow Context */}
           <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#E3E6EE] dark:divide-white/[0.08] py-3 flex-1 min-h-0 overflow-hidden">
             {/* Left Column: Platform Directory */}
-            <div className="pr-0 md:pr-4 overflow-y-auto max-h-[min(380px,46vh)]">
+            <div className="pr-0 md:pr-4 overflow-y-auto no-scrollbar max-h-[min(380px,46vh)]">
               <PlatformDirectoryColumn 
                 activeModuleId={activeModuleId}
                 onSelectModule={handleSelectModule}
@@ -116,7 +116,7 @@ export default function NavigateFilterModal({ isOpen, onClose, onOpenAdvisor }) 
             </div>
 
             {/* Right Column: Workflow Context */}
-            <div className="pl-0 md:pl-4 pt-3 md:pt-0 overflow-y-auto max-h-[min(380px,46vh)]">
+            <div className="pl-0 md:pl-4 pt-3 md:pt-0 overflow-y-auto no-scrollbar max-h-[min(380px,46vh)]">
               <WorkflowContextColumn 
                 selectedWorkflowId={selectedWorkflowId}
                 onSelectWorkflow={handleSelectWorkflow}
