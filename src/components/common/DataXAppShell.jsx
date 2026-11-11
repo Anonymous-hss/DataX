@@ -456,6 +456,17 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             <button
               type="button"
+              onClick={() => setSearchModalOpen(true)}
+              className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#F5F6FA] dark:bg-white/[0.05] border border-[#E3E6EE] dark:border-white/[0.08] text-xs text-[#5F6678] hover:border-[#2D55F5]/40 hover:text-[#0A0F1F] transition-all cursor-pointer"
+              title="Search workflows, tables, rules (⌘K)"
+            >
+              <Search className="w-3.5 h-3.5 text-[#8E95A9]" />
+              <span>Search...</span>
+              <kbd className="text-[10px] font-mono text-[#5F6678] bg-white dark:bg-white/[0.08] px-1.5 py-0.5 rounded border border-[#E3E6EE]">⌘K</kbd>
+            </button>
+
+            <button
+              type="button"
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('open-start-thread-modal'));
                 if (currentScreen !== 'threads') {
