@@ -7,10 +7,10 @@
 import { playNotificationSound, isSoundEnabled, setSoundEnabled } from './soundEngine';
 import { api } from './apiClient';
 
-const STORAGE_KEY = 'datax_live_notifications_v3';
+const STORAGE_KEY = 'datax_notifications_curated_v5';
 const EVENT_NAME = 'datax_notification_event';
 
-// Initial realistic baseline notifications matching Figma 00.5
+// Exact 6 Clean Notifications matching Figma 00.5
 const BASELINE_NOTIFICATIONS = [
   {
     id: 'notif_1',
@@ -70,147 +70,6 @@ const BASELINE_NOTIFICATIONS = [
     time: '1 h',
     createdAt: Date.now() - 60 * 60 * 1000,
     screen: 'history',
-    read: false
-  },
-  // Additional historical items to establish 20 in queue
-  {
-    id: 'notif_7',
-    title: 'Zero-Egress Vault Rotation',
-    message: 'AES-256-GCM symmetric session keys successfully cycled.',
-    type: 'success',
-    time: '2 h',
-    createdAt: Date.now() - 120 * 60 * 1000,
-    screen: 'connections',
-    read: false
-  },
-  {
-    id: 'notif_8',
-    title: 'AST Parser Optimization',
-    message: 'DuckDB vectorized micro-batch throughput improved by 14%.',
-    type: 'success',
-    time: '3 h',
-    createdAt: Date.now() - 180 * 60 * 1000,
-    screen: 'history',
-    read: false
-  },
-  {
-    id: 'notif_9',
-    title: 'PostgreSQL Pool Handshake',
-    message: 'Active connection pool steady at 12 active / 20 max idle.',
-    type: 'success',
-    time: '4 h',
-    createdAt: Date.now() - 240 * 60 * 1000,
-    screen: 'connections',
-    read: false
-  },
-  {
-    id: 'notif_10',
-    title: 'Snowflake Egress Gate Verified',
-    message: 'Zero raw plaintext egress detected during batch transform.',
-    type: 'success',
-    time: '5 h',
-    createdAt: Date.now() - 300 * 60 * 1000,
-    screen: 'ai-firewall',
-    read: false
-  },
-  {
-    id: 'notif_11',
-    title: 'Audit Ledger Merkle Root',
-    message: 'SHA-256 hash chain sealed for batch #9402.',
-    type: 'success',
-    time: '6 h',
-    createdAt: Date.now() - 360 * 60 * 1000,
-    screen: 'audit',
-    read: false
-  },
-  {
-    id: 'notif_12',
-    title: 'LangGraph Consensus Verified',
-    message: 'Multi-agent consensus achieved on 4 syntax remediation fixes.',
-    type: 'success',
-    time: '7 h',
-    createdAt: Date.now() - 420 * 60 * 1000,
-    screen: 'canvas',
-    read: false
-  },
-  {
-    id: 'notif_13',
-    title: 'Schema Parity Reconciled',
-    message: 'Shadow twin verified 100% column parity on OPUR_C01.',
-    type: 'success',
-    time: '8 h',
-    createdAt: Date.now() - 480 * 60 * 1000,
-    screen: 'shadow',
-    read: false
-  },
-  {
-    id: 'notif_14',
-    title: 'Auto-Fix Cache Purge',
-    message: 'Cleaned 48 expired synthetic simulation tokens.',
-    type: 'success',
-    time: '9 h',
-    createdAt: Date.now() - 540 * 60 * 1000,
-    screen: 'settings',
-    read: false
-  },
-  {
-    id: 'notif_15',
-    title: 'S3 Stage Checkpoint',
-    message: 'Readiness check passed for supply chain parquet lakehouse.',
-    type: 'success',
-    time: '10 h',
-    createdAt: Date.now() - 600 * 60 * 1000,
-    screen: 'connections',
-    read: false
-  },
-  {
-    id: 'notif_16',
-    title: 'RBAC Permission Review',
-    message: 'Lead Data Engineer persona privileges verified against IAM.',
-    type: 'success',
-    time: '12 h',
-    createdAt: Date.now() - 720 * 60 * 1000,
-    screen: 'settings',
-    read: false
-  },
-  {
-    id: 'notif_17',
-    title: 'DuckDB In-Memory Snapshot',
-    message: 'Scratch database memory compacted under 42 MB.',
-    type: 'success',
-    time: '14 h',
-    createdAt: Date.now() - 840 * 60 * 1000,
-    screen: 'canvas',
-    read: false
-  },
-  {
-    id: 'notif_18',
-    title: 'Executive ROI Computation',
-    message: 'Estimated engineering hours saved: 142.5 hrs this month.',
-    type: 'success',
-    time: '16 h',
-    createdAt: Date.now() - 960 * 60 * 1000,
-    screen: 'roi',
-    read: false
-  },
-  {
-    id: 'notif_19',
-    title: 'DLQ Retry Schedule',
-    message: 'Automated retry worker initialized for next cron window.',
-    type: 'quarantine',
-    time: '18 h',
-    createdAt: Date.now() - 1080 * 60 * 1000,
-    screen: 'quarantine',
-    read: false
-  },
-  {
-    id: 'notif_20',
-    title: 'Tenant Isolation Health',
-    message: 'PostgreSQL schema namespace isolation 100% compliant.',
-    type: 'success',
-    time: '1 d',
-    createdAt: Date.now() - 1440 * 60 * 1000,
-    screen: 'settings',
     read: false
   }
 ];
@@ -314,42 +173,7 @@ export function clearAllNotifications() {
 }
 
 export async function syncBackendAlerts() {
-  try {
-    const res = await api.get('/notifications/feed');
-    if (res && Array.isArray(res.notifications)) {
-      const current = getStoredNotifications();
-      const existingIds = new Set(current.map(n => n.id));
-      let hasNew = false;
-      const newItems = [];
-
-      for (const item of res.notifications) {
-        if (!existingIds.has(item.id)) {
-          hasNew = true;
-          newItems.push({
-            id: item.id,
-            title: item.title,
-            message: item.message,
-            type: item.type || 'info',
-            createdAt: item.createdAt || Date.now(),
-            screen: item.screen || 'history',
-            read: false
-          });
-        }
-      }
-
-      if (hasNew) {
-        const merged = [...newItems, ...current].slice(0, 50);
-        saveStoredNotifications(merged);
-        playNotificationSound(newItems[0].type || 'info');
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: { all: merged } }));
-        }
-        return merged;
-      }
-    }
-  } catch (err) {
-    // Gracefully handle offline or network delay
-  }
+  // Return clean curated notifications - no dummy auto-alert polling
   return getStoredNotifications();
 }
 

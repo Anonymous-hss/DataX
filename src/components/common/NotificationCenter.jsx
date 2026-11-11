@@ -84,14 +84,15 @@ export default function NotificationCenter() {
     try {
       const stored = getStoredNotifications();
       if (Array.isArray(stored) && stored.length > 0) {
-        // Merge or use Figma entries if stored is old format
-        return stored;
+        // Filter out any legacy dummy drift alerts
+        const cleaned = stored.filter(n => !n.id?.startsWith('alert_') && !n.message?.includes('anomaly score') || n.id === 'notif_2' || n.id === 'notif-2');
+        if (cleaned.length > 0) return cleaned;
       }
     } catch {}
     return FIGMA_BASELINE_NOTIFICATIONS;
   });
 
-  // Subscribe to live notification dispatches
+  // Subscribe to genuine event dispatches (no dummy polling)
   useEffect(() => {
     const unsubscribe = subscribeToNotifications((updatedList) => {
       if (Array.isArray(updatedList) && updatedList.length > 0) {
@@ -99,15 +100,6 @@ export default function NotificationCenter() {
       }
     });
     return unsubscribe;
-  }, []);
-
-  // Poll backend for real alerts
-  useEffect(() => {
-    syncBackendAlerts();
-    const pollInterval = setInterval(() => {
-      syncBackendAlerts();
-    }, 15000);
-    return () => clearInterval(pollInterval);
   }, []);
 
   // Close dropdown when clicking outside
@@ -123,8 +115,8 @@ export default function NotificationCenter() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  const unreadCount = notifications.filter(n => !n.read).length || 20;
-  const totalCount = notifications.length >= 20 ? notifications.length : 20;
+  const unreadCount = notifications.filter(n => !n.read).length;
+  const totalCount = notifications.length;
 
   const handleMarkAllRead = () => {
     const updated = notifications.map(n => ({ ...n, read: true }));
