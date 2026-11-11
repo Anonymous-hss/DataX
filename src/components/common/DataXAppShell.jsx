@@ -458,36 +458,56 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
             )}
           </div>
 
-          {/* Right: Quick Actions, New Workflow CTA, Notifications & Profile */}
+          {/* Center: Quick Search Trigger (Matches Figma 01.1 exact layout) */}
+          <div className="hidden md:flex flex-1 max-w-sm mx-4">
+            <button
+              type="button"
+              onClick={() => setSearchModalOpen(true)}
+              className="w-full flex items-center justify-between px-3.5 py-1.5 rounded-full bg-[#F5F6FA] dark:bg-white/[0.05] border border-[#E3E6EE] dark:border-white/[0.08] text-xs text-[#5F6678] hover:border-[#2D55F5]/40 hover:text-[#0A0F1F] transition-all cursor-pointer shadow-2xs"
+              title="Search workflows, rules (⌘K)"
+            >
+              <div className="flex items-center gap-2">
+                <Search className="w-3.5 h-3.5 text-[#8E95A9]" />
+                <span>Search workflows, rules...</span>
+              </div>
+              <kbd className="text-[10px] font-mono text-[#5F6678] bg-white dark:bg-white/[0.08] px-1.5 py-0.5 rounded border border-[#E3E6EE]">⌘K</kbd>
+            </button>
+          </div>
+
+          {/* Right: Navigate, Help, Notifications, New Workflow, Profile */}
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             <button
               type="button"
               onClick={() => setNavigateModalOpen(true)}
-              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F5F6FA] dark:bg-white/[0.05] border border-[#E3E6EE] dark:border-white/[0.08] text-xs text-[#5F6678] hover:border-[#2D55F5]/40 hover:text-[#0A0F1F] transition-all cursor-pointer"
+              className="hidden lg:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#F5F6FA] dark:bg-white/[0.05] border border-[#E3E6EE] dark:border-white/[0.08] text-xs text-[#0A0F1F] dark:text-white hover:border-[#2D55F5]/40 transition-all cursor-pointer shadow-2xs"
               title="Navigate & filter (⌘/)"
             >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-[#8E95A9]" />
-              <span>Navigate</span>
-              <kbd className="text-[10px] font-mono text-[#5F6678] bg-white dark:bg-white/[0.08] px-1.5 py-0.5 rounded border border-[#E3E6EE]">⌘/</kbd>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-[#5F6678] dark:text-slate-400">
+                <path d="M2 4h12M2 8h9M2 12h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+              </svg>
+              <span className="font-semibold text-xs text-[#0A0F1F] dark:text-white">Navigate</span>
+              <span className="w-4 h-4 rounded-full bg-[#2D55F5] text-white text-[10px] font-bold flex items-center justify-center">2</span>
+              <ChevronDown className="w-3 h-3 text-[#8E95A9]" />
             </button>
 
             <button
               type="button"
-              onClick={() => setSearchModalOpen(true)}
-              className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#F5F6FA] dark:bg-white/[0.05] border border-[#E3E6EE] dark:border-white/[0.08] text-xs text-[#5F6678] hover:border-[#2D55F5]/40 hover:text-[#0A0F1F] transition-all cursor-pointer"
-              title="Search workflows, tables, rules (⌘K)"
+              onClick={() => navigateTo('help')}
+              className="p-1.5 text-[#5F6678] hover:text-[#0A0F1F] dark:hover:text-white hover:bg-[#F5F6FA] dark:hover:bg-white/[0.05] rounded-full transition-colors cursor-pointer"
+              title="Help & Documentation"
+              aria-label="Help & Documentation"
             >
-              <Search className="w-3.5 h-3.5 text-[#8E95A9]" />
-              <span>Search...</span>
-              <kbd className="text-[10px] font-mono text-[#5F6678] bg-white dark:bg-white/[0.08] px-1.5 py-0.5 rounded border border-[#E3E6EE]">⌘K</kbd>
+              <HelpCircle className="w-4 h-4 text-[#8E95A9]" />
             </button>
+
+            <NotificationCenter />
 
             <button
               type="button"
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('open-start-thread-modal'));
-                if (currentScreen !== 'threads') {
-                  navigateTo('threads');
+                if (currentScreen !== 'threads' && currentScreen !== 'workflows') {
+                  navigateTo('workflows');
                   setTimeout(() => {
                     window.dispatchEvent(new CustomEvent('open-start-thread-modal'));
                   }, 80);
@@ -496,7 +516,7 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
               className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#2D55F5] hover:bg-[#2045DC] text-white text-xs font-semibold shadow-2xs transition-all cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>New thread</span>
+              <span>New workflow</span>
             </button>
 
             <NotificationCenter />
