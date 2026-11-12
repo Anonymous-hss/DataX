@@ -20,7 +20,6 @@ out
 .output
 
 # Local Environment Variables & Secrets
-.env
 .env*.local
 .env.development.local
 .env.test.local
@@ -34,7 +33,6 @@ config.bat
 
 # Editor directories and files
 .idea/
-.vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
 *.suo

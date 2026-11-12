@@ -12,7 +12,15 @@ import ErrorBoundary from './components/common/ErrorBoundary';
 const DataXPoc = React.lazy(() => import('./components/poc/DataXPoc'));
 
 export default function App() {
-  const [activeView, setActiveView] = useState('website'); // Default to website view
+  const [activeView, setActiveView] = useState(() => {
+    if (typeof window === 'undefined') return 'website';
+    const hash = window.location.hash.toLowerCase();
+    const path = window.location.pathname.toLowerCase();
+    if (hash === '#website') return 'website';
+    if (hash && hash !== '#' && hash !== '#/') return 'poc';
+    if (path.includes('poc') || path.includes('cleanflow') || path.includes('canvas') || path.includes('threads') || path.includes('studio')) return 'poc';
+    return 'website';
+  });
   const [demoModalOpen, setDemoModalOpen] = useState(false);
 
   // Sync with URL hash and pathname
@@ -21,34 +29,18 @@ export default function App() {
       const hash = window.location.hash.toLowerCase();
       const path = window.location.pathname.toLowerCase();
 
+      // Only show marketing website if explicitly on #website or root path with no hash
       if (hash === '#website') {
         setActiveView('website');
+      } else if (hash && hash !== '#' && hash !== '#/') {
+        // Any Studio / App route (#canvas, #threads, #workflows, #templates, #connections, #runs, etc.)
+        setActiveView('poc');
       } else if (
-        hash.includes('login') ||
-        hash.includes('register') ||
-        hash === '#poc' ||
-        hash === '#datax' ||
-        hash === '#workflows' ||
-        hash === '#new-workflow' ||
-        hash === '#templates' ||
-        hash === '#threads' ||
-        hash === '#new-thread' ||
-        hash === '#connect-source' ||
-        hash === '#connect-target' ||
-        hash === '#rules' ||
-        hash === '#running-dry-run' ||
-        hash === '#dry-run-results' ||
-        hash === '#live-auto-fix' ||
-        hash === '#history' ||
-        hash === '#settings' ||
-        hash === '#ai-firewall' ||
-        hash === '#ml-certify' ||
-        hash === '#connections' ||
-        hash === '#audit' ||
-        hash === '#roi' ||
-        hash === '#quarantine' ||
         path.includes('poc') ||
-        path.includes('cleanflow')
+        path.includes('cleanflow') ||
+        path.includes('canvas') ||
+        path.includes('threads') ||
+        path.includes('studio')
       ) {
         setActiveView('poc');
       } else {
