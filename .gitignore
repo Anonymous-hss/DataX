@@ -7,20 +7,56 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+.pnp
+.pnp.js
+
+# Production & Build outputs
 dist
 dist-ssr
-*.local
+build
+out
+.output
+
+# Local Environment Variables & Secrets
+.env
+.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.crt
+*.key
+gcp-service-account.json
+*-key.json
+config.bat
 
 # Editor directories and files
+.idea/
+.vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+!.vscode/settings.json
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Testing & Coverage
+coverage/
+.nyc_output/
+
+# Cache directories
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+.vite/
 
 # Python
 __pycache__/
@@ -28,7 +64,6 @@ __pycache__/
 *$py.class
 *.so
 .venv
-.env
 env/
 venv/
 ENV/
@@ -49,9 +84,9 @@ ENV/
 .audit_hash_chain.jsonl
 .runs_store.json
 
-# GCP Keys & Credentials
-gcp-service-account.json
-*-key.json
-config.bat
-
+# Design Assets & Temporary files
 Designs/
+.temp/
+.tmp/
+temp/
+tmp/
