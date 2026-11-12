@@ -262,19 +262,42 @@ html.light div.bg-white {
 }
 
 /* Zero-Neon & Harsh Green Neutralization (Adobe Spectrum Palette) */
-.bg-\[\#D4FF3A\],
-[fill="#D4FF3A"] {
+/* Landing page uses Figma volt #D4FF3A — .landing-volt classes are exempt */
+.bg-\[\#D4FF3A\]:not(.landing-volt),
+[fill="#D4FF3A"]:not(.landing-volt) {
   background-color: #1473E6 !important;
   fill: #93C5FD !important;
   color: #FFFFFF !important;
 }
 
-.text-\[\#D4FF3A\] {
+.text-\[\#D4FF3A\]:not(.landing-volt) {
   color: #1473E6 !important;
 }
 
-html.dark .text-\[\#D4FF3A\] {
+html.dark .text-\[\#D4FF3A\]:not(.landing-volt) {
   color: #93C5FD !important;
+}
+
+/* ── Landing Page Figma Design Tokens ─────────────────────── */
+/* Volt green #D4FF3A — landing page eyebrow + headline accent */
+.landing-volt-bg {
+  background-color: #D4FF3A !important;
+  color: #0A0F1F !important;
+}
+.landing-volt-text {
+  color: #D4FF3A !important;
+}
+
+/* Landing page h1 — Geist font (defeats global h1 Plus Jakarta Sans rule) */
+.landing-hero-h1 {
+  font-family: "Geist", sans-serif !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.045em !important;
+  line-height: 96% !important;
+  color: #FFFFFF !important;
+}
+.landing-hero-h1 .volt-span {
+  color: #D4FF3A !important;
 }
 
 /* Soften harsh emerald to Adobe muted slate-teal / ocean-slate */

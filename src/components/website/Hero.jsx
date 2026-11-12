@@ -1,162 +1,253 @@
 import React from 'react';
-import { 
-  ArrowRight, 
-  Sparkles, 
-  Database, 
-  Workflow, 
-  Network, 
-  ShieldCheck, 
-  Cpu, 
-  CheckCircle2, 
-  Activity, 
-  Terminal,
-  Zap,
-  Layers
-} from 'lucide-react';
+import { ArrowRight, Play } from 'lucide-react';
+import DataStreamConveyor from './DataStreamConveyor';
 
+/**
+ * Hero – Exact Figma "DataX Landing · animated" spec
+ *
+ * Eyebrow Tag:
+ *   - 212×21px hug, Radius 999px
+ *   - Padding: T2 R8 B2 L8, Gap 5px
+ *   - Background: #D4FF3A (color/volt)
+ *   - Dot: true (filled circle, same #D4FF3A base → black dot)
+ *   - Text: Geist 500 Medium 12px, color #0A0F1F (color/ink)
+ *
+ * Headline:
+ *   - "Bad data stops here." — Geist SemiBold (600) 96px, tracking -4.5%, leading 96%
+ *   - "Bad data " = white (#FFFFFF)
+ *   - "stops here." = #D4FF3A (volt yellow-green)
+ *
+ * Subtitle:
+ *   - Geist 400 Regular 19px, line-height 155%, color #A6ADC2
+ *   - Max-width 680px
+ *
+ * Buttons:
+ *   - "Book a demo →" — Blue pill, Geist 500, same style as navbar CTA
+ *   - "▷ See how it works" — Dark pill with border
+ */
 export default function Hero({ setActiveView, onOpenDemo }) {
   return (
-    <section className="relative pt-32 pb-24 md:pt-40 md:pb-32 overflow-hidden bg-grid-pattern">
-      {/* Background Radial Glows */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-cyan-500/10 blur-[130px] pointer-events-none rounded-full" />
-      <div className="absolute top-1/3 left-1/4 w-[450px] h-[450px] bg-blue-600/10 blur-[110px] pointer-events-none rounded-full" />
-      <div className="absolute top-1/2 right-1/4 w-[450px] h-[450px] bg-purple-600/10 blur-[120px] pointer-events-none rounded-full" />
+    <section
+      style={{
+        position: 'relative',
+        paddingTop: 120,         // space for the 71px floating navbar + 20px gap + 29px buffer
+        paddingBottom: 40,
+        overflow: 'hidden',
+        /* Figma: linear-gradient(#171C45 0%, #0A0F1F 45%, #0A0F1F 100%) */
+        background: 'linear-gradient(180deg, #171C45 0%, #0A0F1F 45%, #0A0F1F 100%)',
+        fontFamily: "'Geist', sans-serif",
+      }}
+    >
+      {/* Top ambient glow/shed beside & behind the floating navbar (Figma: illuminated shed) */}
+      <div style={{
+        position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
+        width: 1400, height: 260,
+        background: 'radial-gradient(ellipse 75% 100% at 50% 0%, rgba(64,105,255,0.42) 0%, rgba(23,28,69,0.30) 50%, transparent 80%)',
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 2,
+        background: 'linear-gradient(90deg, transparent 0%, rgba(100,150,255,0.5) 50%, transparent 100%)',
+        pointerEvents: 'none',
+      }} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        
-        {/* Top Eyebrow Badge */}
-        <div className="flex justify-center mb-6">
-          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full glass-panel border border-cyan-500/30 text-xs font-mono text-cyan-300 shadow-glow-cyan animate-pulse-slow">
-            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="font-semibold uppercase tracking-wider">Enterprise Semantic Fabric & Decision Intelligence</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-            <span className="text-slate-400">Powered by DataGlow</span>
-          </div>
+      {/* Background ambient glows */}
+      <div style={{
+        position: 'absolute', top: '22%', left: '50%',
+        transform: 'translateX(-50%)',
+        width: 720, height: 400,
+        background: 'rgba(37,99,235,0.08)',
+        filter: 'blur(140px)',
+        borderRadius: '50%',
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute', top: '35%', left: '30%',
+        width: 360, height: 360,
+        background: 'rgba(6,182,212,0.04)',
+        filter: 'blur(120px)',
+        borderRadius: '50%',
+        pointerEvents: 'none',
+      }} />
+
+      {/* Subtle dot-grid background */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.18,
+        backgroundImage: 'radial-gradient(rgba(148,163,184,0.25) 1px, transparent 1px)',
+        backgroundSize: '28px 28px',
+      }} />
+
+      {/* ── Main content ───────────────────────────────────── */}
+      <div style={{
+        position: 'relative', zIndex: 10,
+        maxWidth: 1200, margin: '0 auto',
+        padding: '0 24px',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+      }}>
+
+        {/* ── Eyebrow pill ── Figma: Tag, tone=volt, dot=true ── */}
+        {/*
+          Width: Hug 212px, Height: Hug 21px, Radius 999px
+          Padding: T2 R8 B2 L8, Gap 5px
+          Background: #D4FF3A (volt)
+          Label text: Geist 500 12px, color #0A0F1F
+          Dot: filled circle #0A0F1F
+          Uses .landing-volt-bg to bypass Zero-Neon CSS override
+        */}
+        <div
+          className="landing-volt-bg"
+          style={{
+            marginBottom: 24,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            paddingTop: 2, paddingBottom: 2,
+            paddingLeft: 8, paddingRight: 8,
+            borderRadius: 999,
+            boxShadow: '0 0 14px rgba(212,255,58,0.30)',
+          }}
+        >
+          {/* Dot */}
+          <span style={{
+            width: 5, height: 5,
+            borderRadius: '50%',
+            background: '#0A0F1F',
+            flexShrink: 0,
+          }} />
+          {/* Label */}
+          <span style={{
+            fontFamily: "'Geist', sans-serif",
+            fontSize: 12,
+            fontWeight: 500,
+            lineHeight: '140%',
+            letterSpacing: '0%',
+            color: '#0A0F1F',
+            whiteSpace: 'nowrap',
+          }}>
+            AI rule engine for enterprise data
+          </span>
         </div>
 
-        {/* Main Headline */}
-        <div className="text-center max-w-4xl mx-auto space-y-6">
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.08] font-display">
-            Make Enterprise Data <br className="hidden sm:block" />
-            <span className="gradient-text">AI-Ready & Decision-Driven</span>
-          </h1>
+        {/* ── Headline ────────────────────────────────────── */}
+        {/*
+          Font: Geist SemiBold (600), 96px, tracking -4.5%, leading 96%
+          "Bad data " = white, "stops here." = #D4FF3A volt
+          .landing-hero-h1 defeats global h1 Plus Jakarta Sans override
+          .volt-span forces #D4FF3A bypassing Zero-Neon neutralization
+        */}
+        <h1
+          className="landing-hero-h1"
+          style={{
+            margin: '0 0 28px 0',
+            fontSize: 'clamp(48px, 7vw, 96px)',
+            textAlign: 'center',
+          }}
+        >
+          Bad data{' '}
+          <span className="volt-span">stops here.</span>
+        </h1>
 
-          <p className="text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed font-normal">
-            DataGlow combines <span className="text-white font-semibold">Enterprise Ontologies</span>, <span className="text-white font-semibold">Knowledge Graphs</span>, and <span className="text-white font-semibold">Agentic Tool Calling</span> to bridge legacy ERP data silos directly into production AI and Databricks Lakehouses.
-          </p>
+        {/* ── Subtitle ─────────────────────────────────────── */}
+        {/*
+          Font: Geist Regular (400), 19px, line-height 155%, color #A6ADC2
+          Max-width 680px
+        */}
+        <p style={{
+          margin: '0 0 32px 0',
+          fontFamily: "'Geist', sans-serif",
+          fontSize: 19,
+          fontWeight: 400,
+          lineHeight: '155%',
+          letterSpacing: '0%',
+          textAlign: 'center',
+          color: '#A6ADC2',
+          maxWidth: 680,
+        }}>
+          DataX checks every row against rules you describe in plain English, and holds
+          the ones that fail before they reach SAP, your warehouse or your AI.
+        </p>
 
-          {/* Primary Action Buttons */}
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button 
-              onClick={() => setActiveView('poc')}
-              className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 text-white font-bold text-sm flex items-center justify-center gap-2.5 shadow-glow-cyan hover:scale-[1.02] active:scale-[0.98] transition-all group"
-            >
-              <Zap className="w-4 h-4 fill-current text-cyan-200" />
-              Launch DataX Platform POC
-              <ArrowRight className="w-4 h-4 text-cyan-200 group-hover:translate-x-1 transition-transform" />
-            </button>
+        {/* ── CTA Buttons ── Figma exact specs ──────────────── */}
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 12,
+          marginBottom: 0,
+        }}>
+          {/* Primary: Book a demo — Hug 156×47px, gradient #4069FF -> #294FED */}
+          <button
+            onClick={onOpenDemo}
+            style={{
+              height: 47,
+              padding: '12px 22px',
+              borderRadius: 999,
+              border: '1px solid rgba(255,255,255,0.20)',
+              background: 'linear-gradient(180deg, #4069FF 0%, #294FED 100%)',
+              color: '#FFFFFF',
+              fontFamily: "'Geist', sans-serif",
+              fontSize: 14,
+              fontWeight: 600,
+              display: 'flex', alignItems: 'center', gap: 8,
+              cursor: 'pointer',
+              boxShadow: '0 4px 16px rgba(41,79,237,0.45)',
+              transition: 'transform 0.1s, box-shadow 0.15s, opacity 0.15s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.opacity = '0.92';
+              e.currentTarget.style.boxShadow = '0 6px 22px rgba(41,79,237,0.60)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.opacity = '1';
+              e.currentTarget.style.boxShadow = '0 4px 16px rgba(41,79,237,0.45)';
+            }}
+            onMouseDown={e => e.currentTarget.style.transform = 'scale(0.97)'}
+            onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            Book a demo
+            <ArrowRight size={15} />
+          </button>
 
-            <button 
-              onClick={onOpenDemo}
-              className="w-full sm:w-auto px-7 py-3.5 rounded-xl glass-panel hover:bg-slate-800/80 text-white font-semibold text-sm flex items-center justify-center gap-2 border border-slate-700/80 transition-all hover:border-slate-500"
-            >
-              Book Enterprise Demo
-            </button>
-          </div>
-
-          {/* Metric Badges */}
-          <div className="pt-8 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
-            <div className="glass-panel p-3.5 rounded-xl border border-slate-800">
-              <div className="text-2xl font-bold font-display text-cyan-400">3.2B+</div>
-              <div className="text-[11px] font-mono text-slate-400 uppercase mt-0.5">Records Assessed</div>
-            </div>
-            <div className="glass-panel p-3.5 rounded-xl border border-slate-800">
-              <div className="text-2xl font-bold font-display text-emerald-400">94%</div>
-              <div className="text-[11px] font-mono text-slate-400 uppercase mt-0.5">Readiness Uplift</div>
-            </div>
-            <div className="glass-panel p-3.5 rounded-xl border border-slate-800">
-              <div className="text-2xl font-bold font-display text-blue-400">&lt;40ms</div>
-              <div className="text-[11px] font-mono text-slate-400 uppercase mt-0.5">S/4HANA Writeback</div>
-            </div>
-            <div className="glass-panel p-3.5 rounded-xl border border-slate-800">
-              <div className="text-2xl font-bold font-display text-purple-400">100%</div>
-              <div className="text-[11px] font-mono text-slate-400 uppercase mt-0.5">Lineage Auditable</div>
-            </div>
-          </div>
+          {/* Secondary: See how it works — Hug 180×47px, 5% white, 18% border */}
+          <button
+            onClick={() => {
+              const el = document.getElementById('how-it-works') || document.getElementById('pipeline');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }}
+            style={{
+              height: 47,
+              padding: '12px 22px',
+              borderRadius: 999,
+              border: '1px solid rgba(255,255,255,0.18)',
+              background: 'rgba(255,255,255,0.05)',
+              color: '#FFFFFF',
+              fontFamily: "'Geist', sans-serif",
+              fontSize: 14,
+              fontWeight: 500,
+              display: 'flex', alignItems: 'center', gap: 8,
+              cursor: 'pointer',
+              backdropFilter: 'blur(8px)',
+              transition: 'border-color 0.15s, background 0.15s, transform 0.1s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)';
+              e.currentTarget.style.background = 'rgba(255,255,255,0.09)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)';
+              e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+            }}
+            onMouseDown={e => e.currentTarget.style.transform = 'scale(0.97)'}
+            onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            <Play size={13} style={{ fill: '#fff', flexShrink: 0 }} />
+            See how it works
+          </button>
         </div>
 
-        {/* Interactive Dual-Product Hero Showcase Banner */}
-        <div className="mt-16 max-w-5xl mx-auto">
-          <div className="glass-panel p-2 sm:p-3 rounded-2xl border border-slate-700/60 shadow-2xl relative">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              
-              {/* Product 1 Card: DataGlow Continuum */}
-              <div className="p-6 rounded-xl bg-gradient-to-b from-[#0c162d] to-[#080f20] border border-cyan-500/20 relative group hover:border-cyan-500/40 transition-all">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                      <Activity className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-white font-display">DataGlow Continuum</h3>
-                      <p className="text-xs text-cyan-400 font-mono">Enterprise Data Readiness</p>
-                    </div>
-                  </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold">
-                    Core Platform
-                  </span>
-                </div>
-                <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                  Assess, score, and remediate enterprise datasets across 6 dimensions. Automatic Data Quality Index, cross-model drift forecasting, and Meridian audit lineage.
-                </p>
-                <div className="flex flex-wrap gap-1.5 text-[10px] font-mono text-slate-300 mb-5">
-                  <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700">✓ 6-D Quality Scoring</span>
-                  <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700">✓ AI Remediation</span>
-                  <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700">✓ Meridian Audit</span>
-                </div>
-                <a 
-                  href="#products" 
-                  className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 group-hover:gap-2 transition-all"
-                >
-                  Explore Continuum Features <ArrowRight className="w-3.5 h-3.5" />
-                </a>
-              </div>
-
-              {/* Product 2 Card: DataX */}
-              <div className="p-6 rounded-xl bg-gradient-to-b from-[#0b172a] to-[#070e1c] border border-blue-500/30 relative group hover:border-blue-400/50 transition-all shadow-glow-blue">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2.5 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/30">
-                      <Workflow className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-white font-display">DataX Platform</h3>
-                      <p className="text-xs text-blue-400 font-mono">Decision Intelligence & Transformation</p>
-                    </div>
-                  </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold animate-pulse">
-                    Live Demo
-                  </span>
-                </div>
-                <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                  Autonomous agentic data transformation pipeline: Ingests from <strong className="text-white">SAP BW</strong>, synthesizes AI business rules via <strong className="text-white">Agentic Tool Calling</strong>, stages to <strong className="text-white">SAP S/4HANA</strong>, and writes to <strong className="text-white">Databricks</strong>.
-                </p>
-                <div className="flex flex-wrap gap-1.5 text-[10px] font-mono text-slate-300 mb-5">
-                  <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700">✓ SAP BW Extractor</span>
-                  <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700">✓ Agentic Tool Calling</span>
-                  <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700">✓ S/4HANA & Databricks</span>
-                </div>
-                <button 
-                  onClick={() => setActiveView('poc')}
-                  className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 group-hover:gap-2 transition-all"
-                >
-                  Launch Interactive DataX POC <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-            </div>
-          </div>
-        </div>
+        {/* ── Conveyor Animation ─────────────────────────────── */}
+        <DataStreamConveyor />
 
       </div>
     </section>

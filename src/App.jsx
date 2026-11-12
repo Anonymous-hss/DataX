@@ -1,30 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import Navbar from './components/common/Navbar';
+import LandingNavbar from './components/website/LandingNavbar';
 import Footer from './components/common/Footer';
 import Hero from './components/website/Hero';
 import ProductsSection from './components/website/ProductsSection';
-import ExpertiseSection from './components/website/ExpertiseSection';
-import ArchitecturePipeline from './components/website/ArchitecturePipeline';
-import CaseStudiesSection from './components/website/CaseStudiesSection';
+import HowItWorksSection from './components/website/HowItWorksSection';
+import UseCasesSection from './components/website/UseCasesSection';
+import BusinessLeadersSection from './components/website/BusinessLeadersSection';
+import ControlSection from './components/website/ControlSection';
 import BookDemoModal from './components/website/BookDemoModal';
 import ErrorBoundary from './components/common/ErrorBoundary';
 const DataXPoc = React.lazy(() => import('./components/poc/DataXPoc'));
 
 export default function App() {
-  const [activeView, setActiveView] = useState('poc'); // Default to DataX PoC app view
+  const [activeView, setActiveView] = useState('website'); // Default to website view
   const [demoModalOpen, setDemoModalOpen] = useState(false);
 
   // Sync with URL hash and pathname
   useEffect(() => {
     const handleLocationChange = () => {
-      const hash = window.location.hash;
+      const hash = window.location.hash.toLowerCase();
       const path = window.location.pathname.toLowerCase();
-      if (
-        path.includes('datax') ||
-        path.includes('poc') ||
-        path.includes('cleanflow') ||
-        path.includes('login') ||
-        path.includes('register') ||
+
+      if (hash === '#website') {
+        setActiveView('website');
+      } else if (
         hash.includes('login') ||
         hash.includes('register') ||
         hash === '#poc' ||
@@ -47,10 +46,12 @@ export default function App() {
         hash === '#connections' ||
         hash === '#audit' ||
         hash === '#roi' ||
-        hash === '#quarantine'
+        hash === '#quarantine' ||
+        path.includes('poc') ||
+        path.includes('cleanflow')
       ) {
         setActiveView('poc');
-      } else if (hash === '#website') {
+      } else {
         setActiveView('website');
       }
     };
@@ -66,23 +67,19 @@ export default function App() {
 
   const handleViewChange = (view) => {
     setActiveView(view);
-    if (view === 'sandbox') {
-      window.location.hash = '#sandbox';
-    } else if (view === 'poc') {
+    if (view === 'poc') {
       window.location.hash = '#poc';
     } else {
       window.location.hash = '#website';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
-    <div className={`min-h-screen ${activeView === 'website' ? 'bg-[#060a12] text-slate-100 selection:bg-cyan-500/20 selection:text-cyan-300' : 'bg-[#F8FAFC] text-slate-900 selection:bg-blue-500/20 selection:text-blue-700'} flex flex-col font-sans`}>
-      {/* Universal Navbar (Only show on website view, DataX app has its own dedicated top bar) */}
+    <div className={`min-h-screen ${activeView === 'website' ? 'bg-[#0A0F1F] text-slate-100 selection:bg-blue-500/20 selection:text-blue-300' : 'bg-[#F8FAFC] text-slate-900 selection:bg-blue-500/20 selection:text-blue-700'} flex flex-col font-sans`}>
+      {/* Universal Navbar (Only on website view) */}
       {activeView === 'website' && (
-        <Navbar 
-          activeView={activeView} 
+        <LandingNavbar 
           setActiveView={handleViewChange} 
           onOpenDemo={() => setDemoModalOpen(true)} 
         />
@@ -108,11 +105,10 @@ export default function App() {
                 setActiveView={handleViewChange} 
                 onOpenDemo={() => setDemoModalOpen(true)} 
               />
-              <ExpertiseSection />
-              <ArchitecturePipeline 
-                setActiveView={handleViewChange} 
-              />
-              <CaseStudiesSection />
+              <HowItWorksSection />
+              <UseCasesSection onOpenDemo={() => setDemoModalOpen(true)} />
+              <BusinessLeadersSection />
+              <ControlSection onOpenDemo={() => setDemoModalOpen(true)} />
             </>
           )}
         </ErrorBoundary>
