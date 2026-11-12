@@ -110,3 +110,12 @@ export const IconArrowLeft = ({ size = 16, className = '', color = 'currentColor
     <polyline points="12 19 5 12 12 5" />
   </svg>
 );
+
+export const IconAdvisor = ({ size = 15, className = '', color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={`shrink-0 ${className}`}>
+    <path d="M4 20L14 10" />
+    <path d="M14 10V4.5" />
+    <path d="M14 10L18.5 5.5" />
+    <path d="M14 10H19.5" />
+  </svg>
+);

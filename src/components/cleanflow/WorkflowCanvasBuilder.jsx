@@ -230,6 +230,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const [isExecutingLiveRun, setIsExecutingLiveRun] = useState(false);
   const [executionSummary, setExecutionSummary] = useState(null);
   const [isTelemetryDrawerOpen, setIsTelemetryDrawerOpen] = useState(false);
+  const [telemetryDrawerHeight, setTelemetryDrawerHeight] = useState(285);
   const [executionError, setExecutionError] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -718,38 +719,77 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       }
     }
   }, [nodes]);
-  // Fit Canvas and all nodes within window viewport
-  const handleFitToWindow = useCallback(() => {
-    if (!canvasRef.current || nodes.length === 0) {
+  // Fit Canvas and all nodes within window viewport, accurately centered in visible space above underbar
+  const handleFitToWindow = useCallback((nodesToFit = null, customDrawerH = null) => {
+    const targetNodes = (Array.isArray(nodesToFit) && nodesToFit.length > 0)
+      ? nodesToFit
+      : (nodesRef.current && nodesRef.current.length > 0 ? nodesRef.current : nodes);
+    if (!canvasRef.current || !targetNodes || targetNodes.length === 0) {
       setZoom(1);
       setPan({ x: 0, y: 0 });
       return;
     }
     const rect = canvasRef.current.getBoundingClientRect();
-    const padding = 70;
-    const minX = Math.min(...nodes.map(n => n.x));
-    const maxX = Math.max(...nodes.map(n => n.x + (n.width || 260)));
-    const minY = Math.min(...nodes.map(n => n.y));
-    const maxY = Math.max(...nodes.map(n => n.y + (n.height || 135)));
+    if (rect.width <= 0 || rect.height <= 0) return;
+
+    // Available space above the telemetry drawer (underbar) if active
+    const drawerH = customDrawerH !== null
+      ? customDrawerH
+      : (isTelemetryDrawerOpen ? telemetryDrawerHeight : 0);
+
+    const availableWidth = rect.width;
+    const availableHeight = Math.max(160, rect.height - drawerH);
+
+    const minX = Math.min(...targetNodes.map(n => n.x));
+    const maxX = Math.max(...targetNodes.map(n => n.x + (n.width ? Math.min(n.width, 215) : 210)));
+    const minY = Math.min(...targetNodes.map(n => n.y));
+    const maxY = Math.max(...targetNodes.map(n => n.y + (n.height || 135)));
     const contentWidth = maxX - minX;
     const contentHeight = maxY - minY;
-    if (rect.width > 0 && rect.height > 0 && contentWidth > 0 && contentHeight > 0) {
-      const scaleX = (rect.width - padding * 2) / contentWidth;
-      const scaleY = (rect.height - padding * 2) / contentHeight;
-      const newZoom = Math.min(Math.max(Math.min(scaleX, scaleY), 0.55), 1.05);
-      const centeredX = (rect.width - contentWidth * newZoom) / 2 - minX * newZoom;
-      const centeredY = (rect.height - contentHeight * newZoom) / 2 - minY * newZoom;
+
+    if (contentWidth > 0 && contentHeight > 0) {
+      // Balanced margins so all ports and cards sit comfortably in the visible space
+      const paddingX = 48;
+      const paddingY = 32;
+      const scaleX = (availableWidth - paddingX * 2) / contentWidth;
+      const scaleY = (availableHeight - paddingY * 2) / contentHeight;
+      const newZoom = Math.min(Math.max(Math.min(scaleX, scaleY), 0.48), 1.02);
+      const centeredX = (availableWidth - contentWidth * newZoom) / 2 - minX * newZoom;
+      const centeredY = (availableHeight - contentHeight * newZoom) / 2 - minY * newZoom;
+
       setZoom(Number(newZoom.toFixed(2)));
       setPan({ x: Math.round(centeredX), y: Math.round(centeredY) });
     }
-  }, [nodes]);
+  }, [nodes, isTelemetryDrawerOpen, telemetryDrawerHeight]);
+
   // Initial Auto-fit to window when canvas mounts
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const timer1 = setTimeout(() => {
       handleFitToWindow();
-    }, 120);
-    return () => clearTimeout(timer);
+    }, 60);
+    const timer2 = setTimeout(() => {
+      handleFitToWindow();
+    }, 220);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
   }, [handleFitToWindow]);
+
+  // Recalibrate and map workflow in center whenever telemetry underbar opens, closes, or resizes
+  useEffect(() => {
+    handleFitToWindow(null, isTelemetryDrawerOpen ? telemetryDrawerHeight : 0);
+  }, [isTelemetryDrawerOpen, telemetryDrawerHeight, handleFitToWindow]);
+
+  // Re-center on browser resize
+  useEffect(() => {
+    const handleResize = () => {
+      handleFitToWindow();
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [handleFitToWindow]);
+
   // Autofill Template Action
   const handleAutofillTemplate = (templateKey) => {
     const template = TEMPLATE_AUTOFILLS[templateKey];
@@ -759,8 +799,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       setSelectedNodeId(null);
       setSelectedEdgeId(null);
       setExecutionSummary(null);
-      setZoom(1);
-      setPan({ x: 0, y: 0 });
+      handleFitToWindow(template.nodes);
       // Synchronize with RuleEngineContext and APIs!
       if (selectThread) selectThread(templateKey);
       if (template.sourceConfig) {
@@ -800,7 +839,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       }
       // Auto-fit to viewport after template loads
       setTimeout(() => {
-        handleFitToWindow();
+        handleFitToWindow(template.nodes);
       }, 100);
     }
   };
@@ -2354,12 +2393,37 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
         >
           {/* SVG Connector Lines Overlay */}
           <svg className="absolute inset-0 w-[3000px] h-[2000px] pointer-events-none z-10 overflow-visible">
+            <defs>
+              <marker
+                id="edge-arrow-blue"
+                viewBox="0 0 10 10"
+                refX="6"
+                refY="5"
+                markerWidth="6"
+                markerHeight="6"
+                orient="auto"
+              >
+                <path d="M 0 2 L 7 5 L 0 8 z" fill="#3B82F6" />
+              </marker>
+              <marker
+                id="edge-arrow-gray"
+                viewBox="0 0 10 10"
+                refX="6"
+                refY="5"
+                markerWidth="6"
+                markerHeight="6"
+                orient="auto"
+              >
+                <path d="M 0 2 L 7 5 L 0 8 z" fill="#94A3B8" />
+              </marker>
+            </defs>
             {/* Render Saved Edges */}
             {edges.map((edge) => {
               const fromNode = getNode(edge.from);
               const toNode = getNode(edge.to);
               if (!fromNode || !toNode) return null;
-              const startX = fromNode.x + (fromNode.width || 250);
+              const nodeW = 215;
+              const startX = fromNode.x + nodeW;
               const startY = fromNode.y + 70;
               const endX = toNode.x;
               const endY = toNode.y + 70;
@@ -2375,7 +2439,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
               const midX = (startX + endX) / 2;
               const midY = (startY + endY) / 2;
               return (
-                <g key={edge.id} className="cursor-pointer pointer-events-auto">
+                <g key={edge.id} className="cursor-pointer pointer-events-auto group/edge">
                   {/* Outer glow on hover/selected */}
                   <path
                     d={pathD}
@@ -2393,12 +2457,13 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                     strokeWidth={isSelected ? 3 : 2}
                     strokeDasharray={isQuarantineEdge ? '4 4' : 'none'}
                     strokeLinecap="round"
+                    markerEnd={isQuarantineEdge ? 'url(#edge-arrow-gray)' : 'url(#edge-arrow-blue)'}
                     onClick={() => setSelectedEdgeId(edge.id)}
                   />
 
                   {/* Branch TRUE pill */}
                   {isTrueBranch && (
-                    <g transform={`translate(${startX + 28}, ${startY - 14})`} className="pointer-events-none">
+                    <g transform={`translate(${startX + 24}, ${startY - 18})`} className="pointer-events-none">
                       <rect width="36" height="18" rx="9" fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="1" />
                       <text x="18" y="12.5" textAnchor="middle" fill="#5F6678" fontSize="9" fontWeight="bold" fontFamily="sans-serif">
                         TRUE
@@ -2408,7 +2473,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
 
                   {/* Branch FALSE pill */}
                   {isFalseBranch && (
-                    <g transform={`translate(${startX + 28}, ${startY + 2})`} className="pointer-events-none">
+                    <g transform={`translate(${startX + 24}, ${startY + 20})`} className="pointer-events-none">
                       <rect width="40" height="18" rx="9" fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="1" />
                       <text x="20" y="12.5" textAnchor="middle" fill="#5F6678" fontSize="9" fontWeight="bold" fontFamily="sans-serif">
                         FALSE
@@ -2434,10 +2499,10 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                     </g>
                   )}
 
-                  {/* Enhancement 6.4: Insert node button at edge midpoint */}
+                  {/* Enhancement 6.4: Insert node button at edge midpoint (reveal on hover) */}
                   <g
                     transform={`translate(${midX}, ${midY})`}
-                    className="cursor-pointer group/insert"
+                    className="cursor-pointer group/insert opacity-0 group-hover/edge:opacity-100 transition-opacity"
                     onClick={(e) => {
                       e.stopPropagation();
                       setActiveEdgeForInsert(edge);
@@ -2447,14 +2512,14 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                     <circle
                       cx="0"
                       cy="0"
-                      r="11"
+                      r="10"
                       fill="#FFFFFF"
                       stroke="#2D55F5"
-                      strokeWidth="2"
+                      strokeWidth="1.5"
                       className="hover:scale-125 transition-transform"
                     />
-                    <line x1="0" y1="-5" x2="0" y2="5" stroke="#2D55F5" strokeWidth="2" strokeLinecap="round" />
-                    <line x1="-5" y1="0" x2="5" y2="0" stroke="#2D55F5" strokeWidth="2" strokeLinecap="round" />
+                    <line x1="0" y1="-4" x2="0" y2="4" stroke="#2D55F5" strokeWidth="1.5" strokeLinecap="round" />
+                    <line x1="-4" y1="0" x2="4" y2="0" stroke="#2D55F5" strokeWidth="1.5" strokeLinecap="round" />
                   </g>
 
                   {isSelected && (
@@ -2472,10 +2537,11 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
               const fromNode = getNode(edge.from);
               const toNode = getNode(edge.to);
               if (!fromNode || !toNode) return null;
-              const startX = fromNode.x + fromNode.width;
-              const startY = fromNode.y + fromNode.height / 2;
+              const nodeW = 215;
+              const startX = fromNode.x + nodeW;
+              const startY = fromNode.y + 70;
               const endX = toNode.x;
-              const endY = toNode.y + toNode.height / 2;
+              const endY = toNode.y + 70;
               const dx = Math.abs(endX - startX) * 0.5;
               const pathD = `M ${startX} ${startY} C ${startX + dx} ${startY}, ${endX - dx} ${endY}, ${endX} ${endY}`;
               const particleColor = edge.variant === 'orange' ? '#F97316' : edge.variant === 'green' ? '#10B981' : '#3B82F6';
@@ -2498,10 +2564,11 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
               const fromNode = getNode(edge.from);
               const toNode = getNode(edge.to);
               if (!fromNode || !toNode) return null;
-              const startX = fromNode.x + fromNode.width;
-              const startY = fromNode.y + fromNode.height / 2;
+              const nodeW = 215;
+              const startX = fromNode.x + nodeW;
+              const startY = fromNode.y + 70;
               const endX = toNode.x;
-              const endY = toNode.y + toNode.height / 2;
+              const endY = toNode.y + 70;
               const midX = (startX + endX) / 2;
               const midY = (startY + endY) / 2;
               const toTitle = (toNode.title || toNode.name || '').toLowerCase();
@@ -2646,56 +2713,70 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
               }
             }
 
-            // Subtitle text
+            // Dynamic display title matching Image 2
+            const displayTitle =
+              node.type === 'conditional' && (node.title === 'Conditional Router' || !node.title) ? 'If / else router' :
+              node.type === 'hitl' && (node.title === 'Human in Loop' || !node.title) ? 'Controller gate' :
+              node.type === 'rules' && (node.title === 'Intelligence Engine' || node.title === 'AI Identity Rules') ? 'Intelligence engine' :
+              node.type === 'source' && node.title === 'Source Ingestion' && (node.system?.includes('SAP') || !node.system) ? 'SAP BW' :
+              node.type === 'target' && node.title === 'Target ERP' ? 'SAP S/4HANA' :
+              node.type === 'quarantine' && (node.title === 'Quarantine DLQ' || !node.title) ? 'Quarantine store' :
+              node.title;
+
+            // Subtitle text matching Image 2
             const subtitleText =
-              node.type === 'source' ? (node.system || 'InfoCube · HANA Cloud') :
+              node.type === 'source' ? (node.system?.includes('InfoCube') || !node.system ? 'InfoCube\nHANA Cloud' : node.system) :
               node.type === 'rules' ? 'Clean core ontologies' :
               node.type === 'conditional' ? `${conditionField || 'TOTAL_AMOUNT'} ${conditionOp || '>'} ${conditionVal || '50,000'}` :
               node.type === 'hitl' ? (hitlReviewerRole || 'Procurement controller') :
               node.type === 'router' ? 'Clean · Fixed · Quarantined' :
-              node.type === 'target' ? (node.system || 'Clean core') :
+              node.type === 'target' ? (node.system?.includes('Clean') || !node.system ? 'Clean core' : node.system) :
               node.type === 'quarantine' ? 'Dead-letter isolation' :
               (node.system || 'Configured node');
 
-            // Specs Row (Bottom of card)
-            let specLeft = `Table: ${node.table || '0PUR_C01'}`;
-            let specRight = `Rows: ${(dagNodeExecutions[node.id]?.rowsOut || executionSummary?.total || 1420).toLocaleString()}`;
-
+            // Dynamic specs list (Key-Value pairs stacked like Image 2)
+            let specs = [];
             if (node.type === 'source') {
-              specLeft = `Table: ${node.table || '0PUR_C01'}`;
-              specRight = executionSummary
-                ? `Out ${(executionSummary.total || 1420).toLocaleString()}`
-                : `Rows: ${(node.rowCount || 1420).toLocaleString()}`;
+              specs = [
+                { label: 'Table', value: node.table || '0PUR_C01' },
+                { label: 'Rows', value: executionSummary ? executionSummary.total?.toLocaleString() : (node.rowCount || '1,420').toLocaleString() }
+              ];
             } else if (node.type === 'rules') {
-              specLeft = `Rules: ${activeRules?.length || 5} active`;
-              specRight = executionSummary
-                ? `Pass / held ${((executionSummary.clean || 0) + (executionSummary.fixed || 0)).toLocaleString()} / ${(executionSummary.quarantined || 0).toLocaleString()}`
-                : `Model: ${node.aiModel || 'gpt-5-mini'}`;
+              specs = [
+                { label: 'Rules', value: `${activeRules?.length || node.ruleCount || 5} active` },
+                { label: 'Model', value: node.aiModel || 'gpt-5-mini' }
+              ];
             } else if (node.type === 'conditional') {
-              specLeft = 'Paths: TRUE · FALSE';
-              specRight = executionSummary
-                ? 'TRUE / FALSE 111 / 1,156'
-                : 'Condition active';
+              specs = [
+                { label: 'Paths', value: 'TRUE · FALSE' }
+              ];
             } else if (node.type === 'hitl') {
-              specLeft = `SLA: ${hitlSlaTimeout || 8} h`;
-              specRight = executionSummary
-                ? 'Awaiting sign-off'
-                : 'Role: Controller';
+              specs = [
+                { label: 'SLA', value: `${hitlSlaTimeout || 8} h` }
+              ];
             } else if (node.type === 'router') {
-              specLeft = 'Health gate: 90%';
-              specRight = executionSummary
-                ? `Clean / fixed ${(executionSummary.clean || 0).toLocaleString()} / ${(executionSummary.fixed || 0).toLocaleString()}`
-                : '3-way split';
+              specs = [
+                { label: 'Health gate', value: '90%' }
+              ];
             } else if (node.type === 'target') {
-              specLeft = `Table: ${node.table || '0PUR_C01_clean'}`;
-              specRight = executionSummary
-                ? `Staged ${(executionSummary.clean || 0).toLocaleString()}`
-                : 'Write: Append';
+              const tblDisplay = node.table
+                ? (node.table.includes('_') ? `..._${node.table.split('_').slice(-1)[0]}` : node.table)
+                : '..._clean';
+              specs = [
+                { label: 'Table', value: tblDisplay }
+              ];
             } else if (node.type === 'quarantine') {
-              specLeft = `Table: ${node.table || '0PUR_C01_quarantine'}`;
-              specRight = executionSummary
-                ? `Held ${(executionSummary.quarantined || 0).toLocaleString()}`
-                : 'Isolation: Active';
+              const tblDisplay = node.table
+                ? (node.table.includes('_') ? `..._${node.table.split('_').slice(-1)[0]}` : node.table)
+                : '..._quarantine';
+              specs = [
+                { label: 'Table', value: tblDisplay }
+              ];
+            } else {
+              if (node.table) specs.push({ label: 'Table', value: node.table });
+              if (node.rowCount) specs.push({ label: 'Rows', value: String(node.rowCount) });
+              if (node.aiModel || node.model) specs.push({ label: 'Model', value: node.aiModel || node.model });
+              if (specs.length === 0) specs.push({ label: 'Status', value: 'Configured' });
             }
 
             return (
@@ -2709,175 +2790,149 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                 }}
                 style={{
                   transform: `translate(${node.x}px, ${node.y}px)`,
-                  width: node.width || 280,
+                  width: 215,
                   position: 'absolute',
                   zIndex: isStageActive ? 35 : isSelected ? 30 : 20
                 }}
-                className={`workflow-node-card relative group bg-white dark:bg-[#18181C] rounded-2xl border transition-all select-none p-4 ${
+                className={`workflow-node-card relative group bg-white dark:bg-[#18181C] rounded-[20px] border transition-all select-none p-3.5 flex flex-col justify-between shadow-2xs ${
                   activeTool === 'pan' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
                 } ${
                   traceRecordId && (node.type === 'hitl' || node.type === 'target')
-                    ? 'opacity-35 pointer-events-none border-[#CDD2DE]'
+                    ? 'opacity-35 pointer-events-none border-slate-300 dark:border-white/10'
                     : traceRecordId && node.type === 'rules'
                       ? 'border-2 border-rose-500 ring-4 ring-rose-500/20 shadow-xl'
                       : traceRecordId
                         ? 'border-[#2D55F5] ring-2 ring-blue-500/20 shadow-lg'
                         : node.isBlocked || (preflightHasBlocking && (node.type === 'target' || (node.title || '').includes('PostgreSQL')))
-                          ? 'border-2 border-rose-600 bg-white shadow-lg'
+                          ? 'border-2 border-rose-600 bg-white dark:bg-[#18181C] shadow-lg'
                           : node.needsSetup
-                            ? 'border-2 border-amber-600 bg-white shadow-md'
+                            ? 'border-2 border-amber-600 bg-white dark:bg-[#18181C] shadow-md'
                             : node.isSuggested
-                              ? 'border-2 border-dashed border-[#2D55F5] bg-white shadow-sm'
+                              ? 'border-2 border-dashed border-[#2D55F5] bg-white dark:bg-[#18181C] shadow-sm'
                               : node.isRejected
-                                ? 'border-dashed border-slate-300 bg-white opacity-40 select-none'
+                                ? 'border-dashed border-slate-300 bg-white dark:bg-[#18181C] opacity-40 select-none'
                                 : isStageActive
                                   ? 'border-[#2D55F5] ring-4 ring-[#2D55F5]/30 shadow-xl scale-[1.02]'
                                   : isSelected
                                     ? 'border-[#2D55F5] ring-3 ring-[#2D55F5]/25 shadow-xl'
-                                    : 'border-[#CDD2DE] dark:border-white/[0.12] hover:border-[#2D55F5]/60 hover:shadow-lg shadow-sm'
+                                    : 'border-slate-200/90 dark:border-white/[0.08] hover:border-[#2D55F5]/60 hover:shadow-md'
                 }`}
               >
                 {/* 1. INPUT PORT (Left Side) */}
                 {node.type !== 'source' && (
                   <div
                     onMouseUp={(e) => handleCompleteEdge(e, node.id)}
-                    className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white dark:bg-[#18181C] border-2 border-slate-300 dark:border-slate-600 group-hover:border-[#2D55F5] flex items-center justify-center hover:scale-125 transition-all cursor-crosshair z-30 shadow-xs"
+                    className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white dark:bg-[#18181C] border-2 border-slate-300 dark:border-slate-600 group-hover:border-[#2D55F5] flex items-center justify-center hover:scale-125 transition-all cursor-crosshair z-30 shadow-2xs"
                     title="Drop to connect edge here"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-slate-500 group-hover:bg-[#2D55F5]" />
                   </div>
                 )}
 
-                {/* 2. OUTPUT PORT(S) — Conditional gets TRUE+FALSE ports; others get a single port */}
-                {node.type === 'conditional' ? (
-                  <div className="absolute -right-14 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-30">
-                    <div
-                      onMouseDown={(e) => handleStartEdge(e, node.id)}
-                      className="flex items-center gap-1 cursor-crosshair group/port"
-                      title="TRUE path — drag to connect"
-                    >
-                      <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-300 px-1 py-0.5 rounded select-none">TRUE</span>
-                      <div className="w-5 h-5 rounded-full bg-white dark:bg-[#18181C] border-2 border-emerald-500 group-hover/port:border-emerald-600 flex items-center justify-center hover:scale-125 transition-transform shadow-xs">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      </div>
-                    </div>
-                    <div
-                      onMouseDown={(e) => handleStartEdge(e, node.id)}
-                      className="flex items-center gap-1 cursor-crosshair group/port"
-                      title="FALSE path — drag to connect"
-                    >
-                      <span className="text-[9px] font-bold text-slate-600 bg-slate-100 border border-slate-300 px-1 py-0.5 rounded select-none">FALSE</span>
-                      <div className="w-5 h-5 rounded-full bg-white dark:bg-[#18181C] border-2 border-slate-400 group-hover/port:border-slate-600 flex items-center justify-center hover:scale-125 transition-transform shadow-xs">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
-                      </div>
-                    </div>
-                  </div>
-                ) : node.type !== 'quarantine' && node.type !== 'target' ? (
+                {/* 2. OUTPUT PORT(S) */}
+                {node.type !== 'quarantine' && node.type !== 'target' && (
                   <div
                     onMouseDown={(e) => handleStartEdge(e, node.id)}
-                    className="absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white dark:bg-[#18181C] border-2 border-slate-300 dark:border-slate-600 group-hover:border-[#2D55F5] flex items-center justify-center hover:scale-125 transition-all cursor-crosshair z-30 shadow-xs"
+                    className="absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white dark:bg-[#18181C] border-2 border-slate-300 dark:border-slate-600 group-hover:border-[#2D55F5] flex items-center justify-center hover:scale-125 transition-all cursor-crosshair z-30 shadow-2xs"
                     title="Drag to connect to another node"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-slate-500 group-hover:bg-[#2D55F5]" />
                   </div>
-                ) : null}
+                )}
 
-                {/* Card Top Row: Circular Index + Category Label + Status Pill + Settings Button */}
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-4 h-4 rounded-full bg-slate-100 dark:bg-white/[0.08] text-[10px] font-bold text-[#5F6678] dark:text-slate-400 flex items-center justify-center">
+                {/* Card Top Row: Numbered Black Circle + Category Label + Status Pill */}
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-5 h-5 rounded-full bg-[#0A0F1F] dark:bg-white text-white dark:text-[#0A0F1F] text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">
                       {nodeIndex}
                     </span>
-                    <span className="text-[10px] font-bold text-[#5F6678] dark:text-slate-400 uppercase tracking-wider">
+                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 capitalize tracking-tight truncate">
                       {categoryLabel}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     {node.isBlocked || (preflightHasBlocking && (node.type === 'target' || (node.title || '').includes('PostgreSQL'))) ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-rose-50 text-rose-700 border-rose-200/80 flex items-center gap-1">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium border bg-rose-50 text-rose-700 border-rose-200/80 flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
                         Blocked by pre-flight
                       </span>
                     ) : node.needsSetup ? (
-                      <div className="flex items-center gap-1.5">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-amber-50 text-amber-800 border-amber-200/80 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                          Needs setup
-                        </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openNodeSettings(node);
-                          }}
-                          className="px-2 py-0.5 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-semibold flex items-center gap-0.5 shadow-xs transition-colors cursor-pointer"
-                        >
-                          Set write mode →
-                        </button>
-                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium border bg-amber-50 text-amber-800 border-amber-200/80 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        Needs setup
+                      </span>
                     ) : node.isSuggested ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-blue-50 text-blue-700 border-blue-200/80 flex items-center gap-1">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium border bg-blue-50 text-blue-700 border-blue-200/80 flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#2D55F5]" />
                         Suggested by AI
                       </span>
                     ) : node.isRejected ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-slate-100 text-slate-500 border-slate-200 flex items-center gap-1">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium border bg-slate-100 text-slate-500 border-slate-200 flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
                         Rejected
                       </span>
                     ) : (
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border flex items-center gap-1 ${statusBadgeClass}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
-                        {statusText}
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border flex items-center gap-1.5 ${statusBadgeClass}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotClass}`} />
+                        <span>{statusText}</span>
                       </span>
                     )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openNodeSettings(node);
-                      }}
-                      className="w-6 h-6 rounded-lg text-slate-400 hover:text-[#2D55F5] hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-transparent hover:border-blue-200 dark:hover:border-blue-800/40 flex items-center justify-center transition-all cursor-pointer"
-                      title="Configure node properties"
-                    >
-                      <Settings className="w-3.5 h-3.5" />
-                    </button>
                   </div>
                 </div>
 
-                {/* Card Middle Row: Squircle Icon + Title + Subtitle */}
-                <div className="flex items-start gap-3">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border transition-colors ${
-                    node.type === 'source' ? 'bg-[#EFF8FF] text-[#175CD3] border-[#B2DDFF]' :
-                    node.type === 'rules' ? 'bg-[#F9F5FF] text-[#6941C6] border-[#D6BBFB]' :
-                    node.type === 'conditional' ? 'bg-[#EFF8FF] text-[#175CD3] border-[#B2DDFF]' :
-                    node.type === 'hitl' ? 'bg-[#FEF6EE] text-[#B54708] border-[#FDB022]' :
-                    node.type === 'router' ? 'bg-[#F4EBFF] text-[#7C3AED] border-[#D6BBFB]' :
-                    node.type === 'target' ? 'bg-[#ECFDF3] text-[#027A48] border-[#6CE9A6]' :
-                    node.type === 'quarantine' ? 'bg-[#FEF3F2] text-[#B42318] border-[#FECDCA]' :
-                    'bg-slate-100 text-slate-700 border-slate-200'
-                  }`}>
-                    {node.type === 'source' ? <img src={sourceIcon} alt="Source" className="w-5 h-5 object-contain" /> :
-                     node.type === 'rules' ? <Sparkles className="w-4 h-4 text-[#6941C6]" /> :
-                     node.type === 'conditional' ? <img src={connectIcon} alt="Router" className="w-4 h-4 object-contain" /> :
-                     node.type === 'hitl' ? <GitBranch className="w-4 h-4 text-[#B54708]" /> :
-                     node.type === 'router' ? <Zap className="w-4 h-4 fill-current text-[#7C3AED]" /> :
-                     node.type === 'target' ? <img src={targetIcon} alt="Target" className="w-5 h-5 object-contain" /> :
-                     node.type === 'quarantine' ? <img src={quarantineIcon} alt="DLQ" className="w-5 h-5 object-contain" /> :
-                     <Database className="w-4 h-4" />}
+                {/* Card Middle Row: Squircle Icon (strictly 20x20 in 40x40 container) + Title + Subtitle */}
+                <div className="flex items-start gap-3 my-2">
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-white/[0.04] border border-slate-100 dark:border-white/[0.08] flex items-center justify-center shrink-0 shadow-2xs">
+                    {node.type === 'source' ? (
+                      <img src={sourceIcon} alt="Source" className="w-5 h-5 object-contain shrink-0" />
+                    ) : node.type === 'rules' ? (
+                      <div className="relative w-5 h-5 flex items-center justify-center shrink-0">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-slate-700 dark:text-slate-200">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                          <line x1="16" y1="13" x2="8" y2="13" />
+                          <line x1="16" y1="17" x2="8" y2="17" />
+                        </svg>
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#2D55F5] border border-white flex items-center justify-center text-white text-[9px] font-bold">
+                          +
+                        </div>
+                      </div>
+                    ) : node.type === 'conditional' ? (
+                      <img src={connectIcon} alt="Router" className="w-5 h-5 object-contain shrink-0" />
+                    ) : node.type === 'hitl' ? (
+                      <GitBranch className="w-5 h-5 text-slate-700 dark:text-slate-300 stroke-[1.75] shrink-0" />
+                    ) : node.type === 'router' ? (
+                      <Zap className="w-5 h-5 text-slate-800 dark:text-slate-200 fill-current shrink-0" />
+                    ) : node.type === 'target' ? (
+                      <img src={targetIcon} alt="Target" className="w-5 h-5 object-contain shrink-0" />
+                    ) : node.type === 'quarantine' ? (
+                      <img src={quarantineIcon} alt="DLQ" className="w-5 h-5 object-contain shrink-0" />
+                    ) : (
+                      <Database className="w-5 h-5 text-slate-700 dark:text-slate-300 stroke-[1.75] shrink-0" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-bold text-[#0F172A] dark:text-white leading-tight truncate">
-                      {node.title}
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-tight break-words">
+                      {displayTitle}
                     </h4>
-                    <p className="text-xs text-[#5F6678] dark:text-slate-400 truncate mt-0.5 font-medium">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-normal leading-snug mt-0.5 whitespace-pre-line break-words line-clamp-2">
                       {subtitleText}
                     </p>
                   </div>
                 </div>
 
-                {/* Card Specs Bottom Divider & Spec Line */}
-                <div className="border-t border-[#F1F3F7] dark:border-white/[0.06] pt-2.5 mt-3 flex items-center justify-between text-[11px] text-[#5F6678] dark:text-slate-400 font-mono">
-                  <span className="truncate max-w-[150px]">{specLeft}</span>
-                  <span className="font-semibold text-[#0F172A] dark:text-slate-300 shrink-0">{specRight}</span>
+                {/* Card Specs Bottom: Multi-row key-value specs dynamically stacked */}
+                <div className="border-t border-slate-100 dark:border-white/[0.06] pt-2 mt-auto space-y-1">
+                  {specs.map((spec, sIdx) => (
+                    <div key={sIdx} className="flex items-center justify-between text-[11px] leading-tight">
+                      <span className="text-slate-400 dark:text-slate-500 font-medium">
+                        {spec.label}
+                      </span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-200 text-right truncate max-w-[125px]">
+                        {spec.value}
+                      </span>
+                    </div>
+                  ))}
                 </div>
 
                 {/* Quarantine Trace Record Pills (Matching Main-5.png) */}
@@ -3960,6 +4015,8 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       <CanvasTelemetryDrawer
         isOpen={isTelemetryDrawerOpen}
         onClose={() => setIsTelemetryDrawerOpen(false)}
+        height={telemetryDrawerHeight}
+        onHeightChange={setTelemetryDrawerHeight}
         summary={executionSummary}
         dagExecutions={dagNodeExecutions}
         consensusData={executionSummary?.consensusGuard}

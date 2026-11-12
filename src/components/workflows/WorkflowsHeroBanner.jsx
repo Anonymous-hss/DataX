@@ -150,7 +150,7 @@ export default function WorkflowsHeroBanner({
           {/* Metrics Box with exact vertical dividers matching Screenshot */}
           <div className="bg-[#060D24]/85 border border-white/[0.08] rounded-2xl px-5 py-3 flex flex-wrap items-center divide-x divide-white/10 mt-5 max-w-xl">
             <div className="pr-6">
-              <p className="text-[11px] text-slate-400 font-medium">Active threads</p>
+              <p className="text-[11px] text-slate-400 font-medium">Active workflows</p>
               <p className="text-lg sm:text-xl font-bold text-white mt-0.5">{activeCount} / {totalCount}</p>
             </div>
             <div className="px-6">

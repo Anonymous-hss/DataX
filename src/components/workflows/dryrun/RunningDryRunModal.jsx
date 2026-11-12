@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { Play, Check, Clock, X, Loader2 } from 'lucide-react';
 
@@ -17,6 +18,29 @@ export default function RunningDryRunModal({
 
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
+
+  // Escape key listener to close modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (onCancel) onCancel();
+        else if (onClose) onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onCancel, onClose]);
+
+  // Lock body scroll while modal dialog is open
+  useEffect(() => {
+    if (!isOpen || typeof document === 'undefined') return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -49,17 +73,19 @@ export default function RunningDryRunModal({
 
   if (!isOpen) return null;
 
-  return (
+  const modalNode = (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs font-sans"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs font-sans"
       role="dialog"
       aria-modal="true"
+      onClick={onCancel || onClose}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 10 }}
         transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+        onClick={(e) => e.stopPropagation()}
         className="bg-white dark:bg-[#18181C] border border-[#E3E6EE] dark:border-white/[0.08] rounded-[24px] max-w-[560px] w-full p-7 sm:p-8 shadow-2xl relative text-left overflow-hidden"
       >
         {/* Top Header Row with Play Icon & Close */}
@@ -171,5 +197,9 @@ export default function RunningDryRunModal({
       </motion.div>
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalNode, document.body)
+    : modalNode;
 }
 

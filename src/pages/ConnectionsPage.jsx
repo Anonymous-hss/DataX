@@ -14,7 +14,8 @@ import {
   Eye,
   EyeOff,
   Database,
-  RefreshCw
+  RefreshCw,
+  Activity
 } from 'lucide-react';
 import iconSource from '../assets/icons/source.png';
 import iconSpinner from '../assets/icons/spinner.png';
@@ -423,16 +424,16 @@ export default function ConnectionsPage({ onSwitchToMarketing } = {}) {
                       disabled={isTesting}
                       className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
                     >
-                      <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${isTesting ? 'animate-spin' : ''}`} />
+                      <Activity className={`w-3.5 h-3.5 text-slate-800 dark:text-slate-200 stroke-[2] ${isTesting ? 'animate-pulse' : ''}`} />
                       <span>{isTesting ? 'Testing...' : 'Test ping'}</span>
                     </button>
 
                     <button
                       onClick={() => setShowAddModal(true)}
-                      className="w-8 h-8 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors cursor-pointer shadow-2xs"
+                      className="w-8 h-8 rounded-xl bg-transparent hover:bg-slate-100 dark:hover:bg-white/[0.08] flex items-center justify-center text-slate-900 dark:text-white transition-colors cursor-pointer"
                       title="Edit connection"
                     >
-                      <Edit2 className="w-3.5 h-3.5" />
+                      <Edit2 className="w-3.5 h-3.5 stroke-[2]" />
                     </button>
                   </div>
 

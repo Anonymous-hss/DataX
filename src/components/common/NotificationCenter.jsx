@@ -193,12 +193,12 @@ export default function NotificationCenter() {
         )}
       </button>
 
-      {/* Clean White Notification Panel (Figma 00.5) - Dynamically responsive */}
+      {/* Clean White Notification Panel (Figma 00.5) - Dynamically responsive with generous padding */}
       {isOpen && (
-        <div className="absolute right-0 mt-2.5 w-[calc(100vw-24px)] max-w-[360px] sm:max-w-[400px] max-h-[calc(100vh-80px)] sm:max-h-[min(520px,84vh)] bg-white dark:bg-[#18181C] border border-[#E3E6EE] dark:border-white/[0.08] rounded-2xl shadow-2xl shadow-slate-900/15 z-50 overflow-hidden text-left font-sans animate-in fade-in slide-in-from-top-2 duration-180 flex flex-col">
+        <div className="absolute right-[-48px] sm:right-0 mt-2.5 w-[calc(100vw-32px)] sm:w-[410px] max-w-[420px] max-h-[calc(100vh-80px)] sm:max-h-[min(540px,84vh)] bg-white dark:bg-[#18181C] border border-[#E3E6EE] dark:border-white/[0.08] rounded-2xl shadow-2xl shadow-slate-900/15 z-50 overflow-hidden text-left font-sans animate-in fade-in slide-in-from-top-2 duration-180 flex flex-col">
           
           {/* Header */}
-          <div className="px-4.5 pt-4 pb-2.5 shrink-0">
+          <div className="px-5 sm:px-6 pt-5 pb-3.5 shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-[#0A0F1F] dark:text-white leading-tight">
@@ -219,11 +219,11 @@ export default function NotificationCenter() {
             </div>
 
             {/* Filter Tabs Capsule */}
-            <div className="mt-2.5 bg-[#EDEFF5] dark:bg-white/[0.06] p-0.5 rounded-full inline-flex items-center text-xs">
+            <div className="mt-3 bg-[#EDEFF5] dark:bg-white/[0.06] p-1 rounded-full inline-flex items-center text-xs">
               <button
                 type="button"
                 onClick={() => setFilter('all')}
-                className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
                   filter === 'all'
                     ? 'bg-white dark:bg-[#2A2B32] text-[#2D55F5] shadow-2xs'
                     : 'text-[#5F6678] dark:text-slate-400 hover:text-[#0A0F1F]'
@@ -234,7 +234,7 @@ export default function NotificationCenter() {
               <button
                 type="button"
                 onClick={() => setFilter('unread')}
-                className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
                   filter === 'unread'
                     ? 'bg-white dark:bg-[#2A2B32] text-[#2D55F5] shadow-2xs'
                     : 'text-[#5F6678] dark:text-slate-400 hover:text-[#0A0F1F]'
@@ -259,7 +259,7 @@ export default function NotificationCenter() {
                   <div
                     key={notif.id}
                     onClick={() => handleItemClick(notif)}
-                    className="px-5 py-3.5 flex items-start gap-3.5 hover:bg-[#F8FAFC] dark:hover:bg-white/[0.03] transition-colors cursor-pointer group"
+                    className="px-5 sm:px-6 py-4 flex items-start gap-3.5 hover:bg-[#F8FAFC] dark:hover:bg-white/[0.03] transition-colors cursor-pointer group"
                   >
                     {renderIcon(notif.type)}
 
@@ -288,7 +288,7 @@ export default function NotificationCenter() {
           </div>
 
           {/* Footer */}
-          <div className="py-3 px-4 bg-[#F9FAFC] dark:bg-white/[0.02] border-t border-[#E3E6EE] dark:border-white/[0.06] text-center">
+          <div className="py-3.5 px-6 bg-[#F9FAFC] dark:bg-white/[0.02] border-t border-[#E3E6EE] dark:border-white/[0.06] text-center">
             <button
               type="button"
               onClick={() => {

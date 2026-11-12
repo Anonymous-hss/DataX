@@ -1,4 +1,4 @@
-export { default as Logo, Logo } from './Logo';
+export { default as Logo } from './Logo';
 export * from './DatabaseLogos';
 export * from './NavIcons';
 export * from './Illustrations';

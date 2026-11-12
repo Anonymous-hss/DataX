@@ -80,6 +80,8 @@ function formatCellValue(colName, val) {
 export default function CanvasTelemetryDrawer({
   isOpen,
   onClose,
+  height: externalHeight,
+  onHeightChange,
   summary,
   dagExecutions,
   consensusData,
@@ -99,13 +101,20 @@ export default function CanvasTelemetryDrawer({
 
   // Window geometry states: 'docked' | 'floating' | 'minimized'
   const [windowMode, setWindowMode] = useState('docked');
-  const [drawerHeight, setDrawerHeight] = useState(430);
+  const [internalDrawerHeight, setInternalDrawerHeight] = useState(285);
+  const drawerHeight = externalHeight ?? internalDrawerHeight;
+  const setDrawerHeight = useCallback((val) => {
+    const next = typeof val === 'function' ? val(drawerHeight) : val;
+    setInternalDrawerHeight(next);
+    if (onHeightChange) onHeightChange(next);
+  }, [drawerHeight, onHeightChange]);
+
   const [isMaximized, setIsMaximized] = useState(false);
-  const [floatPos, setFloatPos] = useState({ x: 80, y: 110, width: 1120, height: 520 });
+  const [floatPos, setFloatPos] = useState({ x: 80, y: 110, width: 1120, height: 480 });
 
   const resizingRef = useRef(false);
   const draggingWindowRef = useRef(false);
-  const dragStartRef = useRef({ x: 0, y: 0, startHeight: 430, startX: 80, startY: 110 });
+  const dragStartRef = useRef({ x: 0, y: 0, startHeight: 285, startX: 80, startY: 110 });
 
   // Handle vertical resize (docked or floating) and window dragging (floating)
   const handleResizeStart = useCallback((e) => {
@@ -139,8 +148,8 @@ export default function CanvasTelemetryDrawer({
     const onMouseMove = (e) => {
       if (resizingRef.current) {
         const deltaY = dragStartRef.current.y - e.clientY;
-        const maxH = Math.round(window.innerHeight * 0.86);
-        const nextH = Math.max(250, Math.min(maxH, dragStartRef.current.startHeight + deltaY));
+        const maxH = Math.round(window.innerHeight * 0.82);
+        const nextH = Math.max(160, Math.min(maxH, dragStartRef.current.startHeight + deltaY));
         if (windowMode === 'floating') {
           setFloatPos(prev => ({ ...prev, height: nextH }));
         } else {
@@ -494,7 +503,7 @@ FROM evaluated_stream;`;
   const toggleMaximize = () => {
     const maxH = Math.round(window.innerHeight * 0.82);
     if (isMaximized) {
-      setDrawerHeight(430);
+      setDrawerHeight(285);
       setIsMaximized(false);
     } else {
       setDrawerHeight(maxH);
@@ -570,7 +579,7 @@ FROM evaluated_stream;`;
       </div>
 
       {/* Top Header Bar matching Screenshot 02.14 */}
-      <div className="px-6 py-2.5 bg-white dark:bg-[#18181C] border-b border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between gap-3 shrink-0">
+      <div className="px-6 py-2 bg-white dark:bg-[#18181C] border-b border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3 flex-wrap">
           <h3 className="font-bold text-sm text-slate-900 dark:text-white">
             Run telemetry
@@ -612,7 +621,7 @@ FROM evaluated_stream;`;
       <div className="px-6 border-b border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#18181C] flex items-center gap-6 text-xs shrink-0">
         <button
           onClick={() => setActiveTab('consensus')}
-          className={`py-2.5 font-semibold flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
+          className={`py-2 font-semibold flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
             activeTab === 'consensus'
               ? 'border-[#2D55F5] text-[#2D55F5]'
               : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
@@ -623,7 +632,7 @@ FROM evaluated_stream;`;
         </button>
         <button
           onClick={() => setActiveTab('diffs')}
-          className={`py-2.5 font-semibold flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
+          className={`py-2 font-semibold flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
             activeTab === 'diffs'
               ? 'border-[#2D55F5] text-[#2D55F5]'
               : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
@@ -636,7 +645,7 @@ FROM evaluated_stream;`;
         </button>
         <button
           onClick={() => setActiveTab('ast')}
-          className={`py-2.5 font-semibold flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
+          className={`py-2 font-semibold flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
             activeTab === 'ast'
               ? 'border-[#2D55F5] text-[#2D55F5]'
               : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
@@ -647,7 +656,7 @@ FROM evaluated_stream;`;
         </button>
         <button
           onClick={() => setActiveTab('dag')}
-          className={`py-2.5 font-semibold flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
+          className={`py-2 font-semibold flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
             activeTab === 'dag'
               ? 'border-[#2D55F5] text-[#2D55F5]'
               : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
@@ -662,75 +671,75 @@ FROM evaluated_stream;`;
       </div>
 
       {/* Scrollable Body */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 bg-slate-50/50 dark:bg-black/20 space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-6 py-3 bg-slate-50/50 dark:bg-black/20 space-y-3">
         {/* =========================================================
             TAB 1: 3-LAYER MATHEMATICAL CONSENSUS GUARD (02.14)
            ========================================================= */}
         {activeTab === 'consensus' && (
-          <div className="space-y-3.5">
+          <div className="space-y-3">
             {/* Row 1: 3 Layer Architecture Cards matching 02.14 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {/* Layer 1 */}
-              <div className="bg-white dark:bg-[#18181C] border border-slate-200 dark:border-white/[0.08] rounded-xl p-4 shadow-2xs flex flex-col justify-between">
+              <div className="bg-white dark:bg-[#18181C] border border-slate-200 dark:border-white/[0.08] rounded-xl p-3 shadow-2xs flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between text-[11px] font-mono font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                  <div className="flex items-center justify-between text-[11px] font-mono font-semibold text-slate-500 dark:text-slate-400 mb-0.5">
                     <span>LAYER 1 · Deterministic stats</span>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/50 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                       Verified
                     </span>
                   </div>
-                  <div className="flex items-baseline gap-1 my-1">
-                    <span className="text-3xl font-extrabold text-slate-900 dark:text-white font-mono">
+                  <div className="flex items-baseline gap-1 my-0.5">
+                    <span className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono">
                       {consensus.layer1BaselineScore || '9.92'}
                     </span>
                     <span className="text-xs text-slate-400 font-mono">/10</span>
                   </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
                     {((consensus.layer1Stats?.rowCount ?? total) || 1420).toLocaleString()} rows × {((consensus.layer1Stats?.columnCount ?? tableColumns.length) || 8)} columns · {(consensus.layer1Stats?.completenessPct ?? 99.7)}% complete · {((consensus.layer1Stats?.outlierCount ?? 125)).toLocaleString()} IQR outliers · {(consensus.layer1Stats?.detectedPiiCount ?? 0)} unmasked PII
                   </p>
                 </div>
               </div>
 
               {/* Layer 2 */}
-              <div className="bg-white dark:bg-[#18181C] border border-slate-200 dark:border-white/[0.08] rounded-xl p-4 shadow-2xs flex flex-col justify-between">
+              <div className="bg-white dark:bg-[#18181C] border border-slate-200 dark:border-white/[0.08] rounded-xl p-3 shadow-2xs flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between text-[11px] font-mono font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                  <div className="flex items-center justify-between text-[11px] font-mono font-semibold text-slate-500 dark:text-slate-400 mb-0.5">
                     <span>LAYER 2 · Domain expert voting</span>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/50 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#2D55F5]" />
                       Converged
                     </span>
                   </div>
-                  <div className="flex items-baseline gap-1 my-1">
-                    <span className="text-3xl font-extrabold text-slate-900 dark:text-white font-mono">
+                  <div className="flex items-baseline gap-1 my-0.5">
+                    <span className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono">
                       {consensus.unanchoredQualitativeScore || '9.73'}
                     </span>
                     <span className="text-xs text-slate-400 font-mono">/10</span>
                   </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
                     Four agents: schema integrity, drift, PII governance, business rules
                   </p>
                 </div>
               </div>
 
               {/* Layer 3 */}
-              <div className="bg-white dark:bg-[#18181C] border border-slate-200 dark:border-white/[0.08] rounded-xl p-4 shadow-2xs flex flex-col justify-between">
+              <div className="bg-white dark:bg-[#18181C] border border-slate-200 dark:border-white/[0.08] rounded-xl p-3 shadow-2xs flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between text-[11px] font-mono font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                  <div className="flex items-center justify-between text-[11px] font-mono font-semibold text-slate-500 dark:text-slate-400 mb-0.5">
                     <span>LAYER 3 · Anchored consensus</span>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/50 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                       Approved
                     </span>
                   </div>
-                  <div className="flex items-baseline gap-1 my-1">
-                    <span className="text-3xl font-extrabold text-slate-900 dark:text-white font-mono">
+                  <div className="flex items-baseline gap-1 my-0.5">
+                    <span className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono">
                       {consensus.anchoredScore || '9.73'}
                     </span>
                     <span className="text-xs text-slate-400 font-mono">/10</span>
                   </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
                     Clamped to [{consensus.clampedBandRange?.[0] ?? 7.42}, {consensus.clampedBandRange?.[1] ?? 10}] · {consensus.toleranceBand || '±2.5'} band · zero fatal-flaw overrides
                   </p>
                 </div>
@@ -738,9 +747,9 @@ FROM evaluated_stream;`;
             </div>
 
             {/* Row 2: 4 Domain Metric Cards matching 02.14 */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
               {/* Card 1: Schema Integrity */}
-              <div className="bg-white dark:bg-[#18181C] border border-slate-200 dark:border-white/[0.08] rounded-xl p-3.5 shadow-2xs">
+              <div className="bg-white dark:bg-[#18181C] border border-slate-200 dark:border-white/[0.08] rounded-xl p-2.5 shadow-2xs">
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <span className="text-xs font-semibold text-slate-900 dark:text-white">Schema integrity</span>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/50">
@@ -750,13 +759,13 @@ FROM evaluated_stream;`;
                 <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 font-mono">
                   10 / 10 <span className="font-normal text-slate-400 text-[11px]">conf. 95%</span>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                   0 of 8 columns breach naming conventions
                 </p>
               </div>
 
               {/* Card 2: Drift & Dispersion */}
-              <div className="bg-white dark:bg-[#18181C] border border-slate-200 dark:border-white/[0.08] rounded-xl p-3.5 shadow-2xs">
+              <div className="bg-white dark:bg-[#18181C] border border-slate-200 dark:border-white/[0.08] rounded-xl p-2.5 shadow-2xs">
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <span className="text-xs font-semibold text-slate-900 dark:text-white">Drift &amp; dispersion</span>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/50">
@@ -1061,7 +1070,7 @@ FROM evaluated_stream;`;
       </div>
 
       {/* Bottom Action Footer matching Screenshot 02.14 */}
-      <div className="px-6 py-2.5 bg-white dark:bg-[#18181C] border-t border-slate-200/80 dark:border-white/[0.08] flex flex-wrap items-center justify-between gap-3 shrink-0">
+      <div className="px-6 py-2 bg-white dark:bg-[#18181C] border-t border-slate-200/80 dark:border-white/[0.08] flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-2 text-xs text-slate-500 font-mono">
           <Lock className="w-3.5 h-3.5 text-slate-400" />
           <span>SHA-256 seal <span className="text-slate-700 dark:text-slate-300 font-medium font-mono">{(consensus.manifestHash || '828207d13c48bdb8116a81a5').substring(0, 24)}...</span></span>

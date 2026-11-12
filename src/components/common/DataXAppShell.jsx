@@ -391,7 +391,7 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
         </header>
 
         {/* Main Viewport Page Content */}
-        <main className="flex-1 w-full relative z-10">
+        <main className="flex-1 w-full">
           {children}
         </main>
       </div>
