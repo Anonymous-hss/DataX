@@ -93,56 +93,55 @@ export default function StartThreadModal({ isOpen, onClose }) {
   const { navigateTo } = useNavigation();
   const { selectThread, setActiveThread, setWorkflowNodes, setWorkflowEdges } = useRuleEngine();
 
-  const [selectedPack, setSelectedPack] = useState('sap');
-  const [threadName, setThreadName] = useState('SAP BW → S/4HANA Clean Core');
+  const [selectedPack, setSelectedPack] = useState('scratch');
+  const [threadName, setThreadName] = useState('User records clean-up');
   const [description, setDescription] = useState(
-    'Extract InfoCube purchasing lines, fix legacy plant codes and stage clean orders.'
+    'Check user records from production_db (email, name, role, status) and write clean rows to reconciled_db.'
   );
   const [showAllPacks, setShowAllPacks] = useState(false);
 
-  // 6 Primary Domain Packs (Requested by User)
+  // 4 Primary Domain Packs matching exact Figma Reference (Image 2)
   const primaryPacks = [
     {
       id: 'scratch',
-      title: 'Start from scratch',
-      badge: 'Custom',
-      desc: 'Start empty canvas or connect bespoke sources.',
+      title: 'Empty canvas',
+      desc: 'Describe what you need. AI drafts the steps.',
       icon: <StartFromScratchIcon />,
-      defaultName: 'Custom Pipeline & Zero-Egress Rules',
-      defaultDesc: 'Connect bespoke database endpoints, compile custom deterministic AST validation rules, and configure target sink.'
+      defaultName: 'User records clean-up',
+      defaultDesc: 'Check user records from production_db (email, name, role, status) and write clean rows to reconciled_db.'
+    },
+    {
+      id: 'customer',
+      title: 'Customer Master 360',
+      desc: 'MongoDB → PostgreSQL',
+      icon: <OfficialMongoLogo size={20} />,
+      defaultName: 'Customer Master & Identity',
+      defaultDesc: 'Merge duplicate customers from CRM and ERP into one golden record.'
     },
     {
       id: 'sap',
       title: 'SAP BW → S/4HANA Clean Core',
-      badge: 'Tier 1',
-      desc: 'InfoCube → S/4HANA BAPI · 5 rules',
+      desc: 'InfoCube → S/4HANA',
       icon: <OfficialSapLogo size={24} />,
       defaultName: 'SAP BW → S/4HANA Clean Core',
-      defaultDesc: 'Extract InfoCube purchasing lines, resolve legacy plant codes via plant ontology, split high-value purchase orders for human review, and commit verified orders into S/4HANA via BAPI.'
+      defaultDesc: 'Extract InfoCube purchasing lines, fix legacy plant codes and stage clean orders.'
     },
     {
       id: 'ledger',
-      title: 'Financial GL & SOX 404 Audit',
-      badge: 'Tier 1',
-      desc: 'Debits = Credits → BigQuery · 4 rules',
+      title: 'Financial GL & AP Ledger',
+      desc: 'Ledger and payables',
       icon: <FinancialAuditLogo size={20} />,
-      defaultName: 'Financial GL & SOX 404 Audit',
-      defaultDesc: 'Audit general ledger journal entries, enforce Debits = Credits zero balance, and stage verified entries to BigQuery.'
-    },
-    {
-      id: 'customer',
-      title: 'Customer Master 360 & Vector',
-      badge: 'Tier 2',
-      desc: 'MongoDB → Vector Matcher → Neon · 4 rules',
-      icon: <OfficialMongoLogo size={20} />,
-      defaultName: 'Customer Master 360 & Vector',
-      defaultDesc: 'Harmonize duplicate customer accounts using cosine vector embeddings and write golden records to Neon PostgreSQL.'
-    },
+      defaultName: 'Financial GL & AP Compliance',
+      defaultDesc: 'Audit GL and AP entries across legacy systems, guarantee zero imbalance and verify ISO currency codes.'
+    }
+  ];
+
+  // Extended domain pack options
+  const extendedPacks = [
     {
       id: 'rag',
       title: 'Policy RAG & Legal Contracts',
-      badge: 'Tier 2',
-      desc: 'AWS S3 → RAG Enricher → Pinecone · 4 rules',
+      desc: 'AWS S3 → RAG Enricher → Pinecone',
       icon: <OfficialS3Logo size={20} />,
       defaultName: 'Policy RAG & Legal Contracts',
       defaultDesc: 'Ingest enterprise contracts from AWS S3, retrieve compliance policy context, and index vector embeddings to Pinecone.'
@@ -150,21 +149,15 @@ export default function StartThreadModal({ isOpen, onClose }) {
     {
       id: 'sfdc',
       title: 'Salesforce CRM → BigQuery',
-      badge: 'Tier 3',
-      desc: 'Salesforce Leads → BigQuery API · 4 rules',
+      desc: 'Salesforce Leads → BigQuery API',
       icon: <OfficialSalesforceLogo size={24} />,
       defaultName: 'Salesforce CRM → BigQuery',
       defaultDesc: 'Cleanse corporate lead emails, route enterprise deals, and stream pipeline records to BigQuery API.'
-    }
-  ];
-
-  // Extended domain pack options to preserve all existing catalog capabilities
-  const extendedPacks = [
+    },
     {
       id: 'healthcare',
       title: 'Healthcare Patient Master',
-      badge: 'Tier 2',
-      desc: 'HIPAA Sanitizer → Redacted Analytics Sink · 5 rules',
+      desc: 'HIPAA Sanitizer → Analytics Sink',
       icon: <HealthcareShieldLogo size={20} />,
       defaultName: 'Healthcare Patient Master (HIPAA Safe)',
       defaultDesc: 'Mask MRNs, patient names, and addresses with AES-GCM tokenization before exporting clean data to research sinks.'
@@ -172,8 +165,7 @@ export default function StartThreadModal({ isOpen, onClose }) {
     {
       id: 'snowflake',
       title: 'Snowflake Procurement Parity',
-      badge: 'Tier 3',
-      desc: 'Snowflake RAW → Clean Core Mart · 4 rules',
+      desc: 'Snowflake RAW → Clean Core Mart',
       icon: <SnowflakeLogo size={20} />,
       defaultName: 'Snowflake Procurement Parity',
       defaultDesc: 'Stream procurement lines from Snowflake RAW schema and enforce vendor ID and payment term compliance.'
@@ -349,31 +341,26 @@ export default function StartThreadModal({ isOpen, onClose }) {
                       {pack.icon}
                     </div>
 
-                    {/* Center: Title + Tier + Description */}
+                    {/* Center: Title + Description matching Figma */}
                     <div className="flex-1 min-w-0 pr-1">
-                      <div className="flex items-center gap-1.5">
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-tight truncate">
-                          {pack.title}
-                        </h4>
-                        <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-white/[0.08] text-slate-600 dark:text-slate-300 shrink-0">
-                          {pack.badge}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate leading-tight">
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-tight truncate">
+                        {pack.title}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate leading-tight">
                         {pack.desc}
                       </p>
                     </div>
 
-                    {/* Right: Radio Selection Circle */}
+                    {/* Right: Radio Selection Circle matching Figma */}
                     <div
                       className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${
                         isSelected
-                          ? 'border-[#2D55F5] bg-white dark:bg-[#18181C]'
+                          ? 'border-[#2D55F5] bg-[#2D55F5]'
                           : 'border-slate-300 dark:border-white/[0.2]'
                       }`}
                     >
                       {isSelected && (
-                        <div className="w-2 h-2 rounded-full bg-[#2D55F5]" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-white" />
                       )}
                     </div>
                   </div>
