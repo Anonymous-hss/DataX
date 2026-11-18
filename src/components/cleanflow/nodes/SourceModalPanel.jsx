@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Upload,
   Plus,
@@ -11,8 +11,12 @@ import {
   Table,
   Loader2,
   Database,
+  FileSpreadsheet,
+  ArrowRight,
+  Download,
 } from 'lucide-react';
 import { getTableCatalog } from '../../../data/sampleDatasets';
+import { fmdApi } from '../../../services/apiClient';
 
 export default function SourceModalPanel({
   selectedNode,
@@ -21,6 +25,11 @@ export default function SourceModalPanel({
   handleFileUpload,
   uploadedFileMeta,
   uploadedCols,
+  uploadedWorkbookSheets = {},
+  activeExcelSheet = '',
+  onSelectExcelSheet,
+  uploadedRawBase64 = '',
+  onNavigateToMappingStudio,
   srcDbType,
   applyEngineCredentials,
   srcHost,
@@ -53,6 +62,31 @@ export default function SourceModalPanel({
   isLiveSampleActive,
 }) {
   const hasLiveTables = Boolean(srcTestMeta?.success && Array.isArray(srcTestMeta?.tables) && srcTestMeta.tables.length > 0);
+  const [syncingFmd, setSyncingFmd] = useState(false);
+  const [syncNotice, setSyncNotice] = useState('');
+  const sheetNames = Object.keys(uploadedWorkbookSheets || {});
+
+  const handleSyncToFmdStudio = async () => {
+    if (!uploadedFileMeta?.name || !uploadedRawBase64) {
+      if (onNavigateToMappingStudio) onNavigateToMappingStudio();
+      return;
+    }
+    setSyncingFmd(true);
+    setSyncNotice('');
+    try {
+      if (uploadedFileMeta.isFmd) {
+        await fmdApi.uploadFmd({ fileName: uploadedFileMeta.name, contentBase64: uploadedRawBase64 });
+      } else {
+        await fmdApi.uploadSource({ fileName: uploadedFileMeta.name, contentBase64: uploadedRawBase64 });
+      }
+      setSyncNotice('Synced to FMD Mapping Studio');
+      if (onNavigateToMappingStudio) onNavigateToMappingStudio();
+    } catch (err) {
+      setSyncNotice(`Sync failed: ${err.message}`);
+    } finally {
+      setSyncingFmd(false);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -107,34 +141,131 @@ export default function SourceModalPanel({
             <p className="text-xs text-slate-500 max-w-md mx-auto mb-4">
               Upload client or prospect data on the fly. DataX will infer schema columns, bind them directly into the canvas DAG, and run Safe 3-Tier remediation.
             </p>
-            <label className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg cursor-pointer transition-all">
-              <Plus className="w-4 h-4" />
-              <span>Browse Local Dataset File</span>
-              <input
-                type="file"
-                accept=".csv, .xlsx, .xls, .json"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-            </label>
+            <div className="flex flex-wrap items-center justify-center gap-2.5">
+              <label className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg cursor-pointer transition-all">
+                <Plus className="w-4 h-4" />
+                <span>Browse Local Excel / CSV File</span>
+                <input
+                  type="file"
+                  accept=".csv, .xlsx, .xls, .json"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+              <a
+                href={fmdApi.getDemoDownloadUrl('all_zip')}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold transition-all"
+              >
+                <Download className="w-3.5 h-3.5 text-blue-600" />
+                <span>Sample TIME R3.2 Excel Pack (.zip)</span>
+              </a>
+            </div>
           </div>
           {uploadedFileMeta && (
-            <div className="p-3.5 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center font-bold text-sm">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+            <div className="space-y-3">
+              <div className="p-3.5 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center font-bold text-sm">
+                    {uploadedFileMeta.isFmd ? (
+                      <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+                    ) : (
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-xs font-bold text-slate-800">{uploadedFileMeta.name}</p>
+                      {uploadedFileMeta.isFmd && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#D4FF3A] text-[#0A0F1F]">
+                          FMD Multi-Tab Detected (Row {uploadedFileMeta.headerRow || 2} Header)
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      {uploadedFileMeta.count ? `${uploadedFileMeta.count.toLocaleString()} rows parsed` : uploadedFileMeta.size}
+                      {sheetNames.length > 1 ? ` · ${sheetNames.length} Excel tabs` : ''}
+                      {` · ${uploadedCols.length} columns`}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-800">{uploadedFileMeta.name}</p>
-                  <p className="text-[11px] text-slate-500">
-                    {uploadedFileMeta.count ? `${uploadedFileMeta.count.toLocaleString()} records parsed` : uploadedFileMeta.size} · Inferred {uploadedCols.length} columns
-                  </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSyncToFmdStudio}
+                    disabled={syncingFmd}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0A0F1F] hover:bg-slate-800 text-white text-[11px] font-semibold cursor-pointer transition-colors"
+                  >
+                    {syncingFmd ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRight className="w-3.5 h-3.5 text-[#D4FF3A]" />}
+                    <span>Open in FMD Studio</span>
+                  </button>
                 </div>
               </div>
-              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                Dataset Parsed & Active
-              </span>
+
+              {syncNotice && (
+                <p className="text-[11px] font-medium text-emerald-700 px-1">{syncNotice}</p>
+              )}
+
+              {/* Multi-Tab Excel Sheet Switcher */}
+              {sheetNames.length > 1 && (
+                <div className="bg-white rounded-xl border border-slate-200 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                      Excel Workbook Tabs ({sheetNames.length})
+                    </span>
+                    <span className="text-[10px] text-slate-500">Click any tab to bind &amp; preview</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {sheetNames.map((sName) => {
+                      const isActive = sName === activeExcelSheet;
+                      const tabInfo = uploadedWorkbookSheets[sName];
+                      return (
+                        <button
+                          key={sName}
+                          type="button"
+                          onClick={() => onSelectExcelSheet && onSelectExcelSheet(sName)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer border ${
+                            isActive
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-blue-300'
+                          }`}
+                        >
+                          {sName} ({tabInfo?.records?.length || 0})
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Compact Sheet Preview Table */}
+              {previewRows && previewRows.length > 0 && (
+                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                  <div className="overflow-x-auto max-h-48">
+                    <table className="w-full text-left border-collapse text-[11px]">
+                      <thead>
+                        <tr className={uploadedFileMeta.isFmd ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-700'}>
+                          {uploadedCols.slice(0, 8).map((col) => (
+                            <th key={col} className="px-2.5 py-1.5 font-bold whitespace-nowrap border-r border-white/15">
+                              {col}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {previewRows.slice(0, 5).map((row, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50">
+                            {uploadedCols.slice(0, 8).map((col) => (
+                              <td key={col} className="px-2.5 py-1.5 text-slate-700 whitespace-nowrap max-w-[160px] truncate">
+                                {String(row[col] ?? '')}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

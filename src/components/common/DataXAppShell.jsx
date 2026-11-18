@@ -22,7 +22,8 @@ import {
   PanelLeftOpen,
   Plus,
   Workflow,
-  GitBranch
+  GitBranch,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
 import { useRuleEngine } from '../../context/RuleEngineContext';
@@ -137,6 +138,7 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
 
   const PIPELINE_OPERATIONS = [
     { id: 'canvas', label: 'Visual Canvas', screen: 'canvas', icon: Workflow, desc: 'Interactive DAG Rule Builder' },
+    { id: 'mapping-studio', label: 'FMD Mapping Studio', screen: 'mapping-studio', icon: FileSpreadsheet, badge: 'FMD', desc: 'Multi-Tab Excel FMDs & BODS' },
     { id: 'templates', label: 'Domain Templates', screen: 'templates', icon: Layers, desc: 'Certified Industry Blueprints' },
     { id: 'quarantine', label: 'Quarantine DLQ', screen: 'quarantine', icon: SlidersHorizontal, desc: 'Dead-Letter Isolation & Fix' },
     { id: 'shadow', label: 'Shadow Parity', screen: 'shadow', icon: Zap, desc: 'Dual-Twin Reconciliation' },
@@ -153,6 +155,7 @@ function DataXMasterLayout({ children, showContextBar = false, onSwitchToMarketi
     if (screenKey === 'workflows' && (currentScreen === 'workflows' || currentScreen === 'threads' || currentScreen === 'home' || currentScreen === '')) return true;
     if (screenKey === 'ai-firewall' && (currentScreen === 'ai-firewall' || currentScreen === 'firewall' || currentScreen === 'rag-firewall' || currentScreen === 'agent-guard')) return true;
     if (screenKey === 'ml-certify' && (currentScreen === 'ml-certify' || currentScreen === 'ml-certification' || currentScreen === 'ml-gate')) return true;
+    if (screenKey === 'mapping-studio' && (currentScreen === 'mapping-studio' || currentScreen === 'fmd' || currentScreen === 'fmd-mapping')) return true;
     if (screenKey === 'canvas' && (currentScreen === 'canvas' || currentScreen === 'workflow-builder' || currentScreen === 'connect-source' || currentScreen === 'generate-rules' || currentScreen === 'rules')) return true;
     if (screenKey === 'templates' && (currentScreen === 'templates' || currentScreen === 'domain-packs')) return true;
     if (screenKey === 'history' && (currentScreen === 'history' || currentScreen === 'runs')) return true;

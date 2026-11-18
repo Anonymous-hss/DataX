@@ -36,13 +36,24 @@ const MlGateIcon = () => (
   </svg>
 );
 
+// Use Case 4: Multi-Tab FMD Mapping Spreadsheet Icon
+const FmdMappingIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="4" width="18" height="16" rx="3" fill="#EEF2FF" stroke="#0A0F1F" strokeWidth="1.5" />
+    <path d="M3 9h18" stroke="#0A0F1F" strokeWidth="1.5" />
+    <rect x="4" y="5" width="16" height="3.2" rx="1" fill="#D4FF3A" />
+    <path d="M9 9v11M15 9v11M3 14.5h18" stroke="#2D55F5" strokeWidth="1.25" />
+  </svg>
+);
+
 /**
- * UseCasesSection - "Start from a use case" 3-column cards matching 01.1
+ * UseCasesSection - "Start from a use case" 4-column cards
  */
 export default function UseCasesSection({
   onOpenCanvas,
   onOpenFirewall,
   onOpenMlGate,
+  onOpenMappingStudio,
   onOpenAdvisor
 }) {
   return (
@@ -54,7 +65,7 @@ export default function UseCasesSection({
             Start from a use case
           </h2>
           <p className="text-xs text-[#5F6678] dark:text-slate-400 mt-0.5">
-            Three ways teams use DataX. Each opens the matching studio.
+            Four ways teams use DataX. Each opens the matching studio.
           </p>
         </div>
 
@@ -68,8 +79,8 @@ export default function UseCasesSection({
         </button>
       </div>
 
-      {/* 3 Use Case Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      {/* 4 Use Case Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         {/* Card 1: Database & ERP Migrations */}
         <div 
           onClick={onOpenCanvas}
@@ -161,6 +172,38 @@ export default function UseCasesSection({
 
             <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#2D55F5] group-hover:translate-x-0.5 transition-transform shrink-0">
               <span>Open ML gate</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </span>
+          </div>
+        </div>
+
+        {/* Card 4: Functional Mapping & BODS Staging (FMD) */}
+        <div
+          onClick={onOpenMappingStudio}
+          className="bg-white dark:bg-[#18181C] rounded-[20px] border border-[#E3E6EE] dark:border-white/[0.08] p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-[#2D55F5]/30 transition-all cursor-pointer flex flex-col justify-between group"
+        >
+          <div>
+            <div className="w-10 h-10 rounded-xl bg-[#F5F6FA] dark:bg-white/[0.04] border border-[#E3E6EE] dark:border-white/[0.08] flex items-center justify-center shrink-0 mb-4">
+              <FmdMappingIcon />
+            </div>
+
+            <h3 className="font-bold text-sm sm:text-base text-[#0A0F1F] dark:text-white group-hover:text-[#2D55F5] transition-colors tracking-tight">
+              FMD mapping & BODS staging
+            </h3>
+
+            <p className="text-xs text-[#5F6678] dark:text-slate-400 leading-relaxed mt-2">
+              Ingest multi-tab Excel FMDs (SUSTAIN, ATLAS, CONS, CMMS), compare MAKT-MAKTX rules, apply XREF overrides, and export staging + Z_ERRORLOG for SAP BODS.
+            </p>
+          </div>
+
+          <div className="pt-4 mt-5 border-t border-[#E3E6EE]/70 dark:border-white/[0.06] flex items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-[#EAFBEB] dark:bg-emerald-950/30 text-[#127A52] dark:text-emerald-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#127A52] dark:bg-emerald-400" />
+              <span>4 FMDs · XREF &amp; Z_ERRORLOG</span>
+            </span>
+
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#2D55F5] group-hover:translate-x-0.5 transition-transform shrink-0">
+              <span>Open studio</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </span>
           </div>

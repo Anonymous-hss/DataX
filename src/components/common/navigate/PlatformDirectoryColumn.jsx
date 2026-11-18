@@ -11,7 +11,8 @@ import {
   Activity, 
   Lock, 
   FileText, 
-  SlidersHorizontal 
+  SlidersHorizontal,
+  FileSpreadsheet
 } from 'lucide-react';
 
 export const DIRECTORY_SECTIONS = [
@@ -28,6 +29,7 @@ export const DIRECTORY_SECTIONS = [
     group: 'OPERATIONS',
     items: [
       { id: 'canvas', label: 'Visual Canvas', icon: LayoutGrid, screen: 'canvas' },
+      { id: 'mapping_studio', label: 'FMD Mapping Studio', icon: FileSpreadsheet, screen: 'mapping-studio', badge: '4' },
       { id: 'templates', label: 'Domain Templates', icon: Layers, screen: 'templates', badge: '10' },
       { id: 'quarantine', label: 'Quarantine', icon: Inbox, screen: 'quarantine', badge: '50' },
       { id: 'shadow_parity', label: 'Shadow Parity', icon: Eye, screen: 'shadow' },

@@ -307,7 +307,30 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
   const [uploadedFileName, setUploadedFileName] = useState(sourceConfig?.fileName || '');
   const [uploadedCols, setUploadedCols] = useState(sourceConfig?.discoveredColumns || []);
   const [uploadedFileMeta, setUploadedFileMeta] = useState(sourceConfig?.fileName ? { name: sourceConfig.fileName, count: sourceConfig.fileData?.length || 0 } : null);
+  const [uploadedWorkbookSheets, setUploadedWorkbookSheets] = useState({});
+  const [activeExcelSheet, setActiveExcelSheet] = useState('');
+  const [uploadedRawBase64, setUploadedRawBase64] = useState('');
   const [dagNodeExecutions, setDagNodeExecutions] = useState({});
+
+  const selectExcelSheet = (sheetName, sheetsMap = uploadedWorkbookSheets) => {
+    const info = sheetsMap[sheetName];
+    if (!info) return;
+    setActiveExcelSheet(sheetName);
+    setUploadedRecords(info.records);
+    setUploadedCols(info.cols);
+    setDiscoveredColumns(info.cols);
+    setPreviewRows(info.records.slice(0, 10));
+    setUploadedFileMeta((prev) => prev ? {
+      ...prev,
+      count: info.records.length,
+      sheetCount: Object.keys(sheetsMap).length,
+      activeSheet: sheetName,
+      isFmd: info.isFmd,
+      headerRow: info.headerRow,
+      loading: false,
+    } : null);
+  };
+
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -320,6 +343,9 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
           const parsed = JSON.parse(event.target.result);
           const records = Array.isArray(parsed) ? parsed : (parsed.records || parsed.data || [parsed]);
           const cols = Object.keys(records[0] || {});
+          setUploadedWorkbookSheets({});
+          setActiveExcelSheet('');
+          setUploadedRawBase64('');
           setUploadedRecords(records);
           setUploadedFileName(file.name);
           setUploadedCols(cols);
@@ -336,22 +362,87 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
       reader.onload = (event) => {
         try {
           const data = new Uint8Array(event.target.result);
+          if (data.byteLength > 15 * 1024 * 1024) {
+            alert('Uploaded file exceeds the 15 MB limit.');
+            setUploadedFileMeta(null);
+            return;
+          }
+          // Chunked base64 conversion to prevent stack overflow on multi-MB workbooks
+          const chunks = [];
+          const chunkSize = 8192;
+          for (let i = 0; i < data.byteLength; i += chunkSize) {
+            chunks.push(String.fromCharCode(...data.subarray(i, i + chunkSize)));
+          }
+          setUploadedRawBase64(btoa(chunks.join('')));
+
           const workbook = XLSX.read(data, { type: 'array' });
-          const firstSheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[firstSheetName];
-          const records = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-          if (records.length === 0) {
+          const parsedSheets = {};
+          const fmdMarkers = ['UNIQUE_ID', 'TARGET_TABLE', 'TARGET_FIELD_NAME', 'MAPPING_RULE'];
+
+          workbook.SheetNames.forEach((sName) => {
+            const ws = workbook.Sheets[sName];
+            const matrix = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+            if (!matrix || matrix.length === 0) return;
+
+            let hdrIdx = 0;
+            let isFmd = false;
+            for (let r = 0; r < Math.min(matrix.length, 10); r += 1) {
+              const norm = matrix[r].map((c) => String(c || '').trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_'));
+              const hits = fmdMarkers.filter((m) => norm.includes(m)).length;
+              if (hits >= 2 || norm.includes('UNIQUE_ID')) {
+                hdrIdx = r;
+                isFmd = true;
+                break;
+              }
+              if (norm.includes('MATNR') || norm.includes('LEGACY_MATNR')) {
+                hdrIdx = r;
+                break;
+              }
+            }
+
+            const rawHeaders = matrix[hdrIdx].map((c, idx) => String(c || '').trim() || `Column_${idx + 1}`);
+            const records = [];
+            for (let r = hdrIdx + 1; r < matrix.length; r += 1) {
+              const rowArr = matrix[r];
+              if (!rowArr || !rowArr.some((c) => String(c || '').trim() !== '')) continue;
+              const obj = {};
+              rawHeaders.forEach((h, idx) => {
+                obj[h] = rowArr[idx] !== undefined ? rowArr[idx] : '';
+              });
+              records.push(obj);
+            }
+            if (records.length > 0) {
+              parsedSheets[sName] = {
+                records,
+                cols: rawHeaders,
+                isFmd,
+                headerRow: hdrIdx + 1,
+              };
+            }
+          });
+
+          const sheetNames = Object.keys(parsedSheets);
+          if (sheetNames.length === 0) {
             alert('Uploaded file is empty.');
             setUploadedFileMeta(null);
             return;
           }
-          const cols = Object.keys(records[0] || {});
-          setUploadedRecords(records);
+
+          // Prefer Field Mapping - MAKT if present, else first parsed sheet
+          const defaultSheet = sheetNames.find((s) => s.toUpperCase().includes('MAKT')) || sheetNames[0];
+          setUploadedWorkbookSheets(parsedSheets);
           setUploadedFileName(file.name);
-          setUploadedCols(cols);
-          setDiscoveredColumns(cols);
-          setPreviewRows(records.slice(0, 10));
-          setUploadedFileMeta({ name: file.name, size: (file.size / 1024).toFixed(1) + ' KB', count: records.length, loading: false });
+          setUploadedFileMeta({
+            name: file.name,
+            size: (file.size / 1024).toFixed(1) + ' KB',
+            count: parsedSheets[defaultSheet].records.length,
+            sheetCount: sheetNames.length,
+            activeSheet: defaultSheet,
+            isFmd: parsedSheets[defaultSheet].isFmd,
+            headerRow: parsedSheets[defaultSheet].headerRow,
+            loading: false,
+          });
+          selectExcelSheet(defaultSheet, parsedSheets);
         } catch (err) {
           alert('Failed to parse file: ' + err.message);
           setUploadedFileMeta(null);
@@ -464,7 +555,7 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
     if (node.type === 'source') {
       sourceTestRunIdRef.current += 1;
       setSrcTesting(false);
-      if (node.system?.includes('File') || sourceConfig?.engine === 'file_upload' || sourceConfig?.fileData) {
+      if (node.system?.includes('File') || node.system?.includes('Excel') || sourceConfig?.engine === 'file_upload' || sourceConfig?.fileData) {
         setConnectMethod('upload');
       } else {
         applyEngineCredentials(node.system || node.title, node.table, false);
@@ -3524,6 +3615,14 @@ export default function WorkflowCanvasBuilder({ onMoveToNext }) {
                   handleFileUpload={handleFileUpload}
                   uploadedFileMeta={uploadedFileMeta}
                   uploadedCols={uploadedCols}
+                  uploadedWorkbookSheets={uploadedWorkbookSheets}
+                  activeExcelSheet={activeExcelSheet}
+                  onSelectExcelSheet={(sheet) => selectExcelSheet(sheet)}
+                  uploadedRawBase64={uploadedRawBase64}
+                  onNavigateToMappingStudio={() => {
+                    setIsPropertyModalOpen(false);
+                    navigateTo('mapping-studio');
+                  }}
                   srcDbType={srcDbType}
                   applyEngineCredentials={(val) => applyEngineCredentials(val, undefined, true)}
                   srcHost={srcHost}

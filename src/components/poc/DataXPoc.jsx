@@ -26,6 +26,7 @@ import HelpCenterPage from '../../pages/HelpCenterPage';
 import NotFoundPage from '../../pages/NotFoundPage';
 import AiFirewallPage from '../../pages/AiFirewallPage';
 import MlCertificationPage from '../../pages/MlCertificationPage';
+import MappingStudioPage from '../../pages/MappingStudioPage';
 
 function ScreenRenderer({ onBackToWebsite }) {
   const { currentScreen, navigateTo } = useNavigation();
@@ -233,6 +234,15 @@ function ScreenRenderer({ onBackToWebsite }) {
     case 'drift-gate':
       return (
         <MlCertificationPage 
+          onSwitchToMarketing={onBackToWebsite}
+        />
+      );
+
+    case 'mapping-studio':
+    case 'fmd':
+    case 'fmd-mapping':
+      return (
+        <MappingStudioPage 
           onSwitchToMarketing={onBackToWebsite}
         />
       );

@@ -81,6 +81,7 @@ ENV/
 .alerts_history.json
 .audit_hash_chain.jsonl
 .runs_store.json
+.fmd_store.json
 
 # Design Assets & Temporary files
 Designs/

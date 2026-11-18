@@ -257,6 +257,7 @@ export default function ThreadsPage({ onOpenLegacyPoc, onSwitchToMarketing } = {
           onOpenCanvas={handleOpenCanvas}
           onOpenFirewall={() => navigateTo('ai-firewall')}
           onOpenMlGate={() => navigateTo('ml-certification')}
+          onOpenMappingStudio={() => navigateTo('mapping-studio')}
           onOpenAdvisor={() => setAdvisorOpen(true)}
         />
 

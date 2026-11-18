@@ -2749,5 +2749,221 @@ def api_get_quarantine_trace(record_id: str):
     return enhancements_service.get_quarantine_trace(record_id)
 
 
+# -----------------------------------------------------------------------------
+# FMD Mapping Studio (SAP Material Master -> TIME S/4HANA -> BODS Staging)
+# -----------------------------------------------------------------------------
+import fmd_mapping_engine
+
+
+class FmdUploadRequest(BaseModel):
+    fileName: str
+    contentBase64: str
+    sourceSystem: Optional[str] = None
+    tableName: Optional[str] = None
+    tenantId: Optional[str] = "tenant_enterprise"
+
+
+class FmdCompareRequest(BaseModel):
+    targetTable: str = "MAKT"
+    targetField: str = "MAKTX"
+    tenantId: Optional[str] = "tenant_enterprise"
+
+
+class FmdAskRequest(BaseModel):
+    question: str
+    targetTable: str = "MAKT"
+    targetField: str = "MAKTX"
+    tenantId: Optional[str] = "tenant_enterprise"
+
+
+class FmdSimulateRequest(BaseModel):
+    targetTable: str = "MAKT"
+    targetField: str = "MAKTX"
+    xrefEnabled: bool = True
+    applyCmmsOverride: bool = False
+    records: Optional[List[Dict[str, Any]]] = None
+    tenantId: Optional[str] = "tenant_enterprise"
+
+
+def _resolve_fmd_tenant(request: Request, explicit_tid: Optional[str] = None) -> str:
+    hdr_tid = request.headers.get("x-tenant-id")
+    return fmd_mapping_engine._sanitize_tenant_id(explicit_tid or hdr_tid or "tenant_enterprise")
+
+
+@app.post("/fmd/demo/seed")
+@app.post("/api/fmd/demo/seed")
+def api_fmd_demo_seed(request: Request, tenant_id: Optional[str] = None):
+    """Load the 4 synthetic multi-tab FMD workbooks, 2 XREF workbooks, and legacy MAKT source records."""
+    return fmd_mapping_engine.seed_demo_workspace(_resolve_fmd_tenant(request, tenant_id))
+
+
+@app.get("/fmd/demo/files")
+@app.get("/api/fmd/demo/files")
+def api_fmd_demo_files():
+    """List synthetic demo Excel files available for download to local computer."""
+    return {"status": "success", "files": fmd_mapping_engine.list_demo_files()}
+
+
+@app.get("/fmd/demo/download/{file_key}")
+@app.get("/api/fmd/demo/download/{file_key}")
+def api_fmd_demo_download(file_key: str):
+    """Download a synthetic FMD/XREF/Source Excel file (or all_zip) to local computer."""
+    try:
+        content, fname, media = fmd_mapping_engine.get_demo_file_bytes(file_key)
+        return Response(
+            content=content,
+            media_type=media,
+            headers={
+                "Content-Disposition": f'attachment; filename="{fname}"',
+                "X-Content-Type-Options": "nosniff",
+            },
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.get("/fmd/documents")
+@app.get("/api/fmd/documents")
+def api_fmd_list_documents(request: Request, tenant_id: Optional[str] = None):
+    return fmd_mapping_engine.get_workspace_summary(_resolve_fmd_tenant(request, tenant_id))
+
+
+@app.post("/fmd/documents/upload")
+@app.post("/api/fmd/documents/upload")
+def api_fmd_upload_document(request: Request, req: FmdUploadRequest):
+    tid = _resolve_fmd_tenant(request, req.tenantId)
+    try:
+        doc = fmd_mapping_engine.upload_fmd_document(
+            tid=tid,
+            file_name=req.fileName,
+            content_base64=req.contentBase64,
+            source_system=req.sourceSystem,
+        )
+        return {"status": "success", "document": doc, "workspace": fmd_mapping_engine.get_workspace_summary(tid)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Failed to parse FMD Excel workbook.")
+
+
+@app.delete("/fmd/documents/{doc_id}")
+@app.delete("/api/fmd/documents/{doc_id}")
+def api_fmd_delete_document(request: Request, doc_id: str, tenant_id: Optional[str] = None):
+    tid = _resolve_fmd_tenant(request, tenant_id)
+    deleted = fmd_mapping_engine.delete_fmd_document(tid, doc_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {"status": "success", "workspace": fmd_mapping_engine.get_workspace_summary(tid)}
+
+
+@app.get("/fmd/documents/{doc_id}/sheet")
+@app.get("/api/fmd/documents/{doc_id}/sheet")
+def api_fmd_get_sheet(
+    request: Request,
+    doc_id: str,
+    sheet_name: Optional[str] = None,
+    highlight_row: Optional[int] = None,
+    tenant_id: Optional[str] = None,
+):
+    try:
+        return fmd_mapping_engine.get_document_sheet(
+            tid=_resolve_fmd_tenant(request, tenant_id),
+            doc_id=doc_id,
+            sheet_name=sheet_name,
+            highlight_row=highlight_row,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.post("/fmd/xref/upload")
+@app.post("/api/fmd/xref/upload")
+def api_fmd_upload_xref(request: Request, req: FmdUploadRequest):
+    tid = _resolve_fmd_tenant(request, req.tenantId)
+    try:
+        xref = fmd_mapping_engine.upload_xref_document(
+            tid=tid,
+            file_name=req.fileName,
+            content_base64=req.contentBase64,
+            table_name=req.tableName,
+        )
+        return {"status": "success", "xref": xref, "workspace": fmd_mapping_engine.get_workspace_summary(tid)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Failed to parse XREF table.")
+
+
+@app.post("/fmd/source/upload")
+@app.post("/api/fmd/source/upload")
+def api_fmd_upload_source(request: Request, req: FmdUploadRequest):
+    tid = _resolve_fmd_tenant(request, req.tenantId)
+    try:
+        src = fmd_mapping_engine.upload_source_document(
+            tid=tid,
+            file_name=req.fileName,
+            content_base64=req.contentBase64,
+        )
+        return {"status": "success", "source": src, "workspace": fmd_mapping_engine.get_workspace_summary(tid)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Failed to parse source data file.")
+
+
+@app.post("/fmd/compare")
+@app.post("/api/fmd/compare")
+def api_fmd_compare(request: Request, req: FmdCompareRequest):
+    return fmd_mapping_engine.compare_target_field(
+        tid=_resolve_fmd_tenant(request, req.tenantId),
+        target_table=req.targetTable,
+        target_field=req.targetField,
+    )
+
+
+@app.post("/fmd/ask")
+@app.post("/api/fmd/ask")
+def api_fmd_ask(request: Request, req: FmdAskRequest):
+    llm_client, llm_deployment = get_azure_openai_client()
+    return fmd_mapping_engine.ask_business_question(
+        tid=_resolve_fmd_tenant(request, req.tenantId),
+        question=req.question,
+        target_table=req.targetTable,
+        target_field=req.targetField,
+        llm_client=llm_client,
+        llm_deployment=llm_deployment,
+    )
+
+
+@app.post("/fmd/simulate")
+@app.post("/api/fmd/simulate")
+def api_fmd_simulate(request: Request, req: FmdSimulateRequest):
+    return fmd_mapping_engine.simulate_fmd_transformation(
+        tid=_resolve_fmd_tenant(request, req.tenantId),
+        target_table=req.targetTable,
+        target_field=req.targetField,
+        xref_enabled=req.xrefEnabled,
+        apply_cmms_override=req.applyCmmsOverride,
+        custom_records=req.records,
+    )
+
+
+@app.get("/fmd/export/bods")
+@app.get("/api/fmd/export/bods")
+def api_fmd_export_bods(request: Request, format: str = "xlsx", tenant_id: Optional[str] = None):
+    content, fname, media = fmd_mapping_engine.export_bods_staging(
+        tid=_resolve_fmd_tenant(request, tenant_id),
+        fmt=format,
+    )
+    return Response(
+        content=content,
+        media_type=media,
+        headers={
+            "Content-Disposition": f'attachment; filename="{fname}"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8003)

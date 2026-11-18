@@ -12,6 +12,7 @@ import {
   GitBranch,
   UserCheck,
   AlertTriangle,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 export const OPERATIONAL_CATALOG = [
@@ -19,6 +20,7 @@ export const OPERATIONAL_CATALOG = [
     category: '1. Ingestion Sources',
     items: [
       { type: 'source', name: 'SAP BW InfoCube / HANA Cloud', desc: 'Batch extracts, procurement ledger, inventory', system: 'SAP BW', icon: Database, variant: 'blue' },
+      { type: 'source', name: 'FMD & Multi-Tab Excel Source (.xlsx)', desc: 'Upload multi-tab SAP FMD workbooks (MARA, MARC, MAKT), XREF tables, or legacy Excel extracts from computer', system: 'Excel FMD File', icon: FileSpreadsheet, variant: 'green' },
       { type: 'source', name: 'PostgreSQL Database / Neon', desc: 'Relational connection pool with SSL security', system: 'PostgreSQL', icon: Database, variant: 'blue' },
       { type: 'source', name: 'MongoDB Atlas (NoSQL)', desc: 'Document store with automated JSON schema discovery', system: 'MongoDB', icon: Database, variant: 'green' },
       { type: 'source', name: 'Snowflake Data Cloud', desc: 'Direct ingestion from Snowflake landing tables', system: 'Snowflake', icon: Database, variant: 'blue' },

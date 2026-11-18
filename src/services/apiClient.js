@@ -125,4 +125,32 @@ export const api = {
   delete: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'DELETE' }),
 };
 
+export const fmdApi = {
+  seedDemo: () => apiRequest('/fmd/demo/seed', { method: 'POST' }),
+  listDemoFiles: () => apiRequest('/fmd/demo/files', { method: 'GET' }),
+  getDemoDownloadUrl: (fileKey) => `${API_BASE_URL}/fmd/demo/download/${encodeURIComponent(fileKey)}`,
+  getWorkspace: () => apiRequest('/fmd/documents', { method: 'GET' }),
+  uploadFmd: (payload) => apiRequest('/fmd/documents/upload', { method: 'POST', body: payload, timeoutMs: 60000 }),
+  deleteFmd: (docId) => apiRequest(`/fmd/documents/${encodeURIComponent(docId)}`, { method: 'DELETE' }),
+  getSheet: (docId, sheetName = '', highlightRow = null) => {
+    const params = new URLSearchParams();
+    if (sheetName) params.set('sheet_name', sheetName);
+    if (highlightRow) params.set('highlight_row', String(highlightRow));
+    const q = params.toString() ? `?${params.toString()}` : '';
+    return apiRequest(`/fmd/documents/${encodeURIComponent(docId)}/sheet${q}`, { method: 'GET' });
+  },
+  uploadXref: (payload) => apiRequest('/fmd/xref/upload', { method: 'POST', body: payload, timeoutMs: 60000 }),
+  uploadSource: (payload) => apiRequest('/fmd/source/upload', { method: 'POST', body: payload, timeoutMs: 60000 }),
+  compare: (targetTable = 'MAKT', targetField = 'MAKTX') =>
+    apiRequest('/fmd/compare', { method: 'POST', body: { targetTable, targetField } }),
+  ask: (question, targetTable = 'MAKT', targetField = 'MAKTX') =>
+    apiRequest('/fmd/ask', { method: 'POST', body: { question, targetTable, targetField }, timeoutMs: 45000 }),
+  simulate: ({ targetTable = 'MAKT', targetField = 'MAKTX', xrefEnabled = true, applyCmmsOverride = false, records = null } = {}) =>
+    apiRequest('/fmd/simulate', {
+      method: 'POST',
+      body: { targetTable, targetField, xrefEnabled, applyCmmsOverride, records },
+    }),
+  getBodsExportUrl: (format = 'xlsx') => `${API_BASE_URL}/fmd/export/bods?format=${encodeURIComponent(format)}`,
+};
+
 export default api;

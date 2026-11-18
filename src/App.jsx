@@ -40,7 +40,8 @@ export default function App() {
         path.includes('cleanflow') ||
         path.includes('canvas') ||
         path.includes('threads') ||
-        path.includes('studio')
+        path.includes('studio') ||
+        path.includes('mapping-studio')
       ) {
         setActiveView('poc');
       } else {
