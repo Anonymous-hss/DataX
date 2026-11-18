@@ -408,3 +408,70 @@ def test_phase23_rbac_hitl_gate_staging_commit_bw_extract_and_audit_chain():
     tamper_check = fmd_mapping_engine.verify_audit_chain(tid)
     assert tamper_check["valid"] is False
     assert tamper_check["tampered_seq"] == 1
+
+
+def test_saas_universal_upload_and_ephemeral_reset():
+    tid = "tenant_saas_universal"
+
+    # 1. Reset workspace cleanly -> zero pre-fed files
+    r_reset = client.post("/api/fmd/reset-workspace", json={"role": "Lead Data Engineer", "tenantId": tid})
+    assert r_reset.status_code == 200
+    assert len(r_reset.json()["documents"]) == 0
+    assert len(r_reset.json()["source_datasets"]) == 0
+
+    # 2. Upload CSV file streamed from client-side temp storage
+    csv_payload = base64.b64encode(b"MATNR,MAKTX,WERKS\n9001,CENTRIFUGAL PUMP,P100\n9002,=CMD|calc,P200\n").decode()
+    r_csv = client.post(
+        "/api/fmd/upload-universal",
+        json={"fileName": "legacy_materials.csv", "contentBase64": csv_payload, "tenantId": tid},
+    )
+    assert r_csv.status_code == 200
+    assert r_csv.json()["ingestion"]["detected_role"] == "source_data"
+    assert r_csv.json()["ingestion"]["row_count"] == 2
+    # Confirm DDE formula neutralization on uploaded CSV
+    recs = r_csv.json()["workspace"]["source_datasets"][0]["records"]
+    assert recs[1]["MAKTX"].startswith("'=CMD")
+
+    # 3. Upload Apple Numbers (.numbers) via client-parsed sheets
+    r_numbers = client.post(
+        "/api/fmd/upload-universal",
+        json={
+            "fileName": "Apple_XREF_Lookup.numbers",
+            "parsedSheets": {
+                "Sheet 1": [
+                    {"LEGACY_MAKTX": "PUMP OLD", "TARGET_MAKTX": "PUMP NEW"},
+                ]
+            },
+            "fileRole": "xref",
+            "tenantId": tid,
+        },
+    )
+    assert r_numbers.status_code == 200
+    assert r_numbers.json()["ingestion"]["detected_role"] == "xref"
+    assert len(r_numbers.json()["workspace"]["xrefs"]) == 1
+
+    # 4. Upload Reference Document (.txt)
+    txt_b64 = base64.b64encode(b"Material descriptions must not exceed 40 characters.\nPlant codes start with P.").decode()
+    r_txt = client.post(
+        "/api/fmd/upload-universal",
+        json={"fileName": "design_spec.txt", "contentBase64": txt_b64, "tenantId": tid},
+    )
+    assert r_txt.status_code == 200
+    assert r_txt.json()["ingestion"]["detected_role"] == "reference_doc"
+    assert len(r_txt.json()["workspace"]["reference_docs"]) == 1
+
+    # 5. Security: reject disallowed extension (.exe) & path traversal
+    r_bad = client.post(
+        "/api/fmd/upload-universal",
+        json={"fileName": "../../malware.exe", "contentBase64": csv_payload, "tenantId": tid},
+    )
+    assert r_bad.status_code == 400
+    assert "Unsupported file format" in r_bad.json()["detail"]
+
+    # 6. Security: Read-Only Auditor cannot upload or reset
+    r_ro = client.post(
+        "/api/fmd/reset-workspace",
+        json={"role": "Read-Only Auditor", "tenantId": tid},
+    )
+    assert r_ro.status_code == 403
+

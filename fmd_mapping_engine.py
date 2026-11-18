@@ -772,6 +772,7 @@ def get_workspace_summary(tid: str = "tenant_enterprise") -> Dict[str, Any]:
             }
             for s in bucket["source_datasets"]
         ],
+        "reference_docs": bucket.get("reference_docs", []),
         "available_fields": fields,
         "updated_at": bucket.get("updated_at"),
     }
@@ -2385,4 +2386,165 @@ def verify_audit_chain(tid: str = "tenant_enterprise") -> Dict[str, Any]:
         "head_hash": expected_prev if chain else None,
         "tampered_seq": None,
     }
+
+
+# -----------------------------------------------------------------------------
+# Dynamic SaaS Ephemeral Workspace Reset & Universal Multi-Format Ingestion
+# -----------------------------------------------------------------------------
+def reset_workspace(
+    tid: str = "tenant_enterprise",
+    actor: str = "Harshal Sawatkar",
+    role: str = "Lead Data Engineer",
+) -> Dict[str, Any]:
+    """Reset the active tenant's FMD workspace to empty (zero pre-fed files)."""
+    assert_fmd_write_role(role)
+    store = _load_store()
+    bucket = _get_tenant_bucket(store, tid)
+    bucket["documents"] = []
+    bucket["xrefs"] = []
+    bucket["source_datasets"] = []
+    bucket["reference_docs"] = []
+    bucket["updated_at"] = _now_iso()
+    append_audit_event(
+        bucket=bucket,
+        action="WORKSPACE_RESET",
+        actor=actor,
+        role=role,
+        summary="Cleared ephemeral workspace documents, XREFs, and source datasets",
+    )
+    _save_store(store)
+    return get_workspace_summary(tid)
+
+
+def ingest_universal_file(
+    tid: str,
+    file_name: str,
+    content_base64: Optional[str] = None,
+    parsed_sheets: Optional[Dict[str, List[Dict[str, Any]]]] = None,
+    file_role: str = "auto",
+    source_system: Optional[str] = None,
+    actor: str = "Harshal Sawatkar",
+    role: str = "Lead Data Engineer",
+) -> Dict[str, Any]:
+    """
+    Accept any uploaded file streamed from client-side temporary storage (IndexedDB):
+    .xlsx, .xls, .csv, .tsv, .numbers, .ods, .json, .pdf, .pptx, .docx, .txt.
+    Routes it cleanly into FMDs, XREFs, Source Datasets, or Reference Docs.
+    """
+    assert_fmd_write_role(role)
+    import document_processor
+
+    envelope = document_processor.process_universal_upload(
+        filename=file_name,
+        content_base64=content_base64,
+        parsed_sheets=parsed_sheets,
+        file_role=file_role,
+    )
+    detected_role = envelope["detected_role"]
+    clean_name = envelope["filename"]
+    xlsx_bytes = envelope.get("xlsx_bytes")
+
+    store = _load_store()
+    bucket = _get_tenant_bucket(store, tid)
+    ingested_kind = detected_role
+    item_summary: Dict[str, Any] = {}
+
+    if detected_role == "fmd" and xlsx_bytes:
+        try:
+            doc = parse_fmd_workbook_bytes(xlsx_bytes, clean_name, source_system)
+            if doc.get("rule_count", 0) > 0:
+                bucket["documents"] = [
+                    d
+                    for d in bucket["documents"]
+                    if not (d["source_system"] == doc["source_system"] and d["file_name"] == doc["file_name"])
+                ]
+                bucket["documents"].append(doc)
+                item_summary = _strip_doc_heavy_fields(doc)
+            else:
+                detected_role = "source_data"
+                ingested_kind = "source_data"
+        except Exception:
+            detected_role = "source_data"
+            ingested_kind = "source_data"
+
+    if detected_role == "xref" and xlsx_bytes:
+        xref = parse_xref_bytes(xlsx_bytes, clean_name)
+        bucket["xrefs"] = [x for x in bucket["xrefs"] if x["file_name"] != xref["file_name"]]
+        bucket["xrefs"].append(xref)
+        item_summary = {
+            "xref_id": xref["xref_id"],
+            "table_name": xref["table_name"],
+            "file_name": xref["file_name"],
+            "entry_count": xref["entry_count"],
+        }
+    elif detected_role == "source_data":
+        # Convert normalized sheets into a source dataset usable by DuckDB & preview tables
+        first_rows: List[Dict[str, Any]] = []
+        for srows in envelope["sheets"].values():
+            if srows:
+                first_rows = srows
+                break
+        ds = {
+            "source_id": f"src_{hashlib.sha256(clean_name.encode()).hexdigest()[:10]}",
+            "file_name": clean_name,
+            "record_count": len(first_rows),
+            "columns": envelope["columns"],
+            "sheet_names": envelope["sheet_names"],
+            "records": first_rows[:500],
+            "uploaded_at": _now_iso(),
+        }
+        bucket["source_datasets"] = [s for s in bucket["source_datasets"] if s["file_name"] != clean_name]
+        bucket["source_datasets"].append(ds)
+        item_summary = {
+            "source_id": ds["source_id"],
+            "file_name": clean_name,
+            "record_count": ds["record_count"],
+            "columns": ds["columns"],
+        }
+    elif detected_role == "reference_doc":
+        ref_doc = {
+            "ref_id": f"ref_{hashlib.sha256(clean_name.encode()).hexdigest()[:10]}",
+            "file_name": clean_name,
+            "ext": envelope["ext"],
+            "size_bytes": envelope["size_bytes"],
+            "chunk_count": len(envelope["text_chunks"]),
+            "preview_chunks": envelope["text_chunks"][:12],
+            "uploaded_at": _now_iso(),
+        }
+        bucket.setdefault("reference_docs", [])
+        bucket["reference_docs"] = [r for r in bucket["reference_docs"] if r["file_name"] != clean_name]
+        bucket["reference_docs"].append(ref_doc)
+        item_summary = ref_doc
+
+    bucket["updated_at"] = _now_iso()
+    append_audit_event(
+        bucket=bucket,
+        action="UNIVERSAL_UPLOAD",
+        actor=actor,
+        role=role,
+        summary=f"Ingested '{clean_name}' as {ingested_kind} ({envelope['row_count']} rows / {len(envelope['sheet_names'])} sheet(s))",
+        details={
+            "filename": clean_name,
+            "ext": envelope["ext"],
+            "detected_role": ingested_kind,
+            "row_count": envelope["row_count"],
+        },
+    )
+    _save_store(store)
+
+    return {
+        "status": "success",
+        "ingestion": {
+            "filename": clean_name,
+            "ext": envelope["ext"],
+            "size_bytes": envelope["size_bytes"],
+            "detected_role": ingested_kind,
+            "row_count": envelope["row_count"],
+            "columns": envelope["columns"],
+            "sheet_names": envelope["sheet_names"],
+            "item": item_summary,
+        },
+        "workspace": get_workspace_summary(tid),
+    }
+
 

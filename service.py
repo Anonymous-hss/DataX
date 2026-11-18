@@ -3128,5 +3128,50 @@ def api_fmd_audit_verify(request: Request, tenant_id: Optional[str] = None):
     return fmd_mapping_engine.verify_audit_chain(_resolve_fmd_tenant(request, tenant_id))
 
 
+class FmdUniversalUploadRequest(BaseModel):
+    fileName: str
+    contentBase64: Optional[str] = None
+    parsedSheets: Optional[Dict[str, List[Dict[str, Any]]]] = None
+    fileRole: str = "auto"
+    sourceSystem: Optional[str] = None
+    actor: str = "Harshal Sawatkar"
+    role: str = "Lead Data Engineer"
+    tenantId: Optional[str] = None
+
+
+@app.post("/fmd/upload-universal")
+@app.post("/api/fmd/upload-universal")
+def api_fmd_upload_universal(request: Request, req: FmdUniversalUploadRequest):
+    tid = _resolve_fmd_tenant(request, req.tenantId)
+    role = _resolve_fmd_role(request, req.role)
+    try:
+        return fmd_mapping_engine.ingest_universal_file(
+            tid=tid,
+            file_name=req.fileName,
+            content_base64=req.contentBase64,
+            parsed_sheets=req.parsedSheets,
+            file_role=req.fileRole,
+            source_system=req.sourceSystem,
+            actor=req.actor,
+            role=role,
+        )
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/fmd/reset-workspace")
+@app.post("/api/fmd/reset-workspace")
+def api_fmd_reset_workspace(request: Request, req: Optional[FmdRoleActionRequest] = None):
+    tid = _resolve_fmd_tenant(request, req.tenantId if req else None)
+    role = _resolve_fmd_role(request, req.role if req else None)
+    actor = req.actor if req else "Harshal Sawatkar"
+    try:
+        return fmd_mapping_engine.reset_workspace(tid=tid, actor=actor, role=role)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8003)

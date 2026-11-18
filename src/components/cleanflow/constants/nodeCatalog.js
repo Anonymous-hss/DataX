@@ -2,7 +2,6 @@ import {
   Database,
   Cloud,
   FolderTree,
-  Table,
   FileCode2,
   Layers,
   BookOpen,
@@ -13,21 +12,23 @@ import {
   UserCheck,
   AlertTriangle,
   FileSpreadsheet,
+  Upload,
 } from 'lucide-react';
 
 export const OPERATIONAL_CATALOG = [
   {
     category: '1. Ingestion Sources',
     items: [
-      { type: 'source', name: 'SAP BW InfoCube / HANA Cloud', desc: 'Batch extracts, procurement ledger, inventory', system: 'SAP BW', icon: Database, variant: 'blue' },
-      { type: 'source', name: 'FMD & Multi-Tab Excel Source (.xlsx)', desc: 'Upload multi-tab SAP FMD workbooks (MARA, MARC, MAKT), XREF tables, or legacy Excel extracts from computer', system: 'Excel FMD File', icon: FileSpreadsheet, variant: 'green' },
+      { type: 'file_upload', name: 'Universal File Upload (Excel / CSV / Numbers / PDF / PPT)', desc: 'Upload .xlsx, .xls, .csv, Apple .numbers, .ods, .json, .pdf, .pptx, or .docx via local temporary browser storage', system: 'File Upload', icon: Upload, variant: 'green' },
+      { type: 'source', name: 'SAP S/4HANA (OData / Table Read)', desc: 'Read live Master Data, Material Master, or Finance tables from S/4HANA', system: 'SAP S/4HANA', icon: Database, variant: 'blue' },
+      { type: 'source', name: 'SAP BW InfoCube / HANA Cloud', desc: 'Batch extracts, procurement ledger, inventory, MAKT/MARC extracts', system: 'SAP BW', icon: Database, variant: 'blue' },
       { type: 'source', name: 'PostgreSQL Database / Neon', desc: 'Relational connection pool with SSL security', system: 'PostgreSQL', icon: Database, variant: 'blue' },
       { type: 'source', name: 'MongoDB Atlas (NoSQL)', desc: 'Document store with automated JSON schema discovery', system: 'MongoDB', icon: Database, variant: 'green' },
       { type: 'source', name: 'Snowflake Data Cloud', desc: 'Direct ingestion from Snowflake landing tables', system: 'Snowflake', icon: Database, variant: 'blue' },
       { type: 'source', name: 'Azure Blob Storage', desc: 'Enterprise cloud container reader for telemetry & parquet logs', system: 'Azure', icon: Cloud, variant: 'blue' },
       { type: 'source', name: 'Salesforce CRM', desc: 'Live customer accounts, leads, and contact data', system: 'Salesforce', icon: Cloud, variant: 'blue' },
       { type: 'source', name: 'AWS S3 Storage', desc: 'Cloud bucket reader for Parquet, CSV, and Delta lake', system: 'AWS S3', icon: FolderTree, variant: 'blue' },
-      { type: 'source', name: 'BYO File Ingestion (CSV / Excel / JSON)', desc: 'Upload custom client or prospect datasets directly onto canvas', system: 'File Ingest', icon: Table, variant: 'blue' },
+      { type: 'file_upload', name: 'FMD & Multi-Tab Excel Source (.xlsx / .xls / .csv / .numbers)', desc: 'Dedicated uploader for structured Excel (.xlsx/.xls), CSV & Apple Numbers mapping workbooks', system: 'FMD Upload', icon: FileSpreadsheet, variant: 'green' },
     ]
   },
   {

@@ -162,6 +162,11 @@ export const fmdApi = {
   extractBwSubset: (payload = {}) => apiRequest('/fmd/bw-extract', { method: 'POST', body: payload }),
   getAuditChain: () => apiRequest('/fmd/audit', { method: 'GET' }),
   verifyAuditChain: () => apiRequest('/fmd/audit/verify', { method: 'GET' }),
+  // Dynamic SaaS Universal Multi-Format Upload & Ephemeral Workspace Reset
+  uploadUniversal: (payload) =>
+    apiRequest('/fmd/upload-universal', { method: 'POST', body: payload, timeoutMs: 60000 }),
+  resetWorkspace: (payload = {}) =>
+    apiRequest('/fmd/reset-workspace', { method: 'POST', body: payload }),
 };
 
 export default api;
