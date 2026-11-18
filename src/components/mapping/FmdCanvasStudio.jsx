@@ -724,7 +724,7 @@ export default function FmdCanvasStudio({
                   </div>
                   <div className="max-h-60 overflow-y-auto divide-y divide-[#F1F3F7] dark:divide-white/[0.06]">
                     {availableFields.map((f) => {
-                      const fKey = `${f.target_table}-${f.target_field}`;
+                      const fKey = f.key || `${f.target_table}-${f.target_field_name || f.target_field}`;
                       const selected = fKey === selectedFieldKey;
                       return (
                         <button

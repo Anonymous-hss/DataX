@@ -119,7 +119,7 @@ export default function MappingStudioPage() {
       let resolvedKey = fieldKey;
       if (!resolvedKey && ws?.available_fields?.length > 0) {
         const first = ws.available_fields[0];
-        resolvedKey = `${first.target_table}-${first.target_field}`;
+        resolvedKey = first.key || `${first.target_table}-${first.target_field_name || first.target_field}`;
         setSelectedFieldKey(resolvedKey);
       }
       if (!resolvedKey) return;
@@ -157,9 +157,9 @@ export default function MappingStudioPage() {
         setWorkspace(ws);
         if (ws?.documents?.length > 0 && ws?.available_fields?.length > 0) {
           const defaultField =
-            ws.available_fields.find((f) => f.target_table === 'MAKT' && f.target_field === 'MAKTX') ||
+            ws.available_fields.find((f) => f.target_table === 'MAKT' && (f.target_field_name === 'MAKTX' || f.target_field === 'MAKTX' || f.key === 'MAKT-MAKTX')) ||
             ws.available_fields[0];
-          const fKey = `${defaultField.target_table}-${defaultField.target_field}`;
+          const fKey = defaultField.key || `${defaultField.target_table}-${defaultField.target_field_name || defaultField.target_field}`;
           setSelectedFieldKey(fKey);
           await refreshAnalysis(fKey, true, false, ws);
         } else {
@@ -255,9 +255,9 @@ export default function MappingStudioPage() {
         setWorkspace(latestWs);
         const avail = latestWs.available_fields || [];
         let nextField = selectedFieldKey;
-        if (avail.length > 0 && !avail.some((a) => `${a.target_table}-${a.target_field}` === nextField)) {
-          const pref = avail.find((a) => a.target_table === 'MAKT' && a.target_field === 'MAKTX') || avail[0];
-          nextField = `${pref.target_table}-${pref.target_field}`;
+        if (avail.length > 0 && !avail.some((a) => (a.key || `${a.target_table}-${a.target_field_name || a.target_field}`) === nextField)) {
+          const pref = avail.find((a) => a.target_table === 'MAKT' && (a.target_field_name === 'MAKTX' || a.target_field === 'MAKTX' || a.key === 'MAKT-MAKTX')) || avail[0];
+          nextField = pref.key || `${pref.target_table}-${pref.target_field_name || pref.target_field}`;
           setSelectedFieldKey(nextField);
         }
         await refreshAnalysis(nextField, xrefEnabled, applyCmmsOverride, latestWs);
@@ -303,10 +303,10 @@ export default function MappingStudioPage() {
       setWorkspace(seeded);
       const firstField = seeded?.available_fields?.[0];
       const fKey =
-        seeded?.available_fields?.find((f) => f.target_table === 'MAKT' && f.target_field === 'MAKTX')
+        seeded?.available_fields?.find((f) => f.target_table === 'MAKT' && (f.target_field_name === 'MAKTX' || f.target_field === 'MAKTX' || f.key === 'MAKT-MAKTX'))
           ? 'MAKT-MAKTX'
           : firstField
-            ? `${firstField.target_table}-${firstField.target_field}`
+            ? (firstField.key || `${firstField.target_table}-${firstField.target_field_name || firstField.target_field}`)
             : '';
       setSelectedFieldKey(fKey);
       setAskResult(null);

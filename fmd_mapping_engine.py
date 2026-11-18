@@ -824,6 +824,7 @@ def list_available_target_fields(tid: str = "tenant_enterprise") -> List[Dict[st
                 seen[key] = {
                     "key": key,
                     "target_table": r["target_table"],
+                    "target_field": r["target_field_name"],
                     "target_field_name": r["target_field_name"],
                     "target_field_text": r["target_field_text"] or r["target_field_name"],
                     "source_count": 0,

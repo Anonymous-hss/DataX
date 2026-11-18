@@ -84,4 +84,19 @@ describe('FMD Mapping Studio API & Catalog Integration', () => {
     expect(studio).toBeDefined();
     expect(studio.label).toBe('FMD Mapping Studio');
   });
+
+  it('resolves available field keys robustly without producing undefined in dropdown', () => {
+    const backendFields = [
+      { key: 'MAKT-MAKTX', target_table: 'MAKT', target_field_name: 'MAKTX', target_field: 'MAKTX' },
+      { key: 'MARA-MATNR', target_table: 'MARA', target_field_name: 'MATNR' },
+      { target_table: 'MARC', target_field: 'WERKS' },
+    ];
+
+    const resolvedKeys = backendFields.map(
+      (f) => f.key || `${f.target_table}-${f.target_field_name || f.target_field}`
+    );
+
+    expect(resolvedKeys).toEqual(['MAKT-MAKTX', 'MARA-MATNR', 'MARC-WERKS']);
+    expect(resolvedKeys.some((k) => k.includes('undefined'))).toBe(false);
+  });
 });
