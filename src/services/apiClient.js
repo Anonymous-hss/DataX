@@ -151,6 +151,17 @@ export const fmdApi = {
       body: { targetTable, targetField, xrefEnabled, applyCmmsOverride, records },
     }),
   getBodsExportUrl: (format = 'xlsx') => `${API_BASE_URL}/fmd/export/bods?format=${encodeURIComponent(format)}`,
+  // Phase 2 & Phase 3 endpoints
+  getCoverage: () => apiRequest('/fmd/coverage', { method: 'GET' }),
+  commitStaging: (payload = {}) => apiRequest('/fmd/staging/commit', { method: 'POST', body: payload }),
+  getStagingCommits: () => apiRequest('/fmd/staging/commits', { method: 'GET' }),
+  seedR33Revision: (payload = {}) => apiRequest('/fmd/demo/seed-r33', { method: 'POST', body: payload }),
+  diffVersions: (payload) => apiRequest('/fmd/diff', { method: 'POST', body: payload }),
+  getApprovals: () => apiRequest('/fmd/approvals', { method: 'GET' }),
+  decideApproval: (payload) => apiRequest('/fmd/approvals/decide', { method: 'POST', body: payload }),
+  extractBwSubset: (payload = {}) => apiRequest('/fmd/bw-extract', { method: 'POST', body: payload }),
+  getAuditChain: () => apiRequest('/fmd/audit', { method: 'GET' }),
+  verifyAuditChain: () => apiRequest('/fmd/audit/verify', { method: 'GET' }),
 };
 
 export default api;

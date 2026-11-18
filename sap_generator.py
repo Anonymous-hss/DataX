@@ -360,5 +360,37 @@ DOMAIN_PACKS = [
             {"id": "r_fin_2", "name": "ISO-4217 Currency Code", "column": "CURRENCY", "check_type": "ENUM_SET", "condition": "CURRENCY IN ('USD', 'EUR', 'GBP', 'INR', 'JPY')", "severity": "critical", "description": "Only recognized ISO currency codes allowed"},
             {"id": "r_fin_3", "name": "Mandatory Cost Center", "column": "COST_CENTER", "check_type": "NOT_NULL", "condition": "LENGTH(TRIM(COST_CENTER)) > 0", "severity": "critical", "description": "Financial accounting mandates cost center allocation"}
         ]
+    },
+    {
+        "id": "sap_fmd_time_bods",
+        "title": "SAP BW HANA & Excel FMDs → Staging → BODS (TIME Material Master)",
+        "category": "ERP Modernisation",
+        "badge": "FMD · XREF · Z_ERRORLOG",
+        "description": "Consolidate multi-tab Excel FMDs (SUSTAIN, ATLAS, CONS, CMMS/MAXIMO), apply cross-reference overrides and business construction for MAKT-MAKTX, materialize TIME preload tables via ARC-01 staging, and route failures to Z_ERRORLOG for SAP BODS.",
+        "source": {
+            "title": "SAP BW HANA & Multi-Tab FMD Excel",
+            "subtitle": "MAKT / MARC / R3_2_CONS_MATERIAL_CMMS_MASTERDATA",
+            "engine": "sap_bw",
+            "sampleTable": "MAKT",
+            "columns": ["SOURCE_SYSTEM", "MATNR", "SPRAS", "MAKTX", "WERKS", "DISMM", "EKGRP"]
+        },
+        "target1": {
+            "title": "SAP BODS Staging DB (TIME Preload)",
+            "subtitle": "time_preload_makt & time_preload_marc",
+            "engine": "postgres",
+            "table": "time_preload_makt"
+        },
+        "target2": {
+            "title": "Z_ERRORLOG Quarantine Store",
+            "subtitle": "z_errorlog (COLUMNNAME, RULENAME, ERROR_CATEGORY)",
+            "engine": "postgres",
+            "table": "z_errorlog"
+        },
+        "prebuiltRules": [
+            {"id": "r_fmd_1", "name": "Mandatory MAKT-MAKTX Description", "column": "MAKTX", "check_type": "NOT_NULL", "condition": "LENGTH(TRIM(MAKTX)) > 0", "severity": "critical", "description": "Block records with missing TIME Product Description into Z_ERRORLOG"},
+            {"id": "r_fmd_2", "name": "SAP S/4HANA 40-Char MAKTX Bound", "column": "MAKTX", "check_type": "RANGE_BOUND", "condition": "LENGTH(TRIM(MAKTX)) <= 40", "severity": "critical", "description": "Enforce SAP S/4HANA MAKT-MAKTX 40-character field ceiling"},
+            {"id": "r_fmd_3", "name": "XREF Override Resolution (SUSTAIN/ATLAS)", "column": "MAKTX", "check_type": "XREF_LOOKUP", "condition": "COALESCE(XREF_OVERRIDE, XREF_PRIMARY, MAKTX)", "severity": "warning", "description": "Resolve TIME_MAKTX via Material Description and MAKT Override cross-reference tables"},
+            {"id": "r_fmd_4", "name": "Internal MATNR Key Preservation", "column": "MATNR", "check_type": "NOT_NULL", "condition": "LENGTH(TRIM(MATNR)) > 0", "severity": "critical", "description": "Internal mapping for MATNR — no active transformation required"}
+        ]
     }
 ]

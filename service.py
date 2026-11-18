@@ -2965,5 +2965,168 @@ def api_fmd_export_bods(request: Request, format: str = "xlsx", tenant_id: Optio
     )
 
 
+# -----------------------------------------------------------------------------
+# FMD Phase 2 & Phase 3 Routes:
+# Coverage Heatmap, Postgres ARC-01 Staging Commit, Version Diff (R3.2 -> R3.3),
+# HITL Governance Approvals + RBAC, BW HANA Subset Extraction, SHA-256 Audit Chain
+# -----------------------------------------------------------------------------
+class FmdStagingCommitRequest(BaseModel):
+    actor: str = "Harshal Sawatkar"
+    role: str = "Lead Data Engineer"
+    writeMode: str = "append"
+    enforceHitlGate: bool = True
+    tenantId: Optional[str] = None
+
+
+class FmdDiffRequest(BaseModel):
+    baseDocId: str
+    targetDocId: str
+    actor: str = "Harshal Sawatkar"
+    role: str = "Lead Data Engineer"
+    tenantId: Optional[str] = None
+
+
+class FmdHitlDecisionRequest(BaseModel):
+    uniqueId: str
+    decision: str
+    reviewer: str = "Harshal Sawatkar"
+    role: str = "Compliance Controller"
+    comment: str = ""
+    tenantId: Optional[str] = None
+
+
+class FmdBwExtractRequest(BaseModel):
+    tableName: str = "MAKT"
+    maxRows: int = 10
+    actor: str = "Harshal Sawatkar"
+    role: str = "Lead Data Engineer"
+    tenantId: Optional[str] = None
+
+
+class FmdRoleActionRequest(BaseModel):
+    actor: str = "Harshal Sawatkar"
+    role: str = "Lead Data Engineer"
+    tenantId: Optional[str] = None
+
+
+def _resolve_fmd_role(request: Request, explicit_role: Optional[str] = None) -> str:
+    return explicit_role or request.headers.get("x-governance-role") or "Lead Data Engineer"
+
+
+@app.get("/fmd/coverage")
+@app.get("/api/fmd/coverage")
+def api_fmd_coverage(request: Request, tenant_id: Optional[str] = None):
+    return fmd_mapping_engine.compute_coverage_matrix(_resolve_fmd_tenant(request, tenant_id))
+
+
+@app.post("/fmd/staging/commit")
+@app.post("/api/fmd/staging/commit")
+def api_fmd_staging_commit(request: Request, req: FmdStagingCommitRequest):
+    tid = _resolve_fmd_tenant(request, req.tenantId)
+    role = _resolve_fmd_role(request, req.role)
+    try:
+        return fmd_mapping_engine.commit_staging_to_postgres(
+            tid=tid,
+            actor=req.actor,
+            role=role,
+            write_mode=req.writeMode,
+            enforce_hitl_gate=req.enforceHitlGate,
+        )
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/fmd/staging/commits")
+@app.get("/api/fmd/staging/commits")
+def api_fmd_staging_commits(request: Request, tenant_id: Optional[str] = None):
+    return fmd_mapping_engine.list_staging_commits(_resolve_fmd_tenant(request, tenant_id))
+
+
+@app.post("/fmd/demo/seed-r33")
+@app.post("/api/fmd/demo/seed-r33")
+def api_fmd_seed_r33(request: Request, req: Optional[FmdRoleActionRequest] = None):
+    tid = _resolve_fmd_tenant(request, req.tenantId if req else None)
+    role = _resolve_fmd_role(request, req.role if req else None)
+    actor = req.actor if req else "Harshal Sawatkar"
+    try:
+        return fmd_mapping_engine.seed_r33_revision(tid=tid, actor=actor, role=role)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@app.post("/fmd/diff")
+@app.post("/api/fmd/diff")
+def api_fmd_diff(request: Request, req: FmdDiffRequest):
+    tid = _resolve_fmd_tenant(request, req.tenantId)
+    role = _resolve_fmd_role(request, req.role)
+    try:
+        return fmd_mapping_engine.diff_fmd_versions(
+            tid=tid,
+            base_doc_id=req.baseDocId,
+            target_doc_id=req.targetDocId,
+            actor=req.actor,
+            role=role,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/fmd/approvals")
+@app.get("/api/fmd/approvals")
+def api_fmd_get_approvals(request: Request, tenant_id: Optional[str] = None):
+    return fmd_mapping_engine.get_hitl_queue(_resolve_fmd_tenant(request, tenant_id))
+
+
+@app.post("/fmd/approvals/decide")
+@app.post("/api/fmd/approvals/decide")
+def api_fmd_hitl_decide(request: Request, req: FmdHitlDecisionRequest):
+    tid = _resolve_fmd_tenant(request, req.tenantId)
+    role = _resolve_fmd_role(request, req.role)
+    try:
+        return fmd_mapping_engine.submit_hitl_decision(
+            tid=tid,
+            unique_id=req.uniqueId,
+            decision=req.decision,
+            reviewer=req.reviewer,
+            role=role,
+            comment=req.comment,
+        )
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/fmd/bw-extract")
+@app.post("/api/fmd/bw-extract")
+def api_fmd_bw_extract(request: Request, req: FmdBwExtractRequest):
+    tid = _resolve_fmd_tenant(request, req.tenantId)
+    role = _resolve_fmd_role(request, req.role)
+    try:
+        return fmd_mapping_engine.extract_bw_hana_subset(
+            tid=tid,
+            table_name=req.tableName,
+            max_rows=req.maxRows,
+            actor=req.actor,
+            role=role,
+        )
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@app.get("/fmd/audit")
+@app.get("/api/fmd/audit")
+def api_fmd_audit(request: Request, tenant_id: Optional[str] = None):
+    return fmd_mapping_engine.get_audit_chain(_resolve_fmd_tenant(request, tenant_id))
+
+
+@app.get("/fmd/audit/verify")
+@app.get("/api/fmd/audit/verify")
+def api_fmd_audit_verify(request: Request, tenant_id: Optional[str] = None):
+    return fmd_mapping_engine.verify_audit_chain(_resolve_fmd_tenant(request, tenant_id))
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8003)

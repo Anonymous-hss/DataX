@@ -289,3 +289,122 @@ def test_security_tenant_isolation():
     r_a = client.get("/api/fmd/documents", headers={"X-Tenant-Id": iso_a})
     assert r_a.status_code == 200
     assert len(r_a.json()["documents"]) == 4
+
+
+# -----------------------------------------------------------------------------
+# 3. Phase 2 & Phase 3 Tests: Coverage Heatmap, Version Diff, HITL, RBAC,
+#    ARC-01 Staging Commit, BW HANA Subset Extract, SHA-256 Audit Chain
+# -----------------------------------------------------------------------------
+def test_phase2_full_workbook_coverage_heatmap():
+    tid = "tenant_phase2_cov"
+    fmd_mapping_engine.seed_demo_workspace(tid)
+    r = client.get("/api/fmd/coverage", headers={"X-Tenant-Id": tid})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["status"] == "success"
+    assert len(data["sources"]) == 4
+    tables_present = {t["table"] for t in data["tab_summaries"]}
+    assert {"MAKT", "MARC", "MARA", "MBEW", "MARD"}.issubset(tables_present)
+    maktx_row = next(row for row in data["matrix_rows"] if row["key"] == "MAKT-MAKTX")
+    assert maktx_row["divergent"] is True
+    assert maktx_row["needs_review"] is True
+
+
+def test_phase3_version_diff_r32_to_r33():
+    tid = "tenant_phase3_diff"
+    fmd_mapping_engine.seed_demo_workspace(tid)
+    r = client.post(
+        "/api/fmd/demo/seed-r33",
+        json={"actor": "Harshal Sawatkar", "role": "Lead Data Engineer", "tenantId": tid},
+    )
+    assert r.status_code == 200
+    diff = r.json()["diff"]
+    assert diff["counts"]["ADDED"] >= 1
+    assert diff["counts"]["REMOVED"] >= 1
+    assert diff["counts"]["RULE_CHANGED"] >= 1
+    assert diff["counts"]["STATUS_CHANGED"] >= 1
+    changed_keys = {c["field_key"]: c["change_type"] for c in diff["changes"]}
+    assert changed_keys.get("MARA-BISMT") == "ADDED"
+    assert changed_keys.get("MBEW-VPRSV") == "REMOVED"
+    assert changed_keys.get("MARC-WERKS") == "RULE_CHANGED"
+    assert changed_keys.get("MAKT-MAKTX") == "STATUS_CHANGED"
+
+
+def test_phase23_rbac_hitl_gate_staging_commit_bw_extract_and_audit_chain():
+    tid = "tenant_phase3_gov"
+    # Fresh bucket
+    store = fmd_mapping_engine._load_store()
+    store.pop(tid, None)
+    fmd_mapping_engine._save_store(store)
+    fmd_mapping_engine.seed_demo_workspace(tid)
+
+    # 1. RBAC: Read-Only Auditor must be blocked (HTTP 403) on HITL, BW Extract, R3.3, and Staging Commit
+    assert client.post(
+        "/api/fmd/approvals/decide",
+        json={"uniqueId": "SUS_MAKT_3", "decision": "APPROVED", "role": "Read-Only Auditor", "tenantId": tid},
+    ).status_code == 403
+    assert client.post(
+        "/api/fmd/staging/commit",
+        json={"role": "Auditor", "tenantId": tid},
+    ).status_code == 403
+    assert client.post(
+        "/api/fmd/bw-extract",
+        json={"tableName": "MAKT", "role": "Viewer", "tenantId": tid},
+    ).status_code == 403
+
+    # 2. HITL Gate: Commit blocked while SUSTAIN REWORK (SUS_MAKT_3) is pending
+    r_blocked = client.post(
+        "/api/fmd/staging/commit",
+        json={"actor": "Harshal Sawatkar", "role": "Lead Data Engineer", "enforceHitlGate": True, "tenantId": tid},
+    )
+    assert r_blocked.status_code == 200
+    assert r_blocked.json()["status"] == "blocked_by_hitl"
+
+    # 3. Compliance Controller approves SUS_MAKT_3
+    r_app = client.post(
+        "/api/fmd/approvals/decide",
+        json={
+            "uniqueId": "SUS_MAKT_3",
+            "decision": "APPROVED",
+            "reviewer": "Harshal Sawatkar",
+            "role": "Compliance Controller",
+            "comment": "Dual XREF precedence verified",
+            "tenantId": tid,
+        },
+    )
+    assert r_app.status_code == 200
+    assert r_app.json()["queue"]["summary"]["bods_gate_clear"] is True
+
+    # 4. Now ARC-01 Staging Commit succeeds with SHA-256 receipt
+    r_commit = client.post(
+        "/api/fmd/staging/commit",
+        json={"actor": "Harshal Sawatkar", "role": "ERP Integration Lead", "enforceHitlGate": True, "tenantId": tid},
+    )
+    assert r_commit.status_code == 200
+    assert r_commit.json()["status"] == "success"
+    tables = {t["table"] for t in r_commit.json()["commit"]["tables"]}
+    assert tables == {"time_preload_makt", "time_preload_marc", "z_errorlog"}
+    assert len(r_commit.json()["commit"]["sha256_receipt"]) == 64
+
+    # 5. Live Rule-Filtered SAP BW HANA Subset Extraction
+    r_bw = client.post(
+        "/api/fmd/bw-extract",
+        json={"tableName": "MAKT", "maxRows": 8, "role": "Lead Data Engineer", "tenantId": tid},
+    )
+    assert r_bw.status_code == 200
+    assert r_bw.json()["dataset"]["record_count"] == 8
+    assert "MAKTX" in r_bw.json()["projected_fields"]
+
+    # 6. Verify SHA-256 Audit Chain integrity & tamper detection
+    r_ver = client.get("/api/fmd/audit/verify", headers={"X-Tenant-Id": tid})
+    assert r_ver.status_code == 200
+    assert r_ver.json()["valid"] is True
+    assert r_ver.json()["blocks_verified"] >= 3
+
+    # Simulate tampering on block 1 and confirm verifier catches it
+    s2 = fmd_mapping_engine._load_store()
+    s2[tid]["audit_chain"][0]["summary"] = "TAMPERED_ENTRY"
+    fmd_mapping_engine._save_store(s2)
+    tamper_check = fmd_mapping_engine.verify_audit_chain(tid)
+    assert tamper_check["valid"] is False
+    assert tamper_check["tampered_seq"] == 1

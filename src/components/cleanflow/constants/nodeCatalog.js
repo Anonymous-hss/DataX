@@ -34,6 +34,7 @@ export const OPERATIONAL_CATALOG = [
     category: '2. Intelligence Engine & Transformations',
     items: [
       { type: 'rules', name: 'Intelligence Engine (Azure OpenAI)', desc: 'Natural language business rule synthesizer', system: 'gpt-5-mini', icon: FileCode2, variant: 'indigo' },
+      { type: 'rules', name: 'FMD Mapping Transformer (TIME R3.2)', desc: 'Compiles multi-tab Excel FMD rules (XREF override, business construction, copy, internal) into DuckDB SQL', system: 'FMD Engine', icon: FileSpreadsheet, variant: 'blue' },
       { type: 'vector_matcher', name: 'Semantic Vector Matcher', desc: 'Finds fuzzy-matching records using AI similarity (e.g. "IBM Corp" ↔ "International Business Machines")', system: 'text-embedding-3-small', icon: Layers, variant: 'indigo' },
       { type: 'rag', name: 'RAG Context Enricher', desc: 'Searches your company knowledge library and attaches relevant context to each data record', system: 'RAG', icon: BookOpen, variant: 'purple' },
       { type: 'rules', name: 'RFC-5322 Email Normalizer', desc: 'Auto-repairs syntax, trims whitespace, lowercases domains', system: 'Rule Pack', icon: ShieldCheck, variant: 'green' },
@@ -53,6 +54,7 @@ export const OPERATIONAL_CATALOG = [
     category: '4. Targets & Destinations',
     items: [
       { type: 'target', name: 'SAP S/4HANA (BAPI_PO_CREATE1)', desc: 'Operational ERP writeback with human verification gate', system: 'SAP S/4HANA', icon: Database, variant: 'green' },
+      { type: 'target', name: 'SAP BODS Staging DB (TIME Preload + Z_ERRORLOG)', desc: 'Materializes ARC-01 staging preload tables and Z_ERRORLOG for SAP BODS load into TIME', system: 'SAP BODS', icon: Database, variant: 'green' },
       { type: 'target', name: 'PostgreSQL Database (Neon / RDS)', desc: 'Commit verified records and quarantine tables to PostgreSQL', system: 'PostgreSQL', icon: Database, variant: 'green' },
       { type: 'target', name: 'Databricks Unity Catalog Lakehouse', desc: 'Persist compliant records into Delta Lake Gold table', system: 'Databricks', icon: Database, variant: 'green' },
       { type: 'bigquery', name: 'Google BigQuery', desc: 'Enterprise cloud data warehouse for real-time analytics and SQL pipelines', system: 'Google BigQuery', icon: Database, variant: 'blue' },
