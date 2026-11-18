@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, AlertTriangle, CheckCircle2, Code2, Table2, ShieldAlert } from 'lucide-react';
+import { Download, AlertTriangle, CheckCircle2, Code2, Table2, ShieldAlert, Zap } from 'lucide-react';
 
 /**
  * FmdBestDemoScreen - Step 6 (Screenshot 7):
@@ -8,7 +8,7 @@ import { Download, AlertTriangle, CheckCircle2, Code2, Table2, ShieldAlert } fro
  * - Staging Preload Report, Z_ERRORLOG (COLUMNNAME, RULENAME, ERROR_CATEGORY), and Compiled DuckDB SQL
  * - Export to SAP BODS (.xlsx / .csv)
  */
-export default function FmdBestDemoScreen({ simulation, onExportBods }) {
+export default function FmdBestDemoScreen({ simulation, onExportBods, onTraceRecord, activeTraceRecordId }) {
   const [activeTab, setActiveTab] = useState('preload'); // 'preload' | 'z_errorlog' | 'sql'
 
   if (!simulation) return null;
@@ -157,6 +157,7 @@ export default function FmdBestDemoScreen({ simulation, onExportBods }) {
                   <th className="px-3 py-2 font-bold">Execution Branch</th>
                   <th className="px-3 py-2 font-bold">Staging Status</th>
                   <th className="px-3 py-2 font-bold">FMD ID</th>
+                  {onTraceRecord && <th className="px-3 py-2 font-bold text-right">Canvas</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
@@ -183,6 +184,22 @@ export default function FmdBestDemoScreen({ simulation, onExportBods }) {
                       )}
                     </td>
                     <td className="px-3 py-2 font-mono text-[#2D55F5]">{r.fmd_unique_id}</td>
+                    {onTraceRecord && (
+                      <td className="px-3 py-2 text-right whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => onTraceRecord(r.matnr, r.source_system)}
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border cursor-pointer transition-colors ${
+                            activeTraceRecordId === String(r.matnr)
+                              ? 'bg-[#0A0F1F] text-[#D4FF3A] border-[#0A0F1F]'
+                              : 'bg-blue-50 text-[#2D55F5] border-blue-200 hover:bg-blue-100'
+                          }`}
+                        >
+                          <Zap className="w-2.5 h-2.5" />
+                          <span>Trace</span>
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -201,12 +218,13 @@ export default function FmdBestDemoScreen({ simulation, onExportBods }) {
                   <th className="px-3 py-2 font-bold">RULENAME</th>
                   <th className="px-3 py-2 font-bold">ERROR_CATEGORY</th>
                   <th className="px-3 py-2 font-bold">MESSAGE</th>
+                  {onTraceRecord && <th className="px-3 py-2 font-bold text-right">Canvas</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-rose-100 dark:divide-rose-950/50 bg-white dark:bg-[#141418]">
                 {zErrorLog.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
+                    <td colSpan={onTraceRecord ? 7 : 6} className="px-4 py-6 text-center text-slate-500">
                       Zero Z_ERRORLOG entries for this staging batch.
                     </td>
                   </tr>
@@ -223,6 +241,18 @@ export default function FmdBestDemoScreen({ simulation, onExportBods }) {
                         </span>
                       </td>
                       <td className="px-3 py-2 text-slate-700 dark:text-slate-300">{e.message}</td>
+                      {onTraceRecord && (
+                        <td className="px-3 py-2 text-right whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => onTraceRecord(e.record_key, e.source_system)}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 cursor-pointer transition-colors"
+                          >
+                            <Zap className="w-2.5 h-2.5" />
+                            <span>Trace</span>
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}

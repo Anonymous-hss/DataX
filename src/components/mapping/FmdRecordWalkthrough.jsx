@@ -1,5 +1,5 @@
 import React from 'react';
-import { ToggleLeft, ToggleRight, CheckCircle2, MessageSquareQuote } from 'lucide-react';
+import { ToggleLeft, ToggleRight, CheckCircle2, MessageSquareQuote, Zap } from 'lucide-react';
 
 /**
  * FmdRecordWalkthrough - Step 5 (Screenshots 4, 5, 6):
@@ -12,6 +12,8 @@ export default function FmdRecordWalkthrough({
   applyCmmsOverride = false,
   onToggleXref,
   onToggleCmmsOverride,
+  onTraceRecord,
+  activeTraceRecordId,
 }) {
   if (!walkthroughCards || walkthroughCards.length === 0) return null;
 
@@ -69,7 +71,22 @@ export default function FmdRecordWalkthrough({
           >
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-sm font-bold text-[#0A0F1F] dark:text-white">{card.title}</h3>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                {onTraceRecord && card.example_record?.matnr && (
+                  <button
+                    type="button"
+                    onClick={() => onTraceRecord(card.example_record.matnr, card.source_system)}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer ${
+                      activeTraceRecordId === String(card.example_record.matnr)
+                        ? 'bg-[#0A0F1F] text-[#D4FF3A] border-[#0A0F1F]'
+                        : 'bg-white dark:bg-[#141418] text-[#2D55F5] border-blue-200 hover:bg-blue-50'
+                    }`}
+                    title="Trace this material's rule path across the Visual Canvas"
+                  >
+                    <Zap className="w-2.5 h-2.5" />
+                    <span>{activeTraceRecordId === String(card.example_record.matnr) ? 'Tracing' : 'Trace on Canvas'}</span>
+                  </button>
+                )}
                 <span className="px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/40 text-[#2D55F5] dark:text-blue-300 text-[10px] font-bold">
                   {card.rule_type}
                 </span>
