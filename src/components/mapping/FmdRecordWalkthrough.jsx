@@ -37,11 +37,10 @@ export default function FmdRecordWalkthrough({
           <button
             type="button"
             onClick={onToggleXref}
-            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
-              xrefEnabled
+            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition-all ${xrefEnabled
                 ? 'bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-700 dark:text-emerald-300'
                 : 'bg-slate-100 border-slate-300 text-slate-700 dark:bg-white/10 dark:text-slate-300'
-            }`}
+              }`}
           >
             {xrefEnabled ? <ToggleRight className="w-4 h-4 text-emerald-600" /> : <ToggleLeft className="w-4 h-4 text-slate-400" />}
             <span>XREF Lookup: {xrefEnabled ? 'HIT (Override Active)' : 'MISS (Fallback Copy)'}</span>
@@ -50,11 +49,10 @@ export default function FmdRecordWalkthrough({
           <button
             type="button"
             onClick={onToggleCmmsOverride}
-            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
-              applyCmmsOverride
+            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition-all ${applyCmmsOverride
                 ? 'bg-amber-50 border-amber-300 text-amber-800'
                 : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-white/[0.05] dark:border-white/10 dark:text-slate-300'
-            }`}
+              }`}
           >
             {applyCmmsOverride ? <ToggleRight className="w-4 h-4 text-amber-600" /> : <ToggleLeft className="w-4 h-4 text-slate-400" />}
             <span>CMMS Design-Spec XREF Override: {applyCmmsOverride ? 'ON' : 'OFF'}</span>
@@ -76,11 +74,10 @@ export default function FmdRecordWalkthrough({
                   <button
                     type="button"
                     onClick={() => onTraceRecord(card.example_record.matnr, card.source_system)}
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer ${
-                      activeTraceRecordId === String(card.example_record.matnr)
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer ${activeTraceRecordId === String(card.example_record.matnr)
                         ? 'bg-[#0A0F1F] text-[#D4FF3A] border-[#0A0F1F]'
                         : 'bg-white dark:bg-[#141418] text-[#2D55F5] border-blue-200 hover:bg-blue-50'
-                    }`}
+                      }`}
                     title="Trace this material's rule path across the Visual Canvas"
                   >
                     <Zap className="w-2.5 h-2.5" />
@@ -91,13 +88,12 @@ export default function FmdRecordWalkthrough({
                   {card.rule_type}
                 </span>
                 <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                    card.status === 'REWORK'
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${card.status === 'REWORK'
                       ? 'bg-rose-50 text-rose-700 border-rose-200'
                       : card.status === 'FINAL REVIEW'
-                      ? 'bg-amber-50 text-amber-700 border-amber-200'
-                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                  }`}
+                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    }`}
                 >
                   {card.status}
                 </span>

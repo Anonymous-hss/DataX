@@ -16,64 +16,6 @@ import {
   syncBackendAlerts 
 } from '../../services/notificationService';
 
-// Exact baseline notifications matching Figma 00.5
-const FIGMA_BASELINE_NOTIFICATIONS = [
-  {
-    id: 'notif-1',
-    title: 'Dry run completed',
-    message: '1,420 rows evaluated · 96.7% health · 153 quarantined',
-    type: 'success',
-    time: '2 min',
-    screen: 'dry-run-results',
-    read: false
-  },
-  {
-    id: 'notif-2',
-    title: 'Distribution & schema drift alert',
-    message: 'Drift anomaly score 44.3%',
-    type: 'drift',
-    time: '3 min',
-    screen: 'ml-certify',
-    read: false
-  },
-  {
-    id: 'notif-3',
-    title: 'Quarantine spike alert',
-    message: 'Quarantine rate 62.5% breached the 15% threshold',
-    type: 'alert',
-    time: '6 min',
-    screen: 'quarantine',
-    read: false
-  },
-  {
-    id: 'notif-4',
-    title: 'Pipeline run completed',
-    message: 'SAP PO pipeline · 99.0% health · 1,420 rows validated',
-    type: 'success',
-    time: '8 min',
-    screen: 'history',
-    read: false
-  },
-  {
-    id: 'notif-5',
-    title: 'Quarantine review pending',
-    message: '14 records in DLQ need Lead Data Steward sign-off · $1.42M held',
-    type: 'quarantine',
-    time: '21 min',
-    screen: 'quarantine',
-    read: false
-  },
-  {
-    id: 'notif-6',
-    title: 'Distribution drift detected',
-    message: 'MARA material category shifted 24.5% from baseline',
-    type: 'drift',
-    time: '1 h',
-    screen: 'history',
-    read: false
-  }
-];
-
 export default function NotificationCenter() {
   const { navigateTo } = useNavigation();
   const [isOpen, setIsOpen] = useState(false);
@@ -83,19 +25,15 @@ export default function NotificationCenter() {
   const [notifications, setNotifications] = useState(() => {
     try {
       const stored = getStoredNotifications();
-      if (Array.isArray(stored) && stored.length > 0) {
-        // Filter out any legacy dummy drift alerts
-        const cleaned = stored.filter(n => !n.id?.startsWith('alert_') && !n.message?.includes('anomaly score') || n.id === 'notif_2' || n.id === 'notif-2');
-        if (cleaned.length > 0) return cleaned;
-      }
+      if (Array.isArray(stored)) return stored;
     } catch {}
-    return FIGMA_BASELINE_NOTIFICATIONS;
+    return [];
   });
 
   // Subscribe to genuine event dispatches (no dummy polling)
   useEffect(() => {
     const unsubscribe = subscribeToNotifications((updatedList) => {
-      if (Array.isArray(updatedList) && updatedList.length > 0) {
+      if (Array.isArray(updatedList)) {
         setNotifications(updatedList);
       }
     });

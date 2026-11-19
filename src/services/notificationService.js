@@ -7,85 +7,33 @@
 import { playNotificationSound, isSoundEnabled, setSoundEnabled } from './soundEngine';
 import { api } from './apiClient';
 
-const STORAGE_KEY = 'datax_notifications_curated_v5';
+const STORAGE_KEY = 'datax_notifications_v6';
 const EVENT_NAME = 'datax_notification_event';
 
-// Exact 6 Clean Notifications matching Figma 00.5
-const BASELINE_NOTIFICATIONS = [
-  {
-    id: 'notif_1',
-    title: 'Dry run completed',
-    message: '1,420 rows evaluated · 96.7% health · 153 quarantined',
-    type: 'success',
-    time: '2 min',
-    createdAt: Date.now() - 2 * 60 * 1000,
-    screen: 'dry-run-results',
-    read: false
-  },
-  {
-    id: 'notif_2',
-    title: 'Distribution & schema drift alert',
-    message: 'Drift anomaly score 44.3%',
-    type: 'drift',
-    time: '3 min',
-    createdAt: Date.now() - 3 * 60 * 1000,
-    screen: 'ml-certify',
-    read: false
-  },
-  {
-    id: 'notif_3',
-    title: 'Quarantine spike alert',
-    message: 'Quarantine rate 62.5% breached the 15% threshold',
-    type: 'alert',
-    time: '6 min',
-    createdAt: Date.now() - 6 * 60 * 1000,
-    screen: 'quarantine',
-    read: false
-  },
-  {
-    id: 'notif_4',
-    title: 'Pipeline run completed',
-    message: 'SAP PO pipeline · 99.0% health · 1,420 rows validated',
-    type: 'success',
-    time: '8 min',
-    createdAt: Date.now() - 8 * 60 * 1000,
-    screen: 'history',
-    read: false
-  },
-  {
-    id: 'notif_5',
-    title: 'Quarantine review pending',
-    message: '14 records in DLQ need Lead Data Steward sign-off · $1.42M held',
-    type: 'quarantine',
-    time: '21 min',
-    createdAt: Date.now() - 21 * 60 * 1000,
-    screen: 'quarantine',
-    read: false
-  },
-  {
-    id: 'notif_6',
-    title: 'Distribution drift detected',
-    message: 'MARA material category shifted 24.5% from baseline',
-    type: 'drift',
-    time: '1 h',
-    createdAt: Date.now() - 60 * 60 * 1000,
-    screen: 'history',
-    read: false
-  }
-];
+// Zero dummy notifications by default for new accounts
+const BASELINE_NOTIFICATIONS = [];
+const LEGACY_DUMMY_IDS = new Set([
+  'notif_1', 'notif_2', 'notif_3', 'notif_4', 'notif_5', 'notif_6',
+  'notif-1', 'notif-2', 'notif-3', 'notif-4', 'notif-5', 'notif-6'
+]);
 
 export function getStoredNotifications() {
-  if (typeof window === 'undefined') return BASELINE_NOTIFICATIONS;
+  if (typeof window === 'undefined') return [];
   try {
+    // Purge old legacy dummy storage keys if present
+    if (localStorage.getItem('datax_notifications_curated_v5')) {
+      localStorage.removeItem('datax_notifications_curated_v5');
+    }
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(BASELINE_NOTIFICATIONS));
-      return BASELINE_NOTIFICATIONS;
+      return [];
     }
     const list = JSON.parse(raw);
-    return Array.isArray(list) ? list : BASELINE_NOTIFICATIONS;
+    if (!Array.isArray(list)) return [];
+    // Ensure no legacy dummy mock notifications slip through
+    return list.filter(n => !LEGACY_DUMMY_IDS.has(n.id));
   } catch {
-    return BASELINE_NOTIFICATIONS;
+    return [];
   }
 }
 
